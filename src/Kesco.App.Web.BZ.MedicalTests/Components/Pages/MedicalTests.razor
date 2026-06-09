@@ -1,0 +1,184 @@
+@page "/medical-tests"
+@using Kesco.Lib.DALC
+@using Kesco.Lib.Web.Settings
+@using Kesco.Lib.Web.BZ.Controls
+
+@inject DbManager Db
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject KescoAppSettings AppSettings
+
+<PageTitle>Медицинские исследования</PageTitle>
+
+<KescoDataList TEntity="MedicalTest"
+               @ref="_dataGrid"
+               Title="Медицинские исследования"
+               Items="_tests"
+               Loading="_loading"
+               PageSize="@AppSettings.DefaultPageSize"
+               GroupColumn="TestTypeName"
+               ShowGroupToggle="true"
+               GroupToggleLabel="Группировать по типу"
+               Groupable="_dataGrid?.GroupEnabled ?? false"
+               TotalCount="@_query.TotalCount"
+               ShowPagination="true"
+               OnAdd="OpenAddDialog"
+               OnRowClick="OnRowClicked"
+               OnQueryChanged="OnQueryChanged">
+    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Id" Sortable="false">
+        <HeaderTemplate>
+            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                 @onclick="@(() => _dataGrid?.ToggleSort("КодМедицинскогоАнализа"))">
+                <MudText Style="flex:1;text-align:center">Код</MudText>
+                @if (_dataGrid is not null)
+                {
+                    @_dataGrid.GetSortBadge("КодМедицинскогоАнализа")
+                }
+            </div>
+        </HeaderTemplate>
+    </PropertyColumn>
+    <PropertyColumn T="MedicalTest" TProperty="string" Property="x => x.Name" Sortable="false">
+        <HeaderTemplate>
+            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                 @onclick="@(() => _dataGrid?.ToggleSort("НазваниеАнализа"))">
+                <MudText Style="flex:1;text-align:center">Название</MudText>
+                @if (_dataGrid is not null)
+                {
+                    @_dataGrid.GetSortBadge("НазваниеАнализа")
+                }
+            </div>
+        </HeaderTemplate>
+    </PropertyColumn>
+    <PropertyColumn T="MedicalTest" TProperty="string" Property="x => x.TestTypeName" Sortable="false"
+                    Hidden="@(_dataGrid?.GroupEnabled ?? false)"
+                    Groupable="true"
+                    Grouping="@(_dataGrid?.GroupEnabled ?? false)"
+                    GroupBy="@(x => x.TestTypeName ?? "")">
+        <HeaderTemplate>
+            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                 @onclick="@(() => _dataGrid?.ToggleSort("TestTypeName"))">
+                <MudText Style="flex:1;text-align:center">Тип</MudText>
+                @if (_dataGrid is not null)
+                {
+                    @_dataGrid.GetSortBadge("TestTypeName")
+                }
+            </div>
+        </HeaderTemplate>
+        <GroupTemplate>
+            <MudText Typo="Typo.body1" Style="font-weight:600">
+                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
+            </MudText>
+        </GroupTemplate>
+    </PropertyColumn>
+    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Order" Sortable="false">
+        <HeaderTemplate>
+            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                 @onclick="@(() => _dataGrid?.ToggleSort("Порядок"))">
+                <MudText Style="flex:1;text-align:center">Порядок</MudText>
+                @if (_dataGrid is not null)
+                {
+                    @_dataGrid.GetSortBadge("Порядок")
+                }
+            </div>
+        </HeaderTemplate>
+    </PropertyColumn>
+    <TemplateColumn T="MedicalTest" Title="Группа">
+        <CellTemplate>
+            <MudIcon Icon="@(context.Item.IsGroup ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                     Color="@(context.Item.IsGroup ? Color.Success : Color.Default)"
+                     Size="Size.Small" />
+        </CellTemplate>
+    </TemplateColumn>
+    <TemplateColumn T="MedicalTest" Title="Заключение">
+        <CellTemplate>
+            <MudIcon Icon="@(context.Item.IsConclusion ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                     Color="@(context.Item.IsConclusion ? Color.Success : Color.Default)"
+                     Size="Size.Small" />
+        </CellTemplate>
+    </TemplateColumn>
+</KescoDataList>
+
+@code {
+    private KescoDataList<MedicalTest> _dataGrid = null!;
+    private KescoDataQuery _query = new();
+
+    private List<MedicalTest> _tests = [];
+    private bool _loading = true;
+
+    private async Task OnQueryChanged(KescoDataQuery query)
+    {
+        _query.SearchText = query.SearchText;
+        _query.GroupEnabled = query.GroupEnabled;
+        _query.GroupColumn = query.GroupColumn;
+        _query.SortColumns = query.SortColumns;
+        _query.PageNumber = query.PageNumber;
+        _query.PageSize = query.PageSize;
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadData();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        try
+        {
+            var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
+            var where = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
+            var param = new { search = $"%{_query.SearchText}%" };
+
+            _query.TotalCount = await MedicalTest.GetCountAsync(Db, where, param);
+            _tests = (await MedicalTest.GetPagedAsync(Db, where, orderBy, param, _query.PageNumber, _query.PageSize)).ToList();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenAddDialog()
+    {
+        var model = new MedicalTest();
+        var parameters = new DialogParameters<MedicalTestEditDialog>
+        {
+            { x => x.Model, model }
+        };
+        var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
+        var dialog = await DialogService.ShowExAsync<MedicalTestEditDialog>("Новое исследование", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            Snackbar.Add("Запись добавлена", Severity.Success);
+            await LoadData();
+        }
+    }
+
+    private async Task OnRowClicked(DataGridRowClickEventArgs<MedicalTest> args)
+    {
+        var parameters = new DialogParameters<MedicalTestEditDialog>
+        {
+            { x => x.Model, args.Item }
+        };
+        var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
+        var dialog = await DialogService.ShowExAsync<MedicalTestEditDialog>("Редактирование", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+        {
+            Snackbar.Add("Запись обновлена", Severity.Success);
+        }
+        await LoadData();
+    }
+}

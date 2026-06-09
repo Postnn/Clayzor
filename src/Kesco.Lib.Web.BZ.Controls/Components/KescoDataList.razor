@@ -1,0 +1,225 @@
+@typeparam TEntity where TEntity : class
+
+<MudPaper Elevation="1" Class="pa-4">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h5">@Title</MudText>
+        <MudStack Row="true" Spacing="2">
+            <MudTextField T="string"
+                          Value="@_searchText"
+                          ValueChanged="@OnSearchTextChanged"
+                          Placeholder="Поиск..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          DebounceInterval="300"
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense" />
+            @if (ShowAddButton)
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@OnAdd">
+                    Добавить
+                </MudButton>
+            }
+        </MudStack>
+    </MudStack>
+
+    @if (ShowGroupToggle)
+    {
+        <MudStack Row="true" Class="mb-2">
+            <MudSwitch @bind-Value="_groupEnabled"
+                       @bind-Value:after="OnGroupToggleChanged"
+                       Label="@GroupToggleLabel"
+                       Color="Color.Primary" />
+        </MudStack>
+    }
+
+    <MudDataGrid T="TEntity"
+                 Items="@Items"
+                 Filterable="false"
+                 SortMode="SortMode.Multiple"
+                 Groupable="@Groupable"
+                 GroupExpanded="@GroupExpanded"
+                 FixedHeader="true"
+                 Height="calc(100vh - 310px)"
+                 Dense="true"
+                 Hover="true"
+                 Striped="true"
+                 Loading="@Loading"
+                 RowClick="@OnRowClick"
+                 RowsPerPage="@_pageSize"
+                 DragDropColumnReordering="@AllowColumnReorder">
+        <Columns>
+            @ChildContent
+        </Columns>
+    </MudDataGrid>
+    @if (ShowPagination)
+    {
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-3">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudText>Строк на странице:</MudText>
+                <MudNumericField T="int" Value="_pageSize" ValueChanged="OnPageSizeChangedAsync" Min="1" Max="999" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width:80px" />
+                <MudText>Всего: @TotalCount записей</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="RefreshAsync" Size="Size.Small" title="Обновить" />
+            </MudStack>
+            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                <MudIconButton Icon="@Icons.Material.Filled.FirstPage" OnClick="GoToFirstPageAsync" Disabled="@(_pageNumber <= 1)" Size="Size.Small" />
+                <MudIconButton Icon="@Icons.Material.Filled.NavigateBefore" OnClick="GoToPrevPageAsync" Disabled="@(_pageNumber <= 1)" Size="Size.Small" />
+                <MudText Class="mx-2">Стр. @_pageNumber из @_totalPages</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.NavigateNext" OnClick="GoToNextPageAsync" Disabled="@(_pageNumber >= _totalPages)" Size="Size.Small" />
+                <MudIconButton Icon="@Icons.Material.Filled.LastPage" OnClick="GoToLastPageAsync" Disabled="@(_pageNumber >= _totalPages)" Size="Size.Small" />
+            </MudStack>
+        </MudStack>
+    }
+</MudPaper>
+
+@code {
+    private string? _searchText;
+    private bool _groupEnabled;
+    private List<SortColumn> _sortState = [];
+    private int _pageNumber = 1;
+    private int _pageSize;
+
+    [Parameter] public string Title { get; set; } = "Список";
+    [Parameter] public IEnumerable<TEntity> Items { get; set; } = [];
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool ShowAddButton { get; set; } = true;
+    [Parameter] public int PageSize { get; set; } = 50;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnAdd { get; set; }
+    [Parameter] public EventCallback<DataGridRowClickEventArgs<TEntity>> OnRowClick { get; set; }
+    [Parameter] public bool Groupable { get; set; }
+    [Parameter] public bool GroupExpanded { get; set; } = true;
+    [Parameter] public string? GroupColumn { get; set; }
+    [Parameter] public bool ShowGroupToggle { get; set; }
+    [Parameter] public string GroupToggleLabel { get; set; } = "Группировать";
+    [Parameter] public EventCallback<KescoDataQuery> OnQueryChanged { get; set; }
+    [Parameter] public int TotalCount { get; set; }
+    [Parameter] public bool ShowPagination { get; set; } = true;
+    [Parameter] public bool AllowColumnReorder { get; set; } = true;
+
+    public bool GroupEnabled => _groupEnabled;
+
+    private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
+
+    protected override void OnInitialized()
+    {
+        _pageSize = PageSize;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (TotalCount > 0 && _pageNumber > _totalPages)
+            _pageNumber = _totalPages;
+    }
+
+    public void ToggleSort(string column)
+    {
+        if (_groupEnabled && column == GroupColumn)
+            return;
+
+        var idx = _sortState.FindIndex(s => s.Column == column);
+        if (idx >= 0)
+        {
+            if (_sortState[idx].Desc)
+                _sortState.RemoveAt(idx);
+            else
+                _sortState[idx] = _sortState[idx] with { Desc = true };
+        }
+        else
+        {
+            _sortState.Insert(0, new SortColumn(column, false));
+            if (_sortState.Count > 2)
+                _sortState.RemoveAt(2);
+        }
+
+        InvokeAsync(async () =>
+        {
+            _pageNumber = 1;
+            StateHasChanged();
+            await NotifyQueryChanged();
+        });
+    }
+
+    public RenderFragment GetSortBadge(string column) => builder =>
+    {
+        var idx = _sortState.FindIndex(s => s.Column == column);
+        if (idx < 0) return;
+        var arrow = _sortState[idx].Desc ? "\u2193" : "\u2191";
+        var label = (idx + 1).ToString() + arrow;
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "style", "background:var(--mud-palette-primary);color:white;border-radius:6px;padding:0 4px;margin-left:4px;font-size:0.75rem;font-weight:600");
+        builder.AddContent(2, label);
+        builder.CloseElement();
+    };
+
+    private async Task OnSearchTextChanged(string? value)
+    {
+        _searchText = value;
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private async Task OnGroupToggleChanged()
+    {
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private async Task OnPageSizeChangedAsync(int value)
+    {
+        _pageSize = value;
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private async Task RefreshAsync()
+    {
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private async Task GoToFirstPageAsync()
+    {
+        if (_pageNumber <= 1) return;
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private async Task GoToPrevPageAsync()
+    {
+        if (_pageNumber <= 1) return;
+        _pageNumber--;
+        await NotifyQueryChanged();
+    }
+
+    private async Task GoToNextPageAsync()
+    {
+        if (_pageNumber >= _totalPages) return;
+        _pageNumber++;
+        await NotifyQueryChanged();
+    }
+
+    private async Task GoToLastPageAsync()
+    {
+        if (_pageNumber >= _totalPages) return;
+        _pageNumber = _totalPages;
+        await NotifyQueryChanged();
+    }
+
+    private async Task NotifyQueryChanged()
+    {
+        var query = new KescoDataQuery
+        {
+            SearchText = _searchText,
+            GroupEnabled = _groupEnabled,
+            GroupColumn = GroupColumn,
+            SortColumns = _sortState.ToList(),
+            PageNumber = _pageNumber,
+            PageSize = _pageSize
+        };
+        await OnQueryChanged.InvokeAsync(query);
+    }
+}

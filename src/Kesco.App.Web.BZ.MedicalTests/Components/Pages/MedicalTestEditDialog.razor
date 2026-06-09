@@ -1,0 +1,146 @@
+@using Kesco.Lib.DALC
+@inject DbManager Db
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<KescoEditForm TEntity="MedicalTest"
+               Model="Model"
+               Title="@(Model.Id == 0 ? "Новое исследование" : $"Исследование #{Model.Id}")"
+               Icon="@Icons.Material.Filled.Science"
+               OnSave="HandleSave"
+               OnDelete="HandleDelete"
+               ShowDelete="@(Model.Id != 0)">
+
+    <MudTextField @bind-Value="Model.Name"
+                  Label="Название"
+                  Required="true"
+                  RequiredError="Название обязательно"
+                  Variant="Variant.Outlined"
+                  Class="mb-3" />
+
+    <KescoComboBox TItem="MedicalTestType"
+                   @bind-Value="Model.TestTypeId"
+                   Items="_testTypes"
+                   Label="Тип исследования"
+                   Required="true"
+                   Class="mb-3" />
+
+    <MudNumericField @bind-Value="Model.Order"
+                     Label="Порядок"
+                     Variant="Variant.Outlined"
+                     Class="mb-3" />
+
+    <MudText Typo="Typo.subtitle1" Class="mt-2 mb-2">Нормы для женщин</MudText>
+    <MudGrid>
+        <MudItem xs="6">
+            <MudNumericField @bind-Value="Model.NormMinFemale"
+                             Label="От"
+                             Variant="Variant.Outlined"
+                             Class="mb-3" />
+        </MudItem>
+        <MudItem xs="6">
+            <MudNumericField @bind-Value="Model.NormMaxFemale"
+                             Label="По"
+                             Variant="Variant.Outlined"
+                             Class="mb-3" />
+        </MudItem>
+    </MudGrid>
+
+    <MudText Typo="Typo.subtitle1" Class="mt-2 mb-2">Нормы для мужчин</MudText>
+    <MudGrid>
+        <MudItem xs="6">
+            <MudNumericField @bind-Value="Model.NormMinMale"
+                             Label="От"
+                             Variant="Variant.Outlined"
+                             Class="mb-3" />
+        </MudItem>
+        <MudItem xs="6">
+            <MudNumericField @bind-Value="Model.NormMaxMale"
+                             Label="По"
+                             Variant="Variant.Outlined"
+                             Class="mb-3" />
+        </MudItem>
+    </MudGrid>
+
+    <MudTextField @bind-Value="Model.NormString"
+                  Label="Норма (строка)"
+                  Variant="Variant.Outlined"
+                  Class="mb-3" />
+
+    <MudSwitch @bind-Value="Model.IsGroup"
+               Label="Группа"
+               Color="Color.Primary"
+               Class="mb-2" />
+
+    <MudSwitch @bind-Value="Model.IsConclusion"
+               Label="Заключение"
+               Color="Color.Primary" />
+</KescoEditForm>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public MedicalTest Model { get; set; } = new();
+
+    private List<MedicalTestType> _testTypes = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _testTypes = await MedicalTestType.GetAllAsync(Db);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка загрузки типов: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleSave(MedicalTest entity)
+    {
+        try
+        {
+            if (entity.Id == 0)
+                await entity.InsertAsync(Db);
+            else
+                await entity.UpdateAsync(Db);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка сохранения: {ex.Message}", Severity.Error);
+            return;
+        }
+
+        MudDialog?.Close(DialogResult.Ok(entity));
+    }
+
+    private async Task HandleDelete(MedicalTest entity)
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { x => x.Title, "Подтверждение удаления" },
+            { x => x.Message, $"Удалить исследование «{entity.Name}»?" },
+            { x => x.ConfirmText, "Удалить" },
+            { x => x.CancelText, "Отмена" }
+        };
+        var options = new DialogOptionsEx { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, DragMode = MudDialogDragMode.Simple };
+        var dialog = await DialogService.ShowExAsync<ConfirmDialog>("Подтверждение", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled)
+            return;
+
+        try
+        {
+            await entity.DeleteAsync(Db);
+            Snackbar.Add("Запись удалена", Severity.Success);
+            MudDialog?.Cancel();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка удаления: {ex.Message}", Severity.Error);
+        }
+    }
+}

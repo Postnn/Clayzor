@@ -1,0 +1,64 @@
+@page "/"
+@using Kesco.Lib.Web.Settings
+@inject KescoAppSettings AppSettings
+
+<PageTitle>@AppSettings.ApplicationName</PageTitle>
+
+<MudStack Spacing="6">
+    <MudStack Spacing="1">
+        <MudText Typo="Typo.h4" Class="page-title-accent">Добро пожаловать</MudText>
+        <MudText Typo="Typo.body1" Style="color:var(--lh-grey-dark); max-width:600px; margin-top:12px;">
+            Система учёта медицинских исследований. Выберите раздел в меню для начала работы.
+        </MudText>
+    </MudStack>
+
+    <MudGrid Spacing="4">
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-5" Elevation="0" Style="border-left: 3px solid var(--lh-gold); min-height:120px;">
+                <MudStack Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Science" Size="Size.Large" Style="color:var(--lh-navy);" />
+                    <MudText Typo="Typo.h6">Исследования</MudText>
+                    <MudText Typo="Typo.body2" Style="color:var(--lh-grey-dark);">
+                        Просмотр, добавление и редактирование медицинских исследований
+                    </MudText>
+                    <MudButton Href="/medical-tests" Variant="Variant.Text" Color="Color.Primary"
+                               EndIcon="@Icons.Material.Filled.ArrowForward" Style="align-self:flex-start;">
+                        Перейти
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-5" Elevation="0" Style="border-left: 3px solid var(--lh-grey-light); min-height:120px;">
+                <MudStack Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Assessment" Size="Size.Large" Style="color:var(--lh-grey-mid);" />
+                    <MudText Typo="Typo.h6">Отчёты</MudText>
+                    <MudText Typo="Typo.body2" Style="color:var(--lh-grey-dark);">
+                        Статистика и аналитика по проведённым исследованиям
+                    </MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" Disabled="true"
+                               Style="align-self:flex-start;">
+                        Скоро
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-5" Elevation="0" Style="border-left: 3px solid var(--lh-grey-light); min-height:120px;">
+                <MudStack Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Large" Style="color:var(--lh-grey-mid);" />
+                    <MudText Typo="Typo.h6">Настройки</MudText>
+                    <MudText Typo="Typo.body2" Style="color:var(--lh-grey-dark);">
+                        Управление справочниками и параметрами системы
+                    </MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" Disabled="true"
+                               Style="align-self:flex-start;">
+                        Скоро
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudStack>

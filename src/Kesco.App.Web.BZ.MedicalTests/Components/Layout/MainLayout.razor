@@ -1,0 +1,83 @@
+@inherits LayoutComponentBase
+@using Kesco.Lib.Web.BZ.Controls.Themes
+@using Kesco.Lib.Web.Settings
+
+@inject KescoAppSettings AppSettings
+@inject IHttpContextAccessor HttpContextAccessor
+
+<MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Dense="true">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                       Color="Color.Inherit"
+                       Edge="Edge.Start"
+                       OnClick="@ToggleDrawer" />
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Size="Size.Medium" />
+            <MudText Typo="Typo.h6" Style="font-weight:700; letter-spacing:0.04em;">
+                @AppSettings.ApplicationName.ToUpper()
+            </MudText>
+        </MudStack>
+        <MudSpacer />
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+            <MudText Typo="Typo.body2" Style="opacity:0.85;">@_userName</MudText>
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-2" Style="border-color:rgba(255,255,255,0.2);" />
+            <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                           Color="Color.Inherit"
+                           Size="Size.Small"
+                           OnClick="@(() => _isDarkMode = !_isDarkMode)" />
+        </MudStack>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" Variant="DrawerVariant.Mini" OpenMiniOnHover="true">
+        <MudDrawerHeader Dense="true" Class="py-4">
+            <MudText Typo="Typo.body2"
+                     Style="color:rgba(255,173,0,0.9); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; font-size:0.7rem;">
+                Навигация
+            </MudText>
+        </MudDrawerHeader>
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All"
+                        Icon="@Icons.Material.Filled.Dashboard"
+                        IconColor="Color.Inherit">
+                Главная
+            </MudNavLink>
+            <MudNavLink Href="/medical-tests" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.Science"
+                        IconColor="Color.Inherit">
+                Мед. исследования
+            </MudNavLink>
+        </MudNavMenu>
+
+        <MudSpacer />
+
+        <MudStack Class="pa-3" Style="opacity:0.4;">
+            <MudText Typo="Typo.caption" Style="color:#8A93A8; font-size:0.65rem;">
+                Kesco BZ v1.0
+            </MudText>
+        </MudStack>
+    </MudDrawer>
+
+    <MudMainContent Class="pa-6">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private MudTheme _theme = KescoTheme.Create();
+    private bool _isDarkMode;
+    private bool _drawerOpen = true;
+    private string _userName = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        _userName = HttpContextAccessor.HttpContext?.User?.Identity?.Name ?? "Аноним";
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+}

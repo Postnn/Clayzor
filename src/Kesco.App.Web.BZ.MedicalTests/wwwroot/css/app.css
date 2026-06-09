@@ -1,0 +1,158 @@
+/* ═══════════════════════════════════════════════════
+   Kesco BZ — Lufthansa-inspired corporate style
+   Deep navy, gold accents, clean whites, sharp edges
+   ═══════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --lh-navy: #05164D;
+    --lh-navy-light: #0A1D3D;
+    --lh-gold: #FFAD00;
+    --lh-gold-dark: #E69C00;
+    --lh-white: #FFFFFF;
+    --lh-offwhite: #F7F8FA;
+    --lh-grey-light: #EBEDF0;
+    --lh-grey-mid: #9B9B9B;
+    --lh-grey-dark: #4A4A4A;
+}
+
+html, body {
+    font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+#blazor-error-ui {
+    display: none;
+}
+
+/* ── App Bar ── */
+.mud-appbar {
+    border-bottom: 3px solid var(--lh-gold) !important;
+    letter-spacing: 0.02em;
+}
+
+/* ── Drawer / Sidebar ── */
+.mud-drawer {
+    border-right: none !important;
+}
+
+.mud-nav-link {
+    border-radius: 0 !important;
+    margin: 0 !important;
+    border-left: 3px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.mud-nav-link:hover {
+    background-color: rgba(255, 173, 0, 0.08) !important;
+    border-left-color: var(--lh-gold) !important;
+}
+
+.mud-nav-link.active {
+    background-color: rgba(255, 173, 0, 0.12) !important;
+    border-left-color: var(--lh-gold) !important;
+    color: var(--lh-gold) !important;
+}
+
+/* ── Buttons ── */
+.mud-button-filled.mud-button-filled-primary {
+    background-color: var(--lh-navy) !important;
+    transition: background-color 0.15s ease;
+}
+
+.mud-button-filled.mud-button-filled-primary:hover {
+    background-color: #0A1D6B !important;
+}
+
+.mud-button-filled.mud-button-filled-secondary {
+    background-color: var(--lh-gold) !important;
+    color: var(--lh-navy) !important;
+    font-weight: 700;
+}
+
+.mud-button-filled.mud-button-filled-secondary:hover {
+    background-color: var(--lh-gold-dark) !important;
+}
+
+/* ── Data Grid & Tables ── */
+.mud-table-row {
+    cursor: pointer;
+}
+
+.mud-table .mud-table-head .mud-table-cell {
+    background-color: var(--lh-navy) !important;
+    color: var(--lh-white) !important;
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--lh-gold) !important;
+}
+
+.mud-table .mud-table-body .mud-table-row:hover {
+    background-color: rgba(5, 22, 77, 0.04) !important;
+}
+
+/* ── Paper / Cards ── */
+.mud-paper {
+    border-radius: 2px !important;
+    border: 1px solid var(--lh-grey-light);
+}
+
+/* ── Inputs ── */
+.mud-input-outlined .mud-input-outlined-border {
+    border-radius: 2px !important;
+}
+
+.mud-input.mud-input-underline:after {
+    border-bottom-color: var(--lh-navy) !important;
+}
+
+/* ── Dialog ── */
+.mud-dialog .mud-dialog-title {
+    background-color: var(--lh-navy);
+    color: var(--lh-white);
+    padding: 16px 24px;
+}
+
+.mud-dialog {
+    border-radius: 2px !important;
+    overflow: hidden;
+}
+
+/* ── Chips & Badges ── */
+.mud-chip.mud-chip-filled.mud-primary {
+    background-color: var(--lh-navy) !important;
+}
+
+/* ── Scrollbar (webkit) ── */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--lh-offwhite);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--lh-grey-mid);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--lh-grey-dark);
+}
+
+/* ── Main content offset for fixed AppBar ── */
+.mud-main-content {
+    padding-top: 68px !important;
+}
+
+/* ── Gold accent underline on page titles ── */
+.page-title-accent {
+    display: inline-block;
+    padding-bottom: 8px;
+    border-bottom: 3px solid var(--lh-gold);
+}
