@@ -1,6 +1,7 @@
 using System.Data;
-using Microsoft.Data.SqlClient;
+using System.Reflection;
 using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace Kesco.Lib.DALC;
 
@@ -8,20 +9,29 @@ namespace Kesco.Lib.DALC;
 /// Менеджер подключения к SQL Server через Dapper.
 /// Управляет ленивым открытием <see cref="SqlConnection"/> и предоставляет методы для выполнения запросов.
 /// Регистрируется как Scoped (одно подключение на HTTP-запрос).
+/// При возникновении <see cref="SqlException"/> автоматически передаёт ошибку в <see cref="ISqlErrorHandler"/>.
 /// </summary>
 public class DbManager : IDisposable
 {
     private readonly string _connectionString;
+    private readonly ISqlErrorHandler? _errorHandler;
     private SqlConnection? _connection;
 
     /// <summary>
     /// Создаёт экземпляр <see cref="DbManager"/> с указанной строкой подключения.
     /// </summary>
     /// <param name="connectionString">Строка подключения к SQL Server.</param>
-    public DbManager(string connectionString)
+    /// <param name="errorHandler">Обработчик ошибок SQL (опционально).</param>
+    public DbManager(string connectionString, ISqlErrorHandler? errorHandler = null)
     {
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+        _errorHandler = errorHandler;
     }
+
+    /// <summary>
+    /// Строка подключения к SQL Server.
+    /// </summary>
+    public string ConnectionString => _connectionString;
 
     /// <summary>
     /// Ленивое подключение к SQL Server. Открывается при первом обращении, повторно используется в рамках скоупа.
@@ -41,52 +51,90 @@ public class DbManager : IDisposable
     /// <summary>
     /// Выполняет хранимую процедуру и возвращает коллекцию сущностей.
     /// </summary>
-    /// <typeparam name="T">Тип сущности.</typeparam>
-    /// <param name="storedProcName">Имя хранимой процедуры.</param>
-    /// <param name="parameters">Параметры запроса (анонимный объект или <see cref="Dapper.DynamicParameters"/>).</param>
-    /// <param name="commandTimeout">Таймаут команды (сек).</param>
-    /// <returns>Коллекция сущностей типа <typeparamref name="T"/>.</returns>
     public async Task<IEnumerable<T>> QueryStoredProcAsync<T>(string storedProcName, object? parameters = null, int? commandTimeout = null)
     {
-        return await Connection.QueryAsync<T>(storedProcName, parameters, commandType: CommandType.StoredProcedure, commandTimeout: commandTimeout);
+        try
+        {
+            return await Connection.QueryAsync<T>(storedProcName, parameters, commandType: CommandType.StoredProcedure, commandTimeout: commandTimeout);
+        }
+        catch (SqlException ex)
+        {
+            _errorHandler?.HandleSqlError(ex, _connectionString, storedProcName, ExtractParams(parameters));
+            throw;
+        }
     }
 
     /// <summary>
     /// Выполняет raw SQL-запрос на выборку и возвращает коллекцию сущностей.
     /// </summary>
-    /// <typeparam name="T">Тип сущности.</typeparam>
-    /// <param name="sql">SQL-запрос (SELECT).</param>
-    /// <param name="parameters">Параметры запроса (анонимный объект или <see cref="Dapper.DynamicParameters"/>).</param>
-    /// <param name="commandTimeout">Таймаут команды (сек).</param>
-    /// <returns>Коллекция сущностей типа <typeparamref name="T"/>.</returns>
     public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null)
     {
-        return await Connection.QueryAsync<T>(sql, parameters, commandTimeout: commandTimeout);
+        try
+        {
+            return await Connection.QueryAsync<T>(sql, parameters, commandTimeout: commandTimeout);
+        }
+        catch (SqlException ex)
+        {
+            _errorHandler?.HandleSqlError(ex, _connectionString, sql, ExtractParams(parameters));
+            throw;
+        }
     }
 
     /// <summary>
     /// Выполняет хранимую процедуру и возвращает скалярное значение.
     /// </summary>
-    /// <typeparam name="T">Тип возвращаемого значения.</typeparam>
-    /// <param name="storedProcName">Имя хранимой процедуры.</param>
-    /// <param name="parameters">Параметры запроса.</param>
-    /// <param name="commandType">Тип команды (по умолчанию StoredProcedure).</param>
-    /// <returns>Значение типа <typeparamref name="T"/> или default.</returns>
     public async Task<T?> ExecuteScalarAsync<T>(string storedProcName, object? parameters = null, CommandType commandType = CommandType.StoredProcedure)
     {
-        return await Connection.ExecuteScalarAsync<T>(storedProcName, parameters, commandType: commandType);
+        try
+        {
+            return await Connection.ExecuteScalarAsync<T>(storedProcName, parameters, commandType: commandType);
+        }
+        catch (SqlException ex)
+        {
+            _errorHandler?.HandleSqlError(ex, _connectionString, storedProcName, ExtractParams(parameters));
+            throw;
+        }
     }
 
     /// <summary>
     /// Выполняет команду (INSERT, UPDATE, DELETE) или хранимую процедуру.
     /// </summary>
-    /// <param name="storedProcName">SQL-запрос или имя хранимой процедуры.</param>
-    /// <param name="parameters">Параметры запроса.</param>
-    /// <param name="commandType">Тип команды (по умолчанию StoredProcedure).</param>
-    /// <returns>Количество затронутых строк.</returns>
     public async Task<int> ExecuteAsync(string storedProcName, object? parameters = null, CommandType commandType = CommandType.StoredProcedure)
     {
-        return await Connection.ExecuteAsync(storedProcName, parameters, commandType: commandType);
+        try
+        {
+            return await Connection.ExecuteAsync(storedProcName, parameters, commandType: commandType);
+        }
+        catch (SqlException ex)
+        {
+            _errorHandler?.HandleSqlError(ex, _connectionString, storedProcName, ExtractParams(parameters));
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Извлекает список параметров (имя, значение) из объекта параметров Dapper.
+    /// </summary>
+    private static IReadOnlyList<(string Name, object? Value)> ExtractParams(object? parameters)
+    {
+        if (parameters is null)
+            return [];
+
+        if (parameters is DynamicParameters dp)
+        {
+            var list = new List<(string, object?)>();
+            foreach (var name in dp.ParameterNames)
+            {
+                var value = dp.Get<object?>(name);
+                list.Add((name, value));
+            }
+            return list;
+        }
+
+        return parameters.GetType()
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Select(p => (p.Name, p.GetValue(parameters)))
+            .ToList();
     }
 
     /// <summary>

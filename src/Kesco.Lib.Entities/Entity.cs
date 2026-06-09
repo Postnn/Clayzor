@@ -1,4 +1,5 @@
 using System.Data;
+using Dapper;
 using Kesco.Lib.DALC;
 
 namespace Kesco.Lib.Entities;
@@ -53,6 +54,7 @@ public abstract class Entity
 
     /// <summary>
     /// Выполняет SELECT с постраничной выборкой через OFFSET/FETCH.
+    /// Параметры offset/fetch передаются как @__offset и @__fetch — без подстановки значений в SQL.
     /// </summary>
     protected static async Task<IEnumerable<T>> GetPagedAsync<T>(
         DbManager db, string selectSql,
@@ -65,8 +67,15 @@ public abstract class Entity
             sql += $" WHERE {whereClause}";
         if (orderByClause is not null)
             sql += $" ORDER BY {orderByClause}";
-        sql += $" OFFSET {(pageNumber - 1) * pageSize} ROWS FETCH NEXT {pageSize} ROWS ONLY";
-        return await db.QueryAsync<T>(sql, param);
+        sql += " OFFSET @__offset ROWS FETCH NEXT @__fetch ROWS ONLY";
+
+        var parameters = new DynamicParameters();
+        if (param is not null)
+            parameters.AddDynamicParams(param);
+        parameters.Add("__offset", (pageNumber - 1) * pageSize);
+        parameters.Add("__fetch", pageSize);
+
+        return await db.QueryAsync<T>(sql, parameters);
     }
 
     /// <summary>

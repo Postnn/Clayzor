@@ -1,6 +1,7 @@
 using Kesco.App.Web.BZ.MedicalTests.Components;
 using Kesco.Lib.DALC;
 using Kesco.Lib.Entities.MedicalTests;
+using Kesco.Lib.Web.BZ.Controls;
 using Kesco.Lib.Web.Settings;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using MudBlazor.Extensions;
@@ -17,8 +18,12 @@ builder.Services.AddSingleton(kescoSettings);
 // Dapper column mapping
 DapperColumnMapper.Initialize();
 
-// DALC: scoped (одно подключение на запрос)
-builder.Services.AddScoped<DbManager>(_ => new DbManager(kescoSettings.ConnectionString));
+// Сервис глобального отображения ошибок
+builder.Services.AddScoped<KescoErrorService>();
+builder.Services.AddScoped<ISqlErrorHandler>(sp => sp.GetRequiredService<KescoErrorService>());
+
+// DALC: scoped (одно подключение на запрос) — внедряем ISqlErrorHandler
+builder.Services.AddScoped<DbManager>(sp => new DbManager(kescoSettings.ConnectionString, sp.GetRequiredService<ISqlErrorHandler>()));
 
 // Аутентификация: Windows (Kerberos/NTLM)
 builder.Services.AddAuthentication(NegotiateDefaults.AuthenticationScheme)

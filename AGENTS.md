@@ -84,9 +84,17 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoDataList\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой | [docs/kesco-data-list.md](docs/kesco-data-list.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
+| **KescoErrorBar** — баннер ошибок БД с детализацией (SQL, параметры) | [docs/kesco-error-bar.md](docs/kesco-error-bar.md) |
 | **ConfirmDialog** — диалог подтверждения | [docs/confirm-dialog.md](docs/confirm-dialog.md) |
 | **ILookupEntity** — интерфейс справочной сущности (`int Id`, `string Name`) | [docs/entity-crud.md](docs/entity-crud.md) |
 | **KescoTheme** — corporate theme (DarkNavy + Gold accent). Applied in MainLayout | — |
+
+### Services
+
+| Сервис | Назначение |
+|---|---|
+| **KescoErrorService** (Scoped) — хранит состояние последней ошибки SQL, реализует `ISqlErrorHandler`. Используется `KescoErrorBar` |
+| **ISqlErrorHandler** (DALC) — интерфейс, вызываемый `DbManager` при `SqlException`. Регистрируется в DI |
 
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**
@@ -97,7 +105,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - Each SQL constant must be documented with `///` XML doc and `--` inline SQL comments for every column
 - Every public/protected class, method, property, and field must have a `/// <summary>` XML doc comment
 - Database column names are defined exactly once in `ColumnNames.cs` and referenced from `[Column]` attributes (SQLQueries constants are exempt)
-- Grouping column must be hidden when grouping is active — add `Hidden="@_dataGrid?.GroupEnabled ?? false)"` on the `PropertyColumn` used for grouping
+- Grouping column must be hidden when grouping is active — add `Hidden="@(_dataGrid?.GroupColumns.Contains("SqlColumn") ?? false)"` on the `PropertyColumn` used for grouping. Drag-and-drop column headers must have `draggable="true"` with `@ondragstart` setting `KescoDragState.DraggedColumn`
+- **Multi-level grouping order** must be declared via `GroupByOrder="@(_dataGrid?.GetGroupByOrder("SqlColumn") ?? 0)"` on every groupable `PropertyColumn`. `KescoDataList.GetGroupByOrder(sqlCol)` returns the column's index in `_groupColumns` (0 = outermost). Without this binding MudBlazor uses DOM order, not tray order. Never use `@key` or reflection to fix group order — the declarative binding is the only correct approach
 - Data loading goes in `OnAfterRenderAsync(bool firstRender)` with `if (firstRender)` guard, **not** in `OnInitializedAsync` — avoids double-load from Blazor prerendering
 - Sorting, searching, grouping, and **pagination** for data grids must be performed on SQL Server side (not in-memory) — use `GetPagedAsync` + `GetCountAsync`
 - Sort column headers use null-conditional `_dataGrid?.ToggleSort("SqlColumn")` — `_dataGrid` is set via `@ref` on `KescoDataList`
@@ -107,3 +116,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - При вызове `Db.ExecuteAsync()` с сырым SQL обязательно передавать `commandType: CommandType.Text` — по умолчанию `ExecuteAsync` использует `CommandType.StoredProcedure`
 - `DapperColumnMapper` делает fallback на имя свойства, если `[Column]`-атрибут не совпал с колонкой результата — это позволяет использовать SQL-алиасы (`SELECT КодТипа AS Id`) даже при наличии `[Column("КодТипа")]` на свойстве `Id`
 - **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере
+- **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). OFFSET/FETCH передаются как `@__offset`/`@__fetch` через `DynamicParameters`
+- **Обработка ошибок БД**: `DbManager` автоматически перехватывает `SqlException` и вызывает `ISqlErrorHandler.HandleSqlError()`. Страницам **не нужно** вызывать `ErrorService.Report()` вручную — только `try/finally` для `_loading = false`. Баннер `KescoErrorBar` в `MainLayout` показывает ошибку со строкой подключения, SQL и параметрами
+- **Grouping tray**: заголовки колонок должны быть `draggable="true"` с `@ondragstart`, устанавливающим `KescoDragState.DraggedColumn`. При перетаскивании на панель группировки колонка добавляется автоматически. Сортировка по сгруппированным колонкам разрешена
+- `Program.cs` регистрирует `KescoErrorService` как Scoped и как `ISqlErrorHandler`, передаёт `ISqlErrorHandler` в конструктор `DbManager`

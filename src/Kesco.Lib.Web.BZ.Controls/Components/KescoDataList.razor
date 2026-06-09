@@ -36,11 +36,68 @@
         </MudStack>
     }
 
+    @if (ShowGroupingTray)
+    {
+        <div class="grouping-tray d-flex align-items-center flex-wrap gap-2 mb-2"
+             @ondragover="OnTrayDragOver"
+             @ondragover:preventDefault="true"
+             @ondrop="@(e => OnTrayDrop(e, -1))">
+            <MudText Typo="Typo.body2" Class="mr-1">Группировка:</MudText>
+            @for (int i = 0; i < _groupColumns.Count; i++)
+            {
+                var idx = i;
+                var col = _groupColumns[i];
+                var displayName = AvailableGroupColumns.FirstOrDefault(kvp => kvp.Value == col).Key ?? col;
+                <div class="grouping-chip"
+                     draggable="true"
+                     @ondragstart="@(e => OnChipDragStart(e, idx))"
+                     @ondragend="OnChipDragEnd"
+                     @ondragover="OnTrayDragOver"
+                     @ondragover:preventDefault="true"
+                     @ondrop="@(e => OnTrayDrop(e, idx))">
+                    <span class="chip-label" @onclick="() => ToggleSort(col)" @onclick:stopPropagation="true">@displayName</span>
+                    @GetSortBadge(col)
+                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                   Size="Size.Small"
+                                   OnClick="() => RemoveGroupColumn(col)"
+                                   Class="chip-remove-btn pa-0"
+                                   Style="width:18px;height:18px" />
+                </div>
+            }
+            @if (_groupColumns.Count < AvailableGroupColumns.Count)
+            {
+                <MudMenu Variant="Variant.Outlined"
+                         Size="Size.Small"
+                         AnchorOrigin="Origin.BottomCenter"
+                         TransformOrigin="Origin.TopCenter">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Outlined"
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Style="text-transform:none">
+                            Колонка
+                        </MudButton>
+                    </ActivatorContent>
+                    <ChildContent>
+                        @foreach (var kvp in AvailableGroupColumns)
+                        {
+                            if (!_groupColumns.Contains(kvp.Value))
+                            {
+                                <MudMenuItem OnClick="() => AddGroupColumn(kvp.Value)">@kvp.Key</MudMenuItem>
+                            }
+                        }
+                    </ChildContent>
+                </MudMenu>
+            }
+        </div>
+    }
+
     <MudDataGrid T="TEntity"
+                 @ref="_mudGrid"
                  Items="@Items"
                  Filterable="false"
                  SortMode="SortMode.Multiple"
-                 Groupable="@Groupable"
+                 Groupable="@(ShowGroupingTray ? _groupColumns.Count > 0 : Groupable)"
                  GroupExpanded="@GroupExpanded"
                  FixedHeader="true"
                  Height="calc(100vh - 310px)"
@@ -78,10 +135,12 @@
 @code {
     private string? _searchText;
     private bool _groupEnabled;
+    private List<string> _groupColumns = [];
+    private int _dragSourceIndex = -1;
     private List<SortColumn> _sortState = [];
     private int _pageNumber = 1;
     private int _pageSize;
-
+    private MudDataGrid<TEntity> _mudGrid = default!;
     [Parameter] public string Title { get; set; } = "Список";
     [Parameter] public IEnumerable<TEntity> Items { get; set; } = [];
     [Parameter] public bool Loading { get; set; }
@@ -95,12 +154,15 @@
     [Parameter] public string? GroupColumn { get; set; }
     [Parameter] public bool ShowGroupToggle { get; set; }
     [Parameter] public string GroupToggleLabel { get; set; } = "Группировать";
+    [Parameter] public bool ShowGroupingTray { get; set; }
+    [Parameter] public Dictionary<string, string> AvailableGroupColumns { get; set; } = [];
     [Parameter] public EventCallback<KescoDataQuery> OnQueryChanged { get; set; }
     [Parameter] public int TotalCount { get; set; }
     [Parameter] public bool ShowPagination { get; set; } = true;
     [Parameter] public bool AllowColumnReorder { get; set; } = true;
 
     public bool GroupEnabled => _groupEnabled;
+    public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
     private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
 
@@ -115,11 +177,20 @@
             _pageNumber = _totalPages;
     }
 
+    /// <summary>
+    /// Возвращает порядок группировки для указанной SQL-колонки.
+    /// Используется в биндинге <c>GroupByOrder</c> на колонках грида:
+    /// <c>GroupByOrder="@(_dataGrid?.GetGroupByOrder("SqlCol") ?? 0)"</c>.
+    /// Меньшее значение = внешний уровень группировки.
+    /// </summary>
+    public int GetGroupByOrder(string sqlColumn)
+    {
+        var idx = _groupColumns.IndexOf(sqlColumn);
+        return idx < 0 ? 0 : idx;
+    }
+
     public void ToggleSort(string column)
     {
-        if (_groupEnabled && column == GroupColumn)
-            return;
-
         var idx = _sortState.FindIndex(s => s.Column == column);
         if (idx >= 0)
         {
@@ -165,6 +236,72 @@
     private async Task OnGroupToggleChanged()
     {
         _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private async Task AddGroupColumn(string column)
+    {
+        if (_groupColumns.Contains(column))
+            return;
+        _groupColumns.Add(column);
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private async Task RemoveGroupColumn(string column)
+    {
+        _groupColumns.Remove(column);
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    private void OnChipDragStart(DragEventArgs e, int index)
+    {
+        e.DataTransfer.EffectAllowed = "move";
+        _dragSourceIndex = index;
+    }
+
+    private void OnChipDragEnd()
+    {
+        _dragSourceIndex = -1;
+    }
+
+    private void OnTrayDragOver(DragEventArgs e)
+    {
+        e.DataTransfer.DropEffect = "move";
+    }
+
+    private async Task OnTrayDrop(DragEventArgs e, int targetIndex)
+    {
+        var draggedData = KescoDragState.DraggedColumn;
+        KescoDragState.DraggedColumn = null;
+
+        if (!string.IsNullOrEmpty(draggedData) && AvailableGroupColumns.ContainsValue(draggedData) && !_groupColumns.Contains(draggedData))
+        {
+            _groupColumns.Add(draggedData);
+            _dragSourceIndex = -1;
+            _pageNumber = 1;
+            StateHasChanged();
+            await NotifyQueryChanged();
+            return;
+        }
+
+        if (_dragSourceIndex < 0 || _dragSourceIndex >= _groupColumns.Count)
+            return;
+
+        var item = _groupColumns[_dragSourceIndex];
+        _groupColumns.RemoveAt(_dragSourceIndex);
+
+        if (targetIndex < 0 || targetIndex >= _groupColumns.Count + 1)
+            _groupColumns.Add(item);
+        else if (targetIndex > _dragSourceIndex)
+            _groupColumns.Insert(targetIndex - 1, item);
+        else
+            _groupColumns.Insert(targetIndex, item);
+
+        _dragSourceIndex = -1;
+        _pageNumber = 1;
+        StateHasChanged();
         await NotifyQueryChanged();
     }
 
@@ -214,8 +351,8 @@
         var query = new KescoDataQuery
         {
             SearchText = _searchText,
-            GroupEnabled = _groupEnabled,
-            GroupColumn = GroupColumn,
+            GroupEnabled = ShowGroupingTray ? _groupColumns.Count > 0 : _groupEnabled,
+            GroupColumns = _groupColumns.ToList(),
             SortColumns = _sortState.ToList(),
             PageNumber = _pageNumber,
             PageSize = _pageSize

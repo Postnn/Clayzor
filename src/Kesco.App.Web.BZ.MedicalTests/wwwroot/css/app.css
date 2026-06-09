@@ -156,3 +156,55 @@ html, body {
     padding-bottom: 8px;
     border-bottom: 3px solid var(--lh-gold);
 }
+
+/* ── Grouping Tray (KescoDataList drag‑and‑drop) ── */
+.grouping-tray {
+    min-height: 36px;
+    padding: 6px 8px;
+    border: 1px dashed var(--lh-grey-mid);
+    border-radius: 4px;
+    background: var(--lh-offwhite);
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.grouping-tray.drag-over {
+    border-color: var(--lh-gold);
+    background: rgba(255, 173, 0, 0.06);
+}
+
+.grouping-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 4px 2px 10px;
+    background: var(--lh-navy);
+    color: var(--lh-white);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 0.15s, opacity 0.15s;
+}
+
+.grouping-chip:active {
+    cursor: grabbing;
+}
+
+.grouping-chip.drag-over {
+    box-shadow: 0 0 0 2px var(--lh-gold);
+}
+
+.chip-label {
+    pointer-events: none;
+}
+
+.chip-remove-btn {
+    color: var(--lh-white) !important;
+    opacity: 0.75;
+}
+
+.chip-remove-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.15) !important;
+}

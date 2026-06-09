@@ -20,8 +20,23 @@ public sealed class KescoDataQuery
     /// <summary>Включена ли группировка данных.</summary>
     public bool GroupEnabled { get; set; }
 
-    /// <summary>SQL-имя колонки, по которой выполняется группировка.</summary>
-    public string? GroupColumn { get; set; }
+    /// <summary>SQL-имена колонок, по которым выполняется группировка (в порядке приоритета).</summary>
+    public List<string> GroupColumns { get; set; } = [];
+
+    /// <summary>
+    /// SQL-имя первой колонки группировки. Удобство для обратной совместимости
+    /// со старым режимом одиночной группировки через <c>GroupColumn</c>.
+    /// </summary>
+    public string? GroupColumn
+    {
+        get => GroupColumns.Count > 0 ? GroupColumns[0] : null;
+        set
+        {
+            GroupColumns.Clear();
+            if (value is not null)
+                GroupColumns.Add(value);
+        }
+    }
 
     /// <summary>Список колонок сортировки в порядке приоритета.</summary>
     public List<SortColumn> SortColumns { get; set; } = [];
@@ -46,18 +61,32 @@ public sealed class KescoDataQuery
     {
         var clauses = new List<string>();
 
-        if (GroupEnabled && GroupColumn is not null)
-            clauses.Add(GroupColumn);
+        if (GroupEnabled && GroupColumns.Count > 0)
+        {
+            foreach (var gc in GroupColumns)
+            {
+                var sortCol = SortColumns.Find(s => s.Column == gc);
+                if (sortCol is not null)
+                    clauses.Add($"{gc} {(sortCol.Desc ? "DESC" : "ASC")}");
+                else
+                    clauses.Add(gc);
+            }
+        }
 
         if (SortColumns.Count == 0)
         {
-            clauses.AddRange(defaultOrder.Split(", ", StringSplitOptions.RemoveEmptyEntries));
+            foreach (var col in defaultOrder.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (GroupEnabled && GroupColumns.Contains(col))
+                    continue;
+                clauses.Add(col);
+            }
         }
         else
         {
             foreach (var s in SortColumns)
             {
-                if (GroupEnabled && s.Column == GroupColumn)
+                if (GroupEnabled && GroupColumns.Contains(s.Column))
                     continue;
                 clauses.Add($"{s.Column} {(s.Desc ? "DESC" : "ASC")}");
             }

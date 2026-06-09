@@ -7,6 +7,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject KescoAppSettings AppSettings
+@inject KescoErrorService ErrorService
 
 <PageTitle>Медицинские исследования</PageTitle>
 
@@ -16,19 +17,26 @@
                Items="_tests"
                Loading="_loading"
                PageSize="@AppSettings.DefaultPageSize"
-               GroupColumn="TestTypeName"
-               ShowGroupToggle="true"
-               GroupToggleLabel="Группировать по типу"
-               Groupable="_dataGrid?.GroupEnabled ?? false"
+               ShowGroupingTray="true"
+               AvailableGroupColumns="@_groupColumnsDef"
+               Groupable="@(_dataGrid?.GroupColumns.Count > 0)"
                TotalCount="@_query.TotalCount"
                ShowPagination="true"
                OnAdd="OpenAddDialog"
                OnRowClick="OnRowClicked"
                OnQueryChanged="OnQueryChanged">
-    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Id" Sortable="false">
+    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Id" Sortable="false"
+                    Title="Код"
+                    Groupable="true"
+                    Grouping="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)"
+                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("КодМедицинскогоАнализа") ?? 0)"
+                    GroupBy="@(x => x.Id)">
         <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 @onclick="@(() => _dataGrid?.ToggleSort("КодМедицинскогоАнализа"))">
+             <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                  draggable="true"
+                  @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "КодМедицинскогоАнализа"; })"
+                  @onclick="@(() => _dataGrid?.ToggleSort("КодМедицинскогоАнализа"))">
                 <MudText Style="flex:1;text-align:center">Код</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -36,11 +44,24 @@
                 }
             </div>
         </HeaderTemplate>
+        <GroupTemplate>
+            <MudText Typo="Typo.body1" Style="font-weight:600">
+                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
+            </MudText>
+        </GroupTemplate>
     </PropertyColumn>
-    <PropertyColumn T="MedicalTest" TProperty="string" Property="x => x.Name" Sortable="false">
+    <PropertyColumn T="MedicalTest" TProperty="string" Property="x => x.Name" Sortable="false"
+                    Title="Название"
+                    Groupable="true"
+                    Grouping="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)"
+                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("НазваниеАнализа") ?? 0)"
+                    GroupBy="@(x => x.Name ?? "")">
         <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 @onclick="@(() => _dataGrid?.ToggleSort("НазваниеАнализа"))">
+             <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                  draggable="true"
+                  @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "НазваниеАнализа"; })"
+                  @onclick="@(() => _dataGrid?.ToggleSort("НазваниеАнализа"))">
                 <MudText Style="flex:1;text-align:center">Название</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -48,15 +69,24 @@
                 }
             </div>
         </HeaderTemplate>
+        <GroupTemplate>
+            <MudText Typo="Typo.body1" Style="font-weight:600">
+                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
+            </MudText>
+        </GroupTemplate>
     </PropertyColumn>
     <PropertyColumn T="MedicalTest" TProperty="string" Property="x => x.TestTypeName" Sortable="false"
-                    Hidden="@(_dataGrid?.GroupEnabled ?? false)"
+                    Title="Тип"
                     Groupable="true"
-                    Grouping="@(_dataGrid?.GroupEnabled ?? false)"
+                    Grouping="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)"
+                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("TestTypeName") ?? 0)"
                     GroupBy="@(x => x.TestTypeName ?? "")">
         <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 @onclick="@(() => _dataGrid?.ToggleSort("TestTypeName"))">
+             <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                  draggable="true"
+                  @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "TestTypeName"; })"
+                  @onclick="@(() => _dataGrid?.ToggleSort("TestTypeName"))">
                 <MudText Style="flex:1;text-align:center">Тип</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -70,10 +100,18 @@
             </MudText>
         </GroupTemplate>
     </PropertyColumn>
-    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Order" Sortable="false">
+    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Order" Sortable="false"
+                    Title="Порядок"
+                    Groupable="true"
+                    Grouping="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)"
+                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("Порядок") ?? 0)"
+                    GroupBy="@(x => x.Order)">
         <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 @onclick="@(() => _dataGrid?.ToggleSort("Порядок"))">
+             <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                  draggable="true"
+                  @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "Порядок"; })"
+                  @onclick="@(() => _dataGrid?.ToggleSort("Порядок"))">
                 <MudText Style="flex:1;text-align:center">Порядок</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -81,6 +119,11 @@
                 }
             </div>
         </HeaderTemplate>
+        <GroupTemplate>
+            <MudText Typo="Typo.body1" Style="font-weight:600">
+                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
+            </MudText>
+        </GroupTemplate>
     </PropertyColumn>
     <TemplateColumn T="MedicalTest" Title="Группа">
         <CellTemplate>
@@ -102,6 +145,14 @@
     private KescoDataList<MedicalTest> _dataGrid = null!;
     private KescoDataQuery _query = new();
 
+    private Dictionary<string, string> _groupColumnsDef = new()
+    {
+        ["Тип"] = "TestTypeName",
+        ["Код"] = "КодМедицинскогоАнализа",
+        ["Название"] = "НазваниеАнализа",
+        ["Порядок"] = "Порядок"
+    };
+
     private List<MedicalTest> _tests = [];
     private bool _loading = true;
 
@@ -109,7 +160,7 @@
     {
         _query.SearchText = query.SearchText;
         _query.GroupEnabled = query.GroupEnabled;
-        _query.GroupColumn = query.GroupColumn;
+        _query.GroupColumns = query.GroupColumns;
         _query.SortColumns = query.SortColumns;
         _query.PageNumber = query.PageNumber;
         _query.PageSize = query.PageSize;
@@ -128,22 +179,23 @@
     private async Task LoadData()
     {
         _loading = true;
+        var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
+        var where = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
+        var param = new { search = $"%{_query.SearchText}%" };
+
         try
         {
-            var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
-            var where = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
-            var param = new { search = $"%{_query.SearchText}%" };
-
             _query.TotalCount = await MedicalTest.GetCountAsync(Db, where, param);
             _tests = (await MedicalTest.GetPagedAsync(Db, where, orderBy, param, _query.PageNumber, _query.PageSize)).ToList();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Snackbar.Add($"Ошибка загрузки: {ex.Message}", Severity.Error);
+            // DbManager уже передал ошибку в KescoErrorService через ISqlErrorHandler
         }
         finally
         {
             _loading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
