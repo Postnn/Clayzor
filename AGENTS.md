@@ -118,5 +118,10 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере
 - **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). OFFSET/FETCH передаются как `@__offset`/`@__fetch` через `DynamicParameters`
 - **Обработка ошибок БД**: `DbManager` автоматически перехватывает `SqlException` и вызывает `ISqlErrorHandler.HandleSqlError()`. Страницам **не нужно** вызывать `ErrorService.Report()` вручную — только `try/finally` для `_loading = false`. Баннер `KescoErrorBar` в `MainLayout` показывает ошибку со строкой подключения, SQL и параметрами
-- **Grouping tray**: заголовки колонок должны быть `draggable="true"` с `@ondragstart`, устанавливающим `KescoDragState.DraggedColumn`. При перетаскивании на панель группировки колонка добавляется автоматически. Сортировка по сгруппированным колонкам разрешена
+- **Grouping tray**: заголовки колонок должны быть `draggable="true"` с `@ondragstart`,
+  устанавливающим `KescoDragState.DraggedColumn`. При перетаскивании на панель группировки колонка
+  добавляется автоматически. Сортировка по сгруппированным колонкам разрешена. Панель скрыта по
+  умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре. Кнопки тулбара
+  (группировка, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
+  `toolbar-add-btn` и тултипами — не `MudButton Variant.Filled`
 - `Program.cs` регистрирует `KescoErrorService` как Scoped и как `ISqlErrorHandler`, передаёт `ISqlErrorHandler` в конструктор `DbManager`
