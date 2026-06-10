@@ -1,5 +1,8 @@
 # KescoBZ — Медицинские исследования
 
+## Agent instructions
+- Перед внесением изменений, если требования неоднозначны, задавай уточняющие вопросы через опросник (question tool)
+
 ## Stack
 - .NET 10 Blazor Server (Interactive Server)
 - MudBlazor 9.x — `Variant.Outlined` is the standard form input style
@@ -93,7 +96,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Компонент | Документация |
 |---|---|
-| **KescoDataList\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой | [docs/kesco-data-list.md](docs/kesco-data-list.md) |
+| **KescoDataList\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам | [docs/kesco-data-list.md](docs/kesco-data-list.md) |
+| **ColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами | [docs/column-filter-dialog.md](docs/column-filter-dialog.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
 | **KescoErrorBar** — баннер ошибок БД с детализацией (SQL, параметры) | [docs/kesco-error-bar.md](docs/kesco-error-bar.md) |
@@ -178,6 +182,64 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - Детальные строки внутри группы сортируются по колонкам, НЕ участвующим в группировке
 - **Запрещено** пересортировывать список агрегатов после получения из БД (`aggregates.OrderBy(...)`) — это уничтожает порядок, заданный `ORDER BY` в SQL. Синтетические родительские узлы строятся непосредственно внутри цикла `foreach (var gr in groupRows)` до листового узла, поэтому при обходе `aggregates` (без `.OrderBy`) порядок родитель-перед-детьми всегда соблюдается
 
+## Server-side column filtering
+
+Фильтрация по колонкам выполняется **на стороне SQL Server** через `BuildColumnFilterClause`.
+UI — панель фильтров (filter tray) с drag-and-drop заголовков и диалогом `ColumnFilterDialog` для настройки условий.
+
+### Модель данных
+- `ColumnType` — тип данных колонки: `Text` (Contains/Equals/StartsWith/EndsWith/NotEquals), `Number` (равенство + сравнения >/</>=/<=), `Boolean` (Equals)
+- `ColumnFilterOperator` — оператор сравнения: `Contains`, `Equals`, `NotEquals`, `StartsWith`, `EndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`
+- `ColumnFilter` — условие фильтра: `Column` (SQL-имя), `ParamName` (имя Dapper-параметра), `Operator`, `Value`
+- `KescoDataQuery.ColumnFilters` — `Dictionary<string, ColumnFilter>` — ключ = SQL-имя колонки
+
+### SQL-генерация
+- `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`
+- `columnNameMap` — опциональный маппинг имён (например, `"TestTypeName"` → `"t.ТипМедицинскогоАнализа"`) для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима
+
+### Filter tray
+- Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)
+- Добавление фильтра: перетаскивание заголовка колонки на панель → открывается `ColumnFilterDialog`
+- Редактирование: клик по чипу фильтра → повторно открывается диалог с текущими значениями
+- Удаление: клик по × на чипе
+- При выключении панели все фильтры сбрасываются, данные перезагружаются
+- Чип показывает читаемое описание: `«Название содержит «грипп»»` (через `ColumnFilterDialog.GetFilterDescription`)
+- Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
+
+### Интеграция на странице
+```csharp
+// Определения фильтруемых колонок и их типов
+private static readonly Dictionary<string, string> _filterColumnsDef = new()
+{
+    ["Код"] = "КодМедицинскогоАнализа", ["Название"] = "НазваниеАнализа", ...
+};
+private static readonly Dictionary<string, ColumnType> _filterColumnTypes = new()
+{
+    ["КодМедицинскогоАнализа"] = ColumnType.Number,
+    ["НазваниеАнализа"] = ColumnType.Text, ...
+};
+// Для плоского режима — маппинг имён (подзапросные → алиасы таблиц)
+private static readonly Dictionary<string, string> _filterFlatColumnMap = new()
+{
+    ["TestTypeName"] = "t.ТипМедицинскогоАнализа", ...
+};
+
+// В LoadFlatData:
+var dp = new DynamicParameters();
+dp.Add("search", $"%{_query.SearchText}%");
+var colFilterWhere = _query.BuildColumnFilterClause(dp, _filterFlatColumnMap);
+// Объединить searchWhere + colFilterWhere через AND
+
+// В LoadGroupedData:
+var dp = new DynamicParameters();
+var colFilterWhere = _query.BuildColumnFilterClause(dp); // без маппинга
+// colFilterWhere вставляется внутрь подзапроса _g
+```
+
+### `sqlName` для фильтрации в grouped-режиме
+- В grouped-режиме фильтры применяются внутри подзапроса `FROM (SELECT ...) _g`, поэтому `ColumnFilter.Column` должен содержать выходное имя колонки (например, `"КодМедицинскогоАнализа"`, а не `"a.КодМедицинскогоАнализа"`)
+- В плоском режиме — через `columnNameMap` имена преобразуются в алиасные
+
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**
 - No tests exist in this repo
@@ -195,17 +257,18 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - Data grid header row must be fixed (not scroll with data) — `KescoDataList` does this automatically
 - При вызове `Db.ExecuteAsync()` с сырым SQL обязательно передавать `commandType: CommandType.Text` — по умолчанию `ExecuteAsync` использует `CommandType.StoredProcedure`
 - `DapperColumnMapper` делает fallback на имя свойства, если `[Column]`-атрибут не совпал с колонкой результата — это позволяет использовать SQL-алиасы (`SELECT КодТипа AS Id`) даже при наличии `[Column("КодТипа")]` на свойстве `Id`
-- **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере. `ExpandedGroups` управляется страницей и **не перезаписывается** из query
+- **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере. `ExpandedGroups` управляется страницей и **не перезаписывается** из query. `ColumnFilters` копируется из query целиком (словарь)
 - **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). Параметры пагинации передаются как `@__start`/`@__end` через `DynamicParameters`
 - **Обработка ошибок БД**: `DbManager` автоматически перехватывает `SqlException` и вызывает `ISqlErrorHandler.HandleSqlError()`. Страницам **не нужно** вызывать `ErrorService.Report()` вручную — только `try/finally` для `_loading = false`. Баннер `KescoErrorBar` в `MainLayout` показывает ошибку со строкой подключения, SQL и параметрами
 - **Grouping tray**: заголовки колонок должны быть `draggable="true"` с `@ondragstart`,
   устанавливающим `KescoDragState.DraggedColumn`. При перетаскивании на панель группировки колонка
   добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
   Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
-  Кнопки тулбара (группировка, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
-  `toolbar-add-btn` и тултипами — не `MudButton Variant.Filled`
+  Кнопки тулбара (группировка, фильтрация, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
+  `filter-toggle-btn` / `toolbar-add-btn` и тултипами — не `MudButton Variant.Filled`
 - **Grouping tray toggle**: кнопка `AccountTree` включает/выключает трей. При выключении (`_trayExpanded = false`) очищает `_groupColumns` и перезагружает данные в плоском режиме — колонки возвращаются в грид
-- **Grid height**: вычисляется динамически через `_gridHeight`: `calc(100vh - 280px)` без трея, `calc(100vh - 330px)` с треем. Заголовок грида фиксирован (`FixedHeader="true"`)
+- **Filter tray toggle**: кнопка `FilterAlt` включает/выключает трей фильтрации. При выключении (`_filterTrayExpanded = false`) очищает `_activeFilters` и перезагружает данные без фильтров. Оба трея (группировка + фильтрация) могут быть открыты одновременно — высота грида уменьшается соответственно
+- **Grid height**: вычисляется динамически через `_gridHeight`: `calc(100vh - 280px)` без треев, `calc(100vh - 330px)` с одним треем, `calc(100vh - 380px)` с двумя. Заголовок грида фиксирован (`FixedHeader="true"`)
 - **Responsive layout**: тулбар и пагинация обёрнуты в `<div>` с `flex-wrap` — элементы переносятся на узких экранах. Внутренние группы используют `MudStack` для вертикального центрирования
 - **Navigation drawer**: `DrawerVariant.Responsive` — десктоп (persistent, сдвигает контент), мобильные (temporary overlay). Кнопка-гамбургер меняет иконку `Menu` ↔ `MenuOpen`. AppBar `z-index: 1301` всегда выше overlay. Overlay начинается ниже AppBar + gold underline (`top: 51px`)
 - `Program.cs` регистрирует `KescoErrorService` как Scoped и как `ISqlErrorHandler`, передаёт `ISqlErrorHandler` в конструктор `DbManager`
