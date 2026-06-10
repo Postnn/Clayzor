@@ -373,7 +373,8 @@
         {
             foreach (var child in node.Children)
                 rows += ComputeEffectiveRows(child, expanded);
-            rows += node.Aggregate.ItemCount;
+            if (node.Children.Count == 0)
+                rows += node.Aggregate.ItemCount;
         }
         node.EffectiveRows = rows;
         return rows;
@@ -446,20 +447,23 @@
                     return;
                 }
 
-                int detailCount = node.Aggregate.ItemCount;
-                if (overlaps && detailCount > 0)
+                if (node.Children.Count == 0)
                 {
-                    int firstDetail = Math.Max(1, pageStart - currentRow + 1);
-                    int lastDetail = Math.Min(detailCount, pageEnd - currentRow + 1);
-                    if (firstDetail <= lastDetail)
+                    int detailCount = node.Aggregate.ItemCount;
+                    if (overlaps && detailCount > 0)
                     {
-                        var last = layout.Last();
-                        last.DetailStart = firstDetail;
-                        last.DetailEnd = lastDetail;
-                        last.HasDetailRange = true;
+                        int firstDetail = Math.Max(1, pageStart - currentRow + 1);
+                        int lastDetail = Math.Min(detailCount, pageEnd - currentRow + 1);
+                        if (firstDetail <= lastDetail)
+                        {
+                            var last = layout.Last();
+                            last.DetailStart = firstDetail;
+                            last.DetailEnd = lastDetail;
+                            last.HasDetailRange = true;
+                        }
                     }
+                    currentRow += detailCount;
                 }
-                currentRow += detailCount;
             }
             else
             {
@@ -526,9 +530,9 @@
 
         await LoadData();
 
-        // If expanding and detail rows don't appear on this page, advance
         if (!wasExpanded)
         {
+            // Expanding: if detail rows don't appear on this page, advance
             var expandedHeader = _rows.OfType<GroupHeaderRow>()
                 .FirstOrDefault(h => h.FullKey == header.FullKey);
             if (expandedHeader is not null)
@@ -539,6 +543,16 @@
                     _query.PageNumber++;
                     await LoadData();
                 }
+            }
+        }
+        else if (_query.TotalCount > 0)
+        {
+            // Collapsing: if current page is now beyond the last valid page, go back
+            int maxPage = (int)Math.Ceiling((double)_query.TotalCount / _query.PageSize);
+            if (_query.PageNumber > maxPage)
+            {
+                _query.PageNumber = maxPage;
+                await LoadData();
             }
         }
 
