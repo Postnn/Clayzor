@@ -97,7 +97,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Компонент | Документация |
 |---|---|
 | **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoGridPageBase\<T>** — базовый класс страниц с гридом: `LoadFlatData`/`LoadGroupedData`, `ToggleGroup`, `OnAfterRenderAsync` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGridPageBase\<T>** — базовый класс страниц с гридом: `LoadFlatData`/`LoadGroupedData`, `ToggleGroup`, `OnAfterRenderAsync`, `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoColumnDef** — невидимый регистратор метаданных колонки: SqlName, DisplayName, Groupable, Filterable | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **ColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами | [docs/column-filter-dialog.md](docs/column-filter-dialog.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
@@ -218,6 +219,9 @@ protected override Dictionary<string, string>? FilterFlatColumnMap => _filterFla
 `KescoGridPageBase<T>` автоматически вызывает `BuildColumnFilterClause(dp, FilterFlatColumnMap)` в плоском режиме
 и `BuildColumnFilterClause(dp)` в группированном.
 
+`FilterColumnTypes` вычисляется автоматически через рефлексию по `[Column]`-атрибутам и C#-типам свойств сущности.
+Страница просто передаёт `FilterColumnTypes="@FilterColumnTypes"` в `<KescoGrid>`. Маппинг: `bool` → `Boolean`, числовые типы → `Number`, остальные → `Text`.
+
 ### `sqlName` для фильтрации в grouped-режиме
 - В grouped-режиме фильтры применяются внутри подзапроса `FROM (SELECT ...) _g`, поэтому `ColumnFilter.Column` должен содержать выходное имя колонки (например, `"КодМедицинскогоАнализа"`, а не `"a.КодМедицинскогоАнализа"`)
 - В плоском режиме — через `columnNameMap` имена преобразуются в алиасные
@@ -246,9 +250,13 @@ protected override Dictionary<string, string>? FilterFlatColumnMap => _filterFla
   устанавливающим `KescoDragState.DraggedColumn`. При перетаскивании на панель группировки колонка
   добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
   Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
+  Кнопка группировки появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Groupable="true"`.
   Кнопки тулбара (группировка, фильтрация, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
   `filter-toggle-btn` / `toolbar-add-btn` и тултипами — не `MudButton Variant.Filled`
-- **Grouping tray toggle**: кнопка `AccountTree` включает/выключает трей. При выключении (`_trayExpanded = false`) очищает `_groupColumns` и перезагружает данные в плоском режиме — колонки возвращаются в грид
+- **Column registration**: метаданные колонок регистрируются через `<KescoColumnDef SqlName="..." DisplayName="..." Groupable="true" Filterable="true" />`
+  внутри `<ColumnDefs>`, а не через параметры `ShowGroupingTray`/`AvailableGroupColumns`/`AvailableFilterColumns`.
+  `KescoGrid` реализует `IKescoGrid` и получает регистрацию через каскадный параметр.
+- **Grouping tray toggle**: кнопка `AccountTree` включает/выключает трей. При выключении (`_trayExpanded = false`) очищает `_groupColumns` и перезагружает данные в плоском режиме — колонки возвращаются в грид. Кнопка появляется только при наличии хотя бы одного `KescoColumnDef` с `Groupable="true"`
 - **Filter tray toggle**: кнопка `FilterAlt` включает/выключает трей фильтрации. При выключении (`_filterTrayExpanded = false`) очищает `_activeFilters` и перезагружает данные без фильтров. Оба трея (группировка + фильтрация) могут быть открыты одновременно — высота грида уменьшается соответственно
 - **Grid height**: вычисляется динамически через `_gridHeight`: `calc(100vh - 280px)` без треев, `calc(100vh - 330px)` с одним треем, `calc(100vh - 380px)` с двумя. Заголовок грида фиксирован (`FixedHeader="true"`)
 - **Responsive layout**: тулбар и пагинация обёрнуты в `<div>` с `flex-wrap` — элементы переносятся на узких экранах. Внутренние группы используют `MudStack` для вертикального центрирования
