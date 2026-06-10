@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Reflection;
 using Dapper;
 using Kesco.Lib.DALC;
 using Kesco.Lib.Entities;
@@ -87,6 +89,54 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
     /// Если все имена совпадают — оставьте <c>null</c> (значение по умолчанию).
     /// </summary>
     protected virtual Dictionary<string, string>? FilterFlatColumnMap => null;
+
+    /// <summary>
+    /// Типы данных фильтруемых колонок, автоматически определённые по <see cref="ColumnAttribute"/>
+    /// и C#-типам свойств сущности <typeparamref name="T"/>.
+    /// Маппинг: SQL-имя колонки → <see cref="ColumnType"/> (Text / Number / Boolean).
+    /// <para>
+    /// SQL-имя берётся из <c>[Column("...")]</c>-атрибута, либо из имени свойства если атрибут отсутствует
+    /// (так работает, например, <c>TestTypeName</c> — алиас из JOIN без <c>[Column]</c>).
+    /// </para>
+    /// Может быть переопределено на странице для нестандартного маппинга.
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, ColumnType> FilterColumnTypes => _inferredColumnTypes;
+
+    // Кеш вычисляется один раз для каждого конкретного T при инициализации класса
+    private static readonly IReadOnlyDictionary<string, ColumnType> _inferredColumnTypes
+        = InferFilterColumnTypes();
+
+    /// <summary>
+    /// Определяет типы колонок для фильтрации через рефлексию по свойствам <typeparamref name="T"/>.
+    /// </summary>
+    private static Dictionary<string, ColumnType> InferFilterColumnTypes()
+    {
+        var result = new Dictionary<string, ColumnType>(StringComparer.OrdinalIgnoreCase);
+        foreach (var prop in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            var colAttr = prop.GetCustomAttribute<ColumnAttribute>();
+            var sqlName = colAttr?.Name ?? prop.Name;
+            result[sqlName] = MapClrTypeToColumnType(prop.PropertyType);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Приводит C#-тип свойства к <see cref="ColumnType"/> для диалога фильтрации.
+    /// <c>Nullable&lt;T&gt;</c> обрабатывается через <see cref="Nullable.GetUnderlyingType"/>.
+    /// </summary>
+    private static ColumnType MapClrTypeToColumnType(Type clrType)
+    {
+        var t = Nullable.GetUnderlyingType(clrType) ?? clrType;
+        if (t == typeof(bool))    return ColumnType.Boolean;
+        if (t == typeof(int)    || t == typeof(long)    ||
+            t == typeof(short)  || t == typeof(byte)    ||
+            t == typeof(decimal)|| t == typeof(float)   ||
+            t == typeof(double) || t == typeof(uint)    ||
+            t == typeof(ulong)  || t == typeof(ushort))
+            return ColumnType.Number;
+        return ColumnType.Text;
+    }
 
     // ── Инфраструктура (не переопределяются на странице) ────────────────────────
 

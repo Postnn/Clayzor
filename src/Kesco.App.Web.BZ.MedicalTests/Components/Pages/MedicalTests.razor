@@ -18,9 +18,9 @@
            PageSize="@AppSettings.DefaultPageSize"
            ShowGroupingTray="true"
            AvailableGroupColumns="@_groupColumnsDef"
-           ShowFilterTray="true"
-           AvailableFilterColumns="@_filterColumnsDef"
-           FilterColumnTypes="@_filterColumnTypes"
+               ShowFilterTray="true"
+               AvailableFilterColumns="@_filterColumnsDef"
+               FilterColumnTypes="@FilterColumnTypes"
            TotalCount="@_query.TotalCount"
            ShowPagination="true"
            OnAdd="OpenAddDialog"
@@ -188,17 +188,6 @@
         ["Порядок"]    = "Порядок",
         ["Группа"]     = "Группа",
         ["Заключение"] = "Заключение",
-    };
-
-    /// <summary>Тип данных для каждой фильтруемой колонки: SQL-имя → ColumnType.</summary>
-    private static readonly Dictionary<string, ColumnType> _filterColumnTypes = new()
-    {
-        ["КодМедицинскогоАнализа"] = ColumnType.Number,
-        ["НазваниеАнализа"]        = ColumnType.Text,
-        ["TestTypeName"]           = ColumnType.Text,
-        ["Порядок"]                = ColumnType.Number,
-        ["Группа"]                 = ColumnType.Boolean,
-        ["Заключение"]             = ColumnType.Boolean,
     };
 
     /// <summary>

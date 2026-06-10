@@ -196,8 +196,13 @@
     [Parameter] public bool ShowFilterTray { get; set; }
     /// <summary>Доступные для фильтрации колонки: ключ — отображаемое имя, значение — SQL-имя.</summary>
     [Parameter] public Dictionary<string, string> AvailableFilterColumns { get; set; } = [];
-    /// <summary>Тип данных для каждой фильтруемой колонки: ключ — SQL-имя, значение — <see cref="ColumnType"/>.</summary>
-    [Parameter] public Dictionary<string, ColumnType> FilterColumnTypes { get; set; } = [];
+    /// <summary>
+    /// Тип данных для каждой фильтруемой колонки: ключ — SQL-имя, значение — <see cref="ColumnType"/>.
+    /// Передаётся из <see cref="KescoGridPageBase{T}.FilterColumnTypes"/>, определяемого автоматически
+    /// по C#-типам свойств сущности через рефлексию.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, ColumnType> FilterColumnTypes { get; set; }
+        = new Dictionary<string, ColumnType>();
 
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
