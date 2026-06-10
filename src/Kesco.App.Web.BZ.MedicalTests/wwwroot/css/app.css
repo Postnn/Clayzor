@@ -38,6 +38,50 @@ html, body {
     border-right: none !important;
 }
 
+/* ═══════════════════════════════════════════════════
+   Mobile (< 960px): temporary overlay drawer
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 959px) {
+
+    /* Hamburger always on top */
+    .mud-appbar {
+        z-index: 1301 !important;
+    }
+
+    /* Overlay: start below AppBar + gold underline (48 + 3 = 51px), below hamburger */
+    .mud-drawer-overlay.mud-drawer-overlay--open,
+    .mud-overlay.mud-overlay-drawer {
+        top: 51px !important;
+        bottom: 0 !important;
+        z-index: 1200 !important;
+        --mud-zindex-drawer: 1200;
+    }
+
+    /* Drawer content: slides out below AppBar */
+    .mud-drawer--open.mud-drawer-temporary,
+    .mud-drawer-responsive.mud-drawer--open {
+        top: 51px !important;
+        height: calc(100vh - 51px) !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   Desktop (≥ 960px): persistent drawer, pushes content
+   ═══════════════════════════════════════════════════ */
+@media (min-width: 960px) {
+
+    /* AppBar normal z-index, above persistent drawer */
+    .mud-appbar {
+        z-index: 1100 !important;
+    }
+
+    /* Persistent drawer visible, full height below AppBar */
+    .mud-drawer--open.mud-drawer-responsive {
+        top: 0 !important;
+        height: 100vh !important;
+    }
+}
+
 .mud-nav-link {
     border-radius: 0 !important;
     margin: 0 !important;
@@ -148,6 +192,15 @@ html, body {
 /* ── Main content offset for fixed AppBar ── */
 .mud-main-content {
     padding-top: 68px !important;
+}
+
+/* ── Fast drawer transition ── */
+.drawer-fast {
+    transition-duration: 0.2s !important;
+}
+
+.drawer-fast * {
+    transition-duration: 0.15s !important;
 }
 
 /* ── Gold accent underline on page titles ── */

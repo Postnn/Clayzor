@@ -12,7 +12,7 @@
 
 <MudLayout>
     <MudAppBar Elevation="0" Dense="true">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu"
+        <MudIconButton Icon="@(_drawerOpen ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)"
                        Color="Color.Inherit"
                        Edge="Edge.Start"
                        OnClick="@ToggleDrawer" />
@@ -34,8 +34,8 @@
         </MudStack>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" Variant="DrawerVariant.Responsive">
-        <MudNavMenu Class="mt-2">
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="0" Variant="DrawerVariant.Responsive" Class="drawer-fast">
+        <MudNavMenu>
             <MudNavLink Href="/" Match="NavLinkMatch.All"
                         Icon="@Icons.Material.Filled.Dashboard"
                         IconColor="Color.Inherit">
@@ -66,7 +66,7 @@
 @code {
     private MudTheme _theme = KescoTheme.Create();
     private bool _isDarkMode;
-    private bool _drawerOpen = true;
+    private bool _drawerOpen;
     private string _userName = string.Empty;
 
     protected override void OnInitialized()
