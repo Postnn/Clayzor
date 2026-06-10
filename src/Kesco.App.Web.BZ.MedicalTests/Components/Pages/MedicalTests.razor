@@ -53,7 +53,7 @@
             }
             else if (context.Item is DetailRow<MedicalTest> detail)
             {
-                <MudText>@detail.Item.Id</MudText>
+                <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
             }
         </CellTemplate>
     </TemplateColumn>
@@ -324,7 +324,7 @@
             {
                 var ag = item.Aggregate;
                 var detailRows = await LoadDetailRows(exprs, ag.RawKeys, where, orderBy,
-                    param, item.DetailStart, item.DetailEnd);
+                    param, item.DetailStart, item.DetailEnd, ag.Depth);
                 newRows.AddRange(detailRows);
             }
         }
@@ -475,7 +475,7 @@
     private async Task<List<DetailRow<MedicalTest>>> LoadDetailRows(
         List<string> exprs, List<object?> rawKeys,
         string? where, string orderBy, object? param,
-        int detailStart, int detailEnd)
+        int detailStart, int detailEnd, int depth)
     {
         var parts = new List<string>();
         if (where is not null)
@@ -517,7 +517,7 @@
         sql += $") _d WHERE _drn BETWEEN @__start AND @__end";
 
         var items = await Db.QueryAsync<MedicalTest>(sql, detailParams);
-        return items.Select(i => new DetailRow<MedicalTest> { Item = i }).ToList();
+        return items.Select(i => new DetailRow<MedicalTest> { Item = i, Depth = depth }).ToList();
     }
 
     private async Task ToggleGroup(GroupHeaderRow header)

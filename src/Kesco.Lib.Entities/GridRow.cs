@@ -45,6 +45,9 @@ public class DetailRow<T> : IGridRow where T : Entity
 
     /// <summary>Полный ключ группы, к которой принадлежит строка.</summary>
     public string GroupKey { get; set; } = "";
+
+    /// <summary>Уровень вложенности родительской группы (0 = внешний).</summary>
+    public int Depth { get; set; }
 }
 
 /// <summary>
