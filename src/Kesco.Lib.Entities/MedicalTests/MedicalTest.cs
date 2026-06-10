@@ -73,50 +73,6 @@ public class MedicalTest : Entity
     [NotMapped]
     public string? TestTypeName { get; set; }
 
-    /// <summary>
-    /// Возвращает список медицинских исследований с фильтрацией и сортировкой.
-    /// </summary>
-    /// <param name="db">Менеджер подключения к БД.</param>
-    /// <param name="whereClause">SQL-фрагмент WHERE (без ключевого слова WHERE). Может быть null.</param>
-    /// <param name="orderByClause">Порядок сортировки (без ключевого слова ORDER BY). Может быть null.</param>
-    /// <param name="param">Параметры для WHERE.</param>
-    public static async Task<IEnumerable<MedicalTest>> GetAllAsync(
-        DbManager db, string? whereClause = null, string? orderByClause = null, object? param = null)
-    {
-        return await Entity.GetAllAsync<MedicalTest>(
-            db, SQLQueries.SELECT_МедицинскиеАнализы, whereClause, orderByClause, param);
-    }
-
-    /// <summary>
-    /// Возвращает страницу медицинских исследований с фильтрацией и сортировкой.
-    /// Использует ROW_NUMBER() для серверной постраничной выборки (SQL Server 2008 R2).
-    /// </summary>
-    /// <param name="db">Менеджер подключения к БД.</param>
-    /// <param name="whereClause">SQL-фрагмент WHERE (без ключевого слова WHERE). Может быть null.</param>
-    /// <param name="orderByClause">Порядок сортировки (без ключевого слова ORDER BY). Может быть null.</param>
-    /// <param name="param">Параметры для WHERE.</param>
-    /// <param name="pageNumber">Номер страницы (1-based).</param>
-    /// <param name="pageSize">Размер страницы.</param>
-    public static async Task<IEnumerable<MedicalTest>> GetPagedAsync(
-        DbManager db, string? whereClause, string? orderByClause, object? param,
-        int pageNumber, int pageSize)
-    {
-        return await Entity.GetPagedAsync<MedicalTest>(
-            db, SQLQueries.SELECT_МедицинскиеАнализы, whereClause, orderByClause, param, pageNumber, pageSize);
-    }
-
-    /// <summary>
-    /// Возвращает общее количество медицинских исследований, соответствующих фильтру.
-    /// </summary>
-    /// <param name="db">Менеджер подключения к БД.</param>
-    /// <param name="whereClause">SQL-фрагмент WHERE (без ключевого слова WHERE). Может быть null.</param>
-    /// <param name="param">Параметры для WHERE.</param>
-    public static async Task<int> GetCountAsync(
-        DbManager db, string? whereClause = null, object? param = null)
-    {
-        return await Entity.GetCountAsync<MedicalTest>(
-            db, SQLQueries.SELECT_МедицинскиеАнализы, whereClause, param);
-    }
 }
 
 /// <summary>

@@ -101,7 +101,7 @@ public sealed class KescoDataQuery
 
     /// <summary>
     /// Условия фильтрации по отдельным колонкам. Ключ — SQL-имя колонки, значение — условие фильтра.
-    /// Управляется страницей; KescoDataList не изменяет этот словарь.
+    /// Управляется страницей; KescoGrid не изменяет этот словарь.
     /// </summary>
     public Dictionary<string, ColumnFilter> ColumnFilters { get; set; } = [];
 
@@ -236,5 +236,21 @@ public sealed class KescoDataQuery
             return null;
 
         return string.Join(" OR ", searchColumns.Select(c => $"{c} LIKE @search"));
+    }
+
+    /// <summary>
+    /// Объединяет два WHERE-фрагмента через AND.
+    /// Если оба null — возвращает null.
+    /// Если один null — возвращает другой без обёртки в скобки.
+    /// Если оба не null — возвращает <c>({a}) AND ({b})</c>.
+    /// </summary>
+    /// <param name="a">Первый WHERE-фрагмент (например, из <see cref="BuildWhereClause"/>).</param>
+    /// <param name="b">Второй WHERE-фрагмент (например, из <see cref="BuildColumnFilterClause"/>).</param>
+    public static string? CombineWhere(string? a, string? b)
+    {
+        if (a is null && b is null) return null;
+        if (a is null) return b;
+        if (b is null) return a;
+        return $"({a}) AND ({b})";
     }
 }

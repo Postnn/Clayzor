@@ -306,11 +306,16 @@
     {
         e.DataTransfer.EffectAllowed = "move";
         _dragSourceIndex = index;
+        // Устанавливаем KescoDragState чтобы панель фильтрации могла принять дроп
+        // из чипа группировки (не только из заголовка колонки грида)
+        KescoDragState.DraggedColumn = _groupColumns[index];
     }
 
     private void OnChipDragEnd()
     {
         _dragSourceIndex = -1;
+        // Сбрасываем, если дроп не состоялся (пользователь отменил перетаскивание)
+        KescoDragState.DraggedColumn = null;
     }
 
     private void OnTrayDragOver(DragEventArgs e)

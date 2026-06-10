@@ -105,16 +105,16 @@ public static void Initialize()
 
 <PageTitle>Новые записи</PageTitle>
 
-<KescoDataList TEntity="NewEntity"
-               @ref="_dataGrid"
-               Title="Новые записи"
-               Items="_items"
-               Loading="_loading"
-               PageSize="@AppSettings.DefaultPageSize"
-               TotalCount="@_query.TotalCount"
-               OnAdd="OpenAddDialog"
-               OnRowClick="OnRowClicked"
-               OnQueryChanged="OnQueryChanged">
+<KescoGrid TEntity="NewEntity"
+           @ref="_dataGrid"
+           Title="Новые записи"
+           Items="_items"
+           Loading="_loading"
+           PageSize="@AppSettings.DefaultPageSize"
+           TotalCount="@_query.TotalCount"
+           OnAdd="OpenAddDialog"
+           OnRowClick="OnRowClicked"
+           OnQueryChanged="OnQueryChanged">
     <PropertyColumn T="NewEntity" TProperty="int" Property="x => x.Id" Sortable="false">
         <HeaderTemplate>
             <div @onclick="@(() => _dataGrid?.ToggleSort("КодНовойЗаписи"))" ...>
@@ -131,7 +131,7 @@ public static void Initialize()
             </div>
         </HeaderTemplate>
     </PropertyColumn>
-</KescoDataList>
+</KescoGrid>
 ```
 
 ### 6. CRUD в диалоге

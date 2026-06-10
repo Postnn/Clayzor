@@ -56,7 +56,7 @@ public abstract class Entity
     /// Выполняет SELECT с постраничной выборкой через ROW_NUMBER() (SQL Server 2008 R2).
     /// Параметры границ страницы передаются как @__start и @__end — без подстановки значений в SQL.
     /// </summary>
-    protected static async Task<IEnumerable<T>> GetPagedAsync<T>(
+    public static async Task<IEnumerable<T>> GetPagedAsync<T>(
         DbManager db, string selectSql,
         string? whereClause, string? orderByClause, object? param,
         int pageNumber, int pageSize)
@@ -85,7 +85,7 @@ public abstract class Entity
     /// Возвращает общее количество записей, соответствующих фильтру.
     /// Оборачивает SELECT в подзапрос COUNT(*).
     /// </summary>
-    protected static async Task<int> GetCountAsync<T>(
+    public static async Task<int> GetCountAsync<T>(
         DbManager db, string selectSql,
         string? whereClause, object? param)
         where T : Entity

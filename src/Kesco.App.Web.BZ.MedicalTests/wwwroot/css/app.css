@@ -244,7 +244,7 @@ html, body {
     background: rgba(5, 22, 77, 0.14) !important;
 }
 
-/* ── Grouping Tray (KescoDataList drag‑and‑drop) ── */
+/* ── Grouping Tray (KescoGrid drag‑and‑drop) ── */
 .grouping-tray {
     min-height: 34px;
     padding: 4px 10px;
