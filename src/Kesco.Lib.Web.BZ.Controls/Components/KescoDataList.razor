@@ -1,7 +1,7 @@
 @typeparam TEntity where TEntity : class
 
 <MudPaper Elevation="1" Class="pa-4">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+    <div class="d-flex flex-wrap justify-space-between gap-2 mb-4" style="align-items:center">
         <MudText Typo="Typo.h5">@Title</MudText>
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
             <MudTextField T="string"
@@ -13,7 +13,8 @@
                           Immediate="true"
                           DebounceInterval="300"
                           Variant="Variant.Outlined"
-                          Margin="Margin.Dense" />
+                          Margin="Margin.Dense"
+                          Style="max-width:250px;min-width:140px" />
             @if (ShowGroupingTray)
             {
                 <MudTooltip Text="@(_trayExpanded ? "Скрыть группировку" : "Показать группировку")" Placement="Placement.Bottom">
@@ -33,7 +34,7 @@
                 </MudTooltip>
             }
         </MudStack>
-    </MudStack>
+    </div>
 
     @if (ShowGroupingTray && _trayExpanded)
     {
@@ -89,7 +90,7 @@
     </MudDataGrid>
     @if (ShowPagination)
     {
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-3">
+        <div class="d-flex flex-wrap justify-space-between gap-2 mt-3" style="align-items:center">
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                 <MudText>Строк на странице:</MudText>
                 <MudNumericField T="int" Value="_pageSize" ValueChanged="OnPageSizeChangedAsync" Min="1" Max="999" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width:80px" />
@@ -103,7 +104,7 @@
                 <MudIconButton Icon="@Icons.Material.Filled.NavigateNext" OnClick="GoToNextPageAsync" Disabled="@(_pageNumber >= _totalPages)" Size="Size.Small" />
                 <MudIconButton Icon="@Icons.Material.Filled.LastPage" OnClick="GoToLastPageAsync" Disabled="@(_pageNumber >= _totalPages)" Size="Size.Small" />
             </MudStack>
-        </MudStack>
+        </div>
     }
 </MudPaper>
 
