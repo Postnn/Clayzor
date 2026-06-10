@@ -9,9 +9,22 @@
 - `abstract string SelectSql / InsertSql / UpdateSql / DeleteSql` — SQL-константы
 - `InsertAsync(DbManager db)` / `UpdateAsync(DbManager db)` / `DeleteAsync(DbManager db)` — наследуемые CRUD-методы
 - `GetAllAsync<T>(db, sql, where, orderBy, param)` — SELECT с динамическими WHERE/ORDER BY
-- `GetPagedAsync<T>(db, sql, where, orderBy, param, pageNumber, pageSize)` — SELECT с `OFFSET/FETCH`
+- `GetPagedAsync<T>(db, sql, where, orderBy, param, pageNumber, pageSize)` — SELECT с `ROW_NUMBER()` (SQL Server 2008 R2 совместимый)
 - `GetCountAsync<T>(db, sql, where, param)` — `SELECT COUNT(*) FROM (SELECT ...)`
 - `GetAllSimpleAsync<T>(db, sql)` — простой SELECT без динамических частей
+
+### SQL Server 2008 R2 пагинация
+
+`GetPagedAsync` использует `ROW_NUMBER()` вместо `OFFSET/FETCH`:
+
+```sql
+SELECT * FROM (
+    SELECT _src.*, ROW_NUMBER() OVER (ORDER BY {orderBy}) AS _rn
+    FROM ({selectSql}) _src
+) _p WHERE _rn BETWEEN @__start AND @__end
+```
+
+Параметры: `@__start = (pageNumber - 1) * pageSize + 1`, `@__end = pageNumber * pageSize`.
 
 ## CRUD-сущность
 
@@ -61,6 +74,36 @@ public class MyLookup : ILookupEntity
         var result = await db.QueryAsync<MyLookup>(SQLQueries.SELECT_MyLookup);
         return result.ToList();
     }
+}
+```
+
+## Серверная группировка — модель данных
+
+`Kesco.Lib.Entities/GridRow.cs` содержит типы для плоской модели с группами:
+
+```csharp
+public interface IGridRow { }
+
+public class GroupHeaderRow : IGridRow
+{
+    public string DisplayValue { get; set; }
+    public string FullKey { get; set; }      // ключи через \u001F
+    public int ItemCount { get; set; }
+    public int Depth { get; set; }           // 0 = внешний уровень
+    public bool IsExpanded { get; set; }
+    public List<string> GroupKeys { get; set; }
+}
+
+public class DetailRow<T> : IGridRow where T : Entity
+{
+    public T Item { get; set; }
+    public string GroupKey { get; set; }
+}
+
+public class GroupedPage<T> where T : Entity
+{
+    public List<IGridRow> Rows { get; set; }
+    public int TotalEffectiveRows { get; set; }
 }
 ```
 

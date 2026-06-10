@@ -89,7 +89,7 @@ public class MedicalTest : Entity
 
     /// <summary>
     /// Возвращает страницу медицинских исследований с фильтрацией и сортировкой.
-    /// Использует OFFSET/FETCH для серверной постраничной выборки.
+    /// Использует ROW_NUMBER() для серверной постраничной выборки (SQL Server 2008 R2).
     /// </summary>
     /// <param name="db">Менеджер подключения к БД.</param>
     /// <param name="whereClause">SQL-фрагмент WHERE (без ключевого слова WHERE). Может быть null.</param>

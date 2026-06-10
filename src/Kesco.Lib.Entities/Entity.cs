@@ -53,8 +53,8 @@ public abstract class Entity
     }
 
     /// <summary>
-    /// Выполняет SELECT с постраничной выборкой через OFFSET/FETCH.
-    /// Параметры offset/fetch передаются как @__offset и @__fetch — без подстановки значений в SQL.
+    /// Выполняет SELECT с постраничной выборкой через ROW_NUMBER() (SQL Server 2008 R2).
+    /// Параметры границ страницы передаются как @__start и @__end — без подстановки значений в SQL.
     /// </summary>
     protected static async Task<IEnumerable<T>> GetPagedAsync<T>(
         DbManager db, string selectSql,
@@ -62,18 +62,21 @@ public abstract class Entity
         int pageNumber, int pageSize)
         where T : Entity
     {
-        var sql = selectSql;
+        var innerSql = selectSql;
         if (whereClause is not null)
-            sql += $" WHERE {whereClause}";
-        if (orderByClause is not null)
-            sql += $" ORDER BY {orderByClause}";
-        sql += " OFFSET @__offset ROWS FETCH NEXT @__fetch ROWS ONLY";
+            innerSql += $" WHERE {whereClause}";
+
+        var orderBy = orderByClause ?? "(SELECT 0)";
+        var sql = $"SELECT * FROM (";
+        sql += $"SELECT _src.*, ROW_NUMBER() OVER (ORDER BY {orderBy}) AS _rn";
+        sql += $" FROM ({innerSql}) _src";
+        sql += $") _p WHERE _rn BETWEEN @__start AND @__end";
 
         var parameters = new DynamicParameters();
         if (param is not null)
             parameters.AddDynamicParams(param);
-        parameters.Add("__offset", (pageNumber - 1) * pageSize);
-        parameters.Add("__fetch", pageSize);
+        parameters.Add("__start", (pageNumber - 1) * pageSize + 1);
+        parameters.Add("__end", pageNumber * pageSize);
 
         return await db.QueryAsync<T>(sql, parameters);
     }

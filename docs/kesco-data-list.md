@@ -13,27 +13,28 @@
 | `PageSize` | `int` | `50` | Размер страницы по умолчанию |
 | `ShowPagination` | `bool` | `true` | Показать панель постраничной навигации |
 | `TotalCount` | `int` | `0` | Общее количество записей (передаётся из страницы) |
-| `Groupable` | `bool` | `false` | Включить группировку в MudDataGrid |
-| `GroupExpanded` | `bool` | `true` | Группы развёрнуты по умолчанию |
-| `GroupColumn` | `string?` | `null` | SQL-имя колонки группировки (только для `ShowGroupToggle`). При tray-режиме используйте `GroupColumns` |
-| `GroupColumns` | `IReadOnlyList<string>` | `[]` | Текущий список SQL-имён колонок группировки. Только для чтения на странице, управляется tray |
-| `ShowGroupToggle` | `bool` | `false` | Показать переключатель одиночной группировки (старый режим) |
-| `ShowGroupingTray` | `bool` | `false` | Включить drag‑and‑drop tray для множественной группировки (новый режим) |
-| `AvailableGroupColumns` | `Dictionary<string, string>` | `[]` | Доступные для группировки колонки: ключ — отображаемое имя, значение — SQL-имя колонки. Только для tray-режима |
-| `GroupToggleLabel` | `string` | `"Группировать"` | Подпись переключателя |
+| `ShowGroupingTray` | `bool` | `false` | Включить drag‑and‑drop tray для выбора колонок группировки |
+| `AvailableGroupColumns` | `Dictionary<string, string>` | `[]` | Доступные для группировки колонки: ключ — отображаемое имя, значение — SQL-имя колонки |
 | `ChildContent` | `RenderFragment?` | — | Колонки MudDataGrid |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
 | `OnRowClick` | `EventCallback<DataGridRowClickEventArgs<TEntity>>` | — | Клик по строке |
 | `OnQueryChanged` | `EventCallback<KescoDataQuery>` | — | Изменение состояния запроса |
 | `AllowColumnReorder` | `bool` | `true` | Разрешить перетаскивание колонок грида мышью |
 
+Удалённые параметры (больше не используются):
+- ~~`Groupable`~~ — группировка выполняется сервером, не MudBlazor
+- ~~`GroupExpanded`~~ — состояние развёрнутости per-group, не глобальное
+- ~~`GroupColumn`~~ — заменён на `GroupColumns` (множественная группировка)
+- ~~`ShowGroupToggle`~~ / ~~`GroupToggleLabel`~~ — старый toggle-режим удалён
+
 ## Публичные методы
 
 | Метод | Описание |
 |---|---|
-| `ToggleSort(string sqlCol)` | Циклически переключает сортировку: ASC → DESC → убрать. Вызывается из `<HeaderTemplate>` |
-| `GetSortBadge(string sqlCol)` | Возвращает `RenderFragment` с бейджем сортировки (номер + стрелка). Вызывается из `<HeaderTemplate>` |
-| `GetGroupByOrder(string sqlCol)` | Возвращает приоритет группировки для колонки (0 = внешний уровень). Используется в биндинге `GroupByOrder` на `PropertyColumn`. Если колонка не участвует в группировке — возвращает 0 |
+| `ToggleSort(string sqlCol)` | Циклически переключает сортировку: ASC → DESC → убрать. Вызывается из `<HeaderTemplate>` или из чипа трея |
+| `GetSortBadge(string sqlCol)` | Возвращает `RenderFragment` с бейджем сортировки (номер + стрелка) |
+| `RefreshAsync()` | Сбрасывает номер страницы на 1 и вызывает `OnQueryChanged` |
+| `GroupColumns` | `IReadOnlyList<string>` — текущий список SQL-имён колонок в трее группировки |
 
 ## KescoDataQuery
 
@@ -41,81 +42,149 @@
 
 - `SearchText` — текст поиска
 - `GroupEnabled` — включена ли группировка
-- `GroupColumns` — список SQL-имён колонок группировки в порядке приоритета (новый, заменяет `GroupColumn`)
-- `GroupColumn` — SQL-имя первой колонки группировки (удобство для обратной совместимости, установка записывает в `GroupColumns[0]`)
+- `GroupColumns` — список SQL-имён колонок группировки в порядке приоритета
+- `ExpandedGroups` — `HashSet<string>` полных ключей развёрнутых групп (разделитель `\u001F`)
 - `SortColumns` — список `SortColumn(Column, Desc)`
 - `PageNumber` — номер текущей страницы (1-based)
 - `PageSize` — размер страницы
-- `TotalCount` — общее число записей (заполняется страницей после `GetCountAsync`)
+- `TotalCount` — общее число записей (заполняется страницей после загрузки)
 - `BuildOrderBy(defaultOrder)` — строит `ORDER BY`; при включённой группировке все `GroupColumns` идут первыми
 - `BuildWhereClause(searchColumns)` — строит `WHERE ... LIKE @search`
 
-## Пример использования (tray-режим)
+## Серверная группировка
+
+Группировка выполняется **на стороне SQL Server** (не MudBlazor). Два отдельных запроса:
+
+1. **Групповые агрегаты**: `GROUP BY` + `COUNT(*)`, возвращает уникальные значения и количество записей
+2. **Детальные строки**: выборка с `ROW_NUMBER()` и фильтром по значениям группы
+
+### Модель данных
+
+- `IGridRow` — маркерный интерфейс строки в плоском списке
+- `GroupHeaderRow` — заголовок группы с `FullKey`, `DisplayValue`, `ItemCount`, `Depth`, `IsExpanded`
+- `DetailRow<T>` — обёртка сущности с `Item` и `GroupKey`
+- `GroupedPage<T>` — результат: `Rows` (плоский список `IGridRow`) + `TotalEffectiveRows`
+
+### Рендеринг групп
+
+Колонки используют `TemplateColumn T="IGridRow"` с проверкой типа в `CellTemplate`:
+
+```razor
+<TemplateColumn T="IGridRow" Title="Код" Sortable="false"
+                Hidden="@(_dataGrid?.GroupColumns.Contains("SqlCol") ?? false)">
+    <CellTemplate>
+        @if (context.Item is GroupHeaderRow header)
+        {
+            <MudIconButton Icon="..." OnClick="() => ToggleGroup(header)" />
+            <MudText>@header.DisplayValue (@header.ItemCount шт.)</MudText>
+        }
+        else if (context.Item is DetailRow<MyEntity> detail)
+        {
+            <MudText>@detail.Item.Id</MudText>
+        }
+    </CellTemplate>
+</TemplateColumn>
+```
+
+**Запрещено** использовать `PropertyColumn` с `Groupable`/`Grouping`/`GroupBy`/`GroupTemplate` — эти атрибуты удалены.
+
+### `ExpandedGroups` и пагинация
+
+- Состояние развёрнутости хранится в `KescoDataQuery.ExpandedGroups` (`HashSet<string>` ключей)
+- Каждый заголовок группы = 1 эффективная строка, каждая строка детализации = 1
+- `TotalCount` = общее эффективное количество строк
+- При сворачивании/разворачивании группы количество видимых строк меняется
+- При разворачивании последней группы на странице — авто-переход на следующую страницу
+
+### `GroupExprMap`
+
+В странице определяется словарь соответствия SQL-имён из `GroupColumns` → выходные имена в подзапросе:
+
+```csharp
+private static readonly Dictionary<string, string> GroupExprMap = new()
+{
+    ["TestTypeName"] = "TestTypeName",
+    ["КодМедицинскогоАнализа"] = "КодМедицинскогоАнализа",
+    ["НазваниеАнализа"] = "НазваниеАнализа",
+    ["Порядок"] = "Порядок"
+};
+```
+
+Важно: в подзапросах `FROM (SELECT ...) _g` видны только выходные имена колонок (не табличные алиасы `a.`/`t.`).
+
+### WHERE для grouped-режима
+
+В grouped-режиме `BuildWhereClause` должен использовать выходные имена:
+```csharp
+var where = _query.BuildWhereClause("НазваниеАнализа", "TestTypeName");
+```
+В плоском режиме — табличные алиасы:
+```csharp
+var where = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
+```
+
+## Пример использования (с группировкой)
 
 ```razor
 @page "/items"
 @using Kesco.Lib.Web.BZ.Controls
 
-<KescoDataList TEntity="MyEntity"
+<KescoDataList TEntity="IGridRow"
                @ref="_dataGrid"
                Title="Заголовок"
-               Items="_items"
+               Items="_rows"
                Loading="_loading"
                PageSize="@AppSettings.DefaultPageSize"
                ShowGroupingTray="true"
                AvailableGroupColumns="@_groupColumnsDef"
-               Groupable="@(_dataGrid?.GroupColumns.Count > 0)"
                TotalCount="@_query.TotalCount"
                ShowPagination="true"
                OnAdd="OpenAddDialog"
                OnRowClick="OnRowClicked"
                OnQueryChanged="OnQueryChanged">
-    <PropertyColumn T="MyEntity" TProperty="int" Property="x => x.Id" Sortable="false"
-                    Groupable="true"
-                    Grouping="@(_dataGrid?.GroupColumns.Contains("SqlCol") ?? false)"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("SqlCol") ?? false)"
-                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("SqlCol") ?? 0)"
-                    GroupBy="@(x => x.Id)">
+    <TemplateColumn T="IGridRow" Title="Код" Sortable="false"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("SqlCol") ?? false)">
         <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 draggable="true"
-                 @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "SqlCol"; })"
+            <div draggable="true"
+                 @ondragstart="@(e => KescoDragState.DraggedColumn = "SqlCol")"
                  @onclick="@(() => _dataGrid?.ToggleSort("SqlCol"))">
-                <MudText Style="flex:1;text-align:center">Код</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("SqlCol") }
+                <MudText>Код</MudText>
+                @_dataGrid?.GetSortBadge("SqlCol")
             </div>
         </HeaderTemplate>
-        <GroupTemplate>
-            <MudText Typo="Typo.body1" Style="font-weight:600">
-                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
-            </MudText>
-        </GroupTemplate>
-    </PropertyColumn>
-    <PropertyColumn T="MyEntity" TProperty="string" Property="x => x.GroupProp"
-                    Groupable="true"
-                    Grouping="@(_dataGrid?.GroupColumns.Contains("GroupSqlCol") ?? false)"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("GroupSqlCol") ?? false)"
-                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("GroupSqlCol") ?? 0)"
-                    GroupBy="@(x => x.GroupProp ?? "")">
+        <CellTemplate>
+            @if (context.Item is GroupHeaderRow h)
+            {
+                <MudIconButton Icon="..." OnClick="() => ToggleGroup(h)" />
+                <MudText>@h.DisplayValue (@h.ItemCount шт.)</MudText>
+            }
+            else if (context.Item is DetailRow<MyEntity> d)
+            {
+                <MudText>@d.Item.Id</MudText>
+            }
+        </CellTemplate>
+    </TemplateColumn>
+    <TemplateColumn T="IGridRow" Title="Название" Sortable="false"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("NameSqlCol") ?? false)">
         <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 draggable="true"
-                 @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "GroupSqlCol"; })"
-                 @onclick="@(() => _dataGrid?.ToggleSort("GroupSqlCol"))">
-                <MudText Style="flex:1;text-align:center">Группа</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("GroupSqlCol") }
+            <div draggable="true"
+                 @ondragstart="@(e => KescoDragState.DraggedColumn = "NameSqlCol")"
+                 @onclick="@(() => _dataGrid?.ToggleSort("NameSqlCol"))">
+                <MudText>Название</MudText>
+                @_dataGrid?.GetSortBadge("NameSqlCol")
             </div>
         </HeaderTemplate>
-        <GroupTemplate>
-            <MudText Typo="Typo.body1" Style="font-weight:600">
-                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
-            </MudText>
-        </GroupTemplate>
-    </PropertyColumn>
+        <CellTemplate>
+            @if (context.Item is DetailRow<MyEntity> d)
+            {
+                <MudText>@d.Item.Name</MudText>
+            }
+        </CellTemplate>
+    </TemplateColumn>
 </KescoDataList>
 
 @code {
-    private KescoDataList<MyEntity> _dataGrid = null!;
+    private KescoDataList<IGridRow> _dataGrid = null!;
     private KescoDataQuery _query = new();
 
     private Dictionary<string, string> _groupColumnsDef = new()
@@ -123,6 +192,15 @@
         ["Группа"] = "GroupSqlCol",
         ["Код"] = "SqlCol"
     };
+
+    private static readonly Dictionary<string, string> GroupExprMap = new()
+    {
+        ["GroupSqlCol"] = "GroupSqlCol",
+        ["SqlCol"] = "SqlCol"
+    };
+
+    private List<IGridRow> _rows = [];
+    private bool _loading = true;
 
     private async Task OnQueryChanged(KescoDataQuery query)
     {
@@ -132,85 +210,7 @@
         _query.SortColumns = query.SortColumns;
         _query.PageNumber = query.PageNumber;
         _query.PageSize = query.PageSize;
-        await LoadData();
-    }
-}
-```
-
-## Пример использования (toggle-режим, старый)
-
-```razor
-@page "/items"
-@using Kesco.Lib.Web.BZ.Controls
-
-<KescoDataList TEntity="MyEntity"
-               @ref="_dataGrid"
-               Title="Заголовок"
-               Items="_items"
-               Loading="_loading"
-               PageSize="@AppSettings.DefaultPageSize"
-               TotalCount="@_query.TotalCount"
-               ShowPagination="true"
-               GroupColumn="GroupColumnSqlName"
-               ShowGroupToggle="true"
-               GroupToggleLabel="Группировать по X"
-               Groupable="_dataGrid?.GroupEnabled ?? false"
-               OnAdd="OpenAddDialog"
-               OnRowClick="OnRowClicked"
-               OnQueryChanged="OnQueryChanged">
-    <PropertyColumn T="MyEntity" TProperty="int" Property="x => x.Id" Sortable="false">
-        <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 @onclick="@(() => _dataGrid?.ToggleSort("SqlColumnName"))">
-                <MudText Style="flex:1;text-align:center">Код</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("SqlColumnName") }
-            </div>
-        </HeaderTemplate>
-    </PropertyColumn>
-    <PropertyColumn T="MyEntity" TProperty="string" Property="x => x.GroupProp"
-                    Hidden="@(_dataGrid?.GroupEnabled ?? false)"
-                    Groupable="true"
-                    Grouping="@(_dataGrid?.GroupEnabled ?? false)"
-                    GroupBy="@(x => x.GroupProp ?? "")">
-        <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 @onclick="@(() => _dataGrid?.ToggleSort("GroupColumnSqlName"))">
-                <MudText Style="flex:1;text-align:center">Группа</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("GroupColumnSqlName") }
-            </div>
-        </HeaderTemplate>
-        <GroupTemplate>
-            <MudText Typo="Typo.body1" Style="font-weight:600">
-                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
-            </MudText>
-        </GroupTemplate>
-    </PropertyColumn>
-</KescoDataList>
-
-@code {
-    private KescoDataList<MyEntity> _dataGrid = null!;
-    private KescoDataQuery _query = new();
-
-    private List<MyEntity> _items = [];
-    private bool _loading = true;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await LoadData();
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnQueryChanged(KescoDataQuery query)
-    {
-        _query.SearchText = query.SearchText;
-        _query.GroupEnabled = query.GroupEnabled;
-        _query.GroupColumn = query.GroupColumn;
-        _query.SortColumns = query.SortColumns;
-        _query.PageNumber = query.PageNumber;
-        _query.PageSize = query.PageSize;
+        // ExpandedGroups управляется страницей, не перезаписывается
         await LoadData();
     }
 
@@ -219,18 +219,56 @@
         _loading = true;
         try
         {
-            var orderBy = _query.BuildOrderBy("DefaultCol1, DefaultCol2");
-            var where = _query.BuildWhereClause("a.SearchCol1", "a.SearchCol2");
-            var param = new { search = $"%{_query.SearchText}%" };
-
-            _query.TotalCount = await MyEntity.GetCountAsync(Db, where, param);
-            _items = (await MyEntity.GetPagedAsync(Db, where, orderBy, param,
-                _query.PageNumber, _query.PageSize)).ToList();
+            if (_query.GroupEnabled && _query.GroupColumns.Count > 0)
+                await LoadGroupedData();
+            else
+                await LoadFlatData();
         }
         finally
         {
             _loading = false;
+            await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task LoadFlatData()
+    {
+        var where = _query.BuildWhereClause("a.Col1", "a.Col2");
+        var orderBy = _query.BuildOrderBy("DefaultCol");
+        var param = new { search = $"%{_query.SearchText}%" };
+
+        _query.TotalCount = await MyEntity.GetCountAsync(Db, where, param);
+        var items = await MyEntity.GetPagedAsync(Db, where, orderBy, param,
+            _query.PageNumber, _query.PageSize);
+        _rows = items.Select(i => (IGridRow)new DetailRow<MyEntity> { Item = i }).ToList();
+    }
+
+    private async Task LoadGroupedData()
+    {
+        // Использовать выходные имена колонок для WHERE в подзапросе
+        var where = _query.BuildWhereClause("Col1", "Col2");
+        var orderBy = _query.BuildOrderBy("DefaultCol");
+
+        // 1. Групповые агрегаты
+        var groupSql = BuildGroupSql(...);
+        var groupRows = await Db.QueryAsync<GroupRow>(groupSql, param);
+
+        // 2. Построение дерева групп (с синтет. родителями для многоуровневой)
+        // 3. Вычисление эффективных строк (ComputeEffectiveRows + ComputeParentCounts)
+        // 4. WalkTree — определение видимых на странице групп и диапазонов деталей
+        // 5. Загрузка детальных строк для развёрнутых групп (LoadDetailRows)
+        // 6. _rows = плоский список (GroupHeaderRow + DetailRow<T>)
+        // 7. _query.TotalCount = totalEffectiveRows
+    }
+
+    private async Task ToggleGroup(GroupHeaderRow header)
+    {
+        if (_query.ExpandedGroups.Contains(header.FullKey))
+            _query.ExpandedGroups.Remove(header.FullKey);
+        else
+            _query.ExpandedGroups.Add(header.FullKey);
+        await LoadData();
+        // Авто-переход на след. страницу, если детали не влезли
     }
 }
 ```
@@ -238,17 +276,9 @@
 ## Состояния
 
 - **Поиск** — сбрасывает страницу на 1, вызывает `OnQueryChanged` с debounce 300 мс
-- **Сортировка** — до 2 колонок, циклически: ASC → DESC → убрать. Группировочная колонка не сортируется. Сбрасывает страницу на 1
-- **Группировка (toggle)** — колонка группировки скрывается (`Hidden`), сортировка по ней блокируется. Сбрасывает страницу на 1
-- **Группировка (tray)** — панель над гридом, скрытая по умолчанию. Открывается кнопкой `AccountTree`
-  в тулбаре (класс `grouping-toggle-btn`); при наличии активных колонок кнопка подсвечивается gold underline.
-  Добавление колонок — перетаскивание заголовка на панель. Удаление — клик по × на чипе.
-  Изменение порядка — перетаскивание чипов внутри панели. Сортировка по чипу — клик по его названию
-  (бейдж `chip-sort-badge`: gold фон, navy текст). При любом изменении сбрасывается страница на 1.
-  Каждый заголовок колонки должен иметь `draggable="true"` и `@ondragstart`, устанавливающий
-  `KescoDragState.DraggedColumn`. Порядок уровней управляется биндингом
-  `GroupByOrder="@(_dataGrid?.GetGroupByOrder("SqlCol") ?? 0)"` — MudBlazor вычисляет его при рендере,
-  не требует пересоздания грида и не использует reflection
+- **Сортировка** — до 2 колонок, циклически: ASC → DESC → убрать. Сбрасывает страницу на 1. Сортировка по чипу в трее также работает (направление учитывается в `GROUP BY ... ORDER BY`)
+- **Группировка (tray)** — панель над гридом, скрытая по умолчанию. Открывается кнопкой `AccountTree` в тулбаре (класс `grouping-toggle-btn`). Добавление колонок — перетаскивание заголовка на панель. Удаление — клик по × на чипе. Изменение порядка — перетаскивание чипов. Сортировка по чипу — клик по его названию (бейдж `chip-sort-badge`). При любом изменении сбрасывается страница на 1
+- **Сворачивание/разворачивание группы** — НЕ сбрасывает страницу на 1. Если детали не влезают — авто-переход вперёд
 - **Смена размера страницы** — числовое поле (1–999). Сбрасывает страницу на 1
 - **Кнопка «Обновить»** — сбрасывает страницу на 1, перезагружает данные
 - **Переход по страницам** — кнопки `|<`, `<`, `>`, `>|`. Не сбрасывают фильтры
@@ -260,39 +290,5 @@
 
 | Кнопка | Иконка | CSS-класс | Поведение |
 |---|---|---|---|
-| Группировка | `AccountTree` | `grouping-toggle-btn` / `grouping-toggle-btn--active` | Показывает/скрывает панель тray. Активное состояние — navy фон + gold underline снизу |
-| Добавить | `Add` | `toolbar-add-btn` | Вызывает `OnAdd`. Navy фон + gold underline — всегда «активный» вид |
-
-Панель группировки скрыта по умолчанию (`_trayExpanded = false`). Скрытие не сбрасывает активные группировки — данные продолжают группироваться.
-
-## Многоуровневая группировка — механика
-
-MudBlazor 9.x определяет порядок уровней группировки исключительно по параметру `GroupByOrder` на каждой `Column<T>`.
-В `GroupItems()` колонки с `Grouping=true` сортируются по `GroupByOrder` по возрастанию: **меньше = внешний уровень**.
-
-### Правила для каждой группируемой колонки
-
-```razor
-<PropertyColumn ...
-    Groupable="true"
-    Grouping="@(_dataGrid?.GroupColumns.Contains("SqlCol") ?? false)"
-    Hidden="@(_dataGrid?.GroupColumns.Contains("SqlCol") ?? false)"
-    GroupByOrder="@(_dataGrid?.GetGroupByOrder("SqlCol") ?? 0)"
-    GroupBy="@(x => x.Prop)">
-```
-
-| Атрибут | Зачем |
-|---|---|
-| `Grouping` | Включает/выключает группировку по этой колонке |
-| `Hidden` | Скрывает колонку в гриде, пока она участвует в группировке |
-| `GroupByOrder` | Задаёт приоритет уровня (0 = внешний). Биндинг вычисляется при каждом рендере |
-| `GroupBy` | Функция-ключ группировки |
-
-### Почему нельзя использовать `@key` или reflection
-
-- `@key="_gridKey"` с инкрементом пересоздаёт `MudDataGrid`. При инициализации нового экземпляра
-  MudBlazor вызывает `GroupItems()` **до** любых `OnAfterRender*`-хуков — все колонки в этот момент
-  имеют `GroupByOrder=0`, порядок определяется DOM-позицией (порядком объявления в Razor).
-- Reflection + `SetValueAsync` в `OnAfterRenderAsync` всегда опаздывает по той же причине.
-- Декларативный биндинг `GroupByOrder="@(...)"` вычисляется Blazor **при рендере**, до вызова
-  `GroupItems()`, и поэтому всегда корректен.
+| Группировка | `AccountTree` | `grouping-toggle-btn` / `grouping-toggle-btn--active` | Показывает/скрывает панель tray |
+| Добавить | `Add` | `toolbar-add-btn` | Вызывает `OnAdd` |

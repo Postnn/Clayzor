@@ -296,3 +296,19 @@ html, body {
     opacity: 1;
     background: rgba(255, 255, 255, 0.12) !important;
 }
+
+/* ── Group Header Rows (server-side grouping) ── */
+.mud-table-row:has(.group-header-cell) {
+    background-color: rgba(5, 22, 77, 0.04) !important;
+    border-top: 2px solid var(--lh-navy) !important;
+    cursor: pointer;
+}
+
+.mud-table-row:has(.group-header-cell):hover {
+    background-color: rgba(5, 22, 77, 0.08) !important;
+}
+
+.group-header-cell {
+    font-weight: 600;
+    color: var(--lh-navy);
+}

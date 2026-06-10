@@ -35,16 +35,6 @@
         </MudStack>
     </MudStack>
 
-    @if (ShowGroupToggle)
-    {
-        <MudStack Row="true" Class="mb-2">
-            <MudSwitch @bind-Value="_groupEnabled"
-                       @bind-Value:after="OnGroupToggleChanged"
-                       Label="@GroupToggleLabel"
-                       Color="Color.Primary" />
-        </MudStack>
-    }
-
     @if (ShowGroupingTray && _trayExpanded)
     {
         <div class="grouping-tray d-flex align-items-center flex-wrap gap-2 mb-2"
@@ -64,7 +54,7 @@
                      @ondragover="OnTrayDragOver"
                      @ondragover:preventDefault="true"
                      @ondrop="@(e => OnTrayDrop(e, idx))">
-                    <span class="chip-label chip-label-clickable" @onclick="() => ToggleSort(col)" @onclick:stopPropagation="true">@displayName</span>
+                    <span class="chip-label chip-label-clickable" @onclick="async () => await ToggleSort(col)" @onclick:stopPropagation="true">@displayName</span>
                     @GetSortBadge(col)
                     <MudIconButton Icon="@Icons.Material.Filled.Close"
                                    Size="Size.Small"
@@ -81,11 +71,9 @@
     }
 
     <MudDataGrid T="TEntity"
+                 @key="_dataKey"
                  Items="@Items"
                  Filterable="false"
-                 SortMode="SortMode.Multiple"
-                 Groupable="@(ShowGroupingTray ? _groupColumns.Count > 0 : Groupable)"
-                 GroupExpanded="@GroupExpanded"
                  FixedHeader="true"
                  Height="calc(100vh - 310px)"
                  Dense="true"
@@ -121,14 +109,13 @@
 
 @code {
     private string? _searchText;
-    private bool _groupEnabled;
     private bool _trayExpanded = false;
     private List<string> _groupColumns = [];
     private int _dragSourceIndex = -1;
     private List<SortColumn> _sortState = [];
     private int _pageNumber = 1;
     private int _pageSize;
-    private MudDataGrid<TEntity> _mudGrid = default!;
+    private int _dataKey;
     [Parameter] public string Title { get; set; } = "Список";
     [Parameter] public IEnumerable<TEntity> Items { get; set; } = [];
     [Parameter] public bool Loading { get; set; }
@@ -137,11 +124,6 @@
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public EventCallback OnAdd { get; set; }
     [Parameter] public EventCallback<DataGridRowClickEventArgs<TEntity>> OnRowClick { get; set; }
-    [Parameter] public bool Groupable { get; set; }
-    [Parameter] public bool GroupExpanded { get; set; } = true;
-    [Parameter] public string? GroupColumn { get; set; }
-    [Parameter] public bool ShowGroupToggle { get; set; }
-    [Parameter] public string GroupToggleLabel { get; set; } = "Группировать";
     [Parameter] public bool ShowGroupingTray { get; set; }
     [Parameter] public Dictionary<string, string> AvailableGroupColumns { get; set; } = [];
     [Parameter] public EventCallback<KescoDataQuery> OnQueryChanged { get; set; }
@@ -149,7 +131,6 @@
     [Parameter] public bool ShowPagination { get; set; } = true;
     [Parameter] public bool AllowColumnReorder { get; set; } = true;
 
-    public bool GroupEnabled => _groupEnabled;
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
     private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
@@ -177,7 +158,7 @@
         return idx < 0 ? 0 : idx;
     }
 
-    public void ToggleSort(string column)
+    public async Task ToggleSort(string column)
     {
         var idx = _sortState.FindIndex(s => s.Column == column);
         if (idx >= 0)
@@ -194,12 +175,9 @@
                 _sortState.RemoveAt(2);
         }
 
-        InvokeAsync(async () =>
-        {
-            _pageNumber = 1;
-            StateHasChanged();
-            await NotifyQueryChanged();
-        });
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+        StateHasChanged();
     }
 
     /// <summary>
@@ -221,12 +199,6 @@
     private async Task OnSearchTextChanged(string? value)
     {
         _searchText = value;
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
-    private async Task OnGroupToggleChanged()
-    {
         _pageNumber = 1;
         await NotifyQueryChanged();
     }
@@ -304,7 +276,10 @@
         await NotifyQueryChanged();
     }
 
-    private async Task RefreshAsync()
+    /// <summary>
+    /// Сбрасывает номер страницы на 1 и инициирует перезагрузку данных.
+    /// </summary>
+    public async Task RefreshAsync()
     {
         _pageNumber = 1;
         await NotifyQueryChanged();
@@ -340,10 +315,11 @@
 
     private async Task NotifyQueryChanged()
     {
+        _dataKey++;
         var query = new KescoDataQuery
         {
             SearchText = _searchText,
-            GroupEnabled = ShowGroupingTray ? _groupColumns.Count > 0 : _groupEnabled,
+            GroupEnabled = _groupColumns.Count > 0,
             GroupColumns = _groupColumns.ToList(),
             SortColumns = _sortState.ToList(),
             PageNumber = _pageNumber,

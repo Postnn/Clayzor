@@ -6,6 +6,7 @@
 - MudBlazor.Extensions 9.x — дополнительные возможности MudBlazor (перетаскивание диалогов и др.)
 - Dapper + Microsoft.Data.SqlClient 6.x (SQL Server)
 - Windows Integrated Auth (Kerberos/NTLM via Negotiate)
+- **SQL Server 2008 R2** — использовать только синтаксис, доступный в этой версии
 
 ## Build & Run
 ```
@@ -71,6 +72,17 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - Every entity class must be registered in `DapperColumnMapper.Initialize()`
 - `@using System.Data` required in `_Imports.razor` when using `CommandType.Text`
 
+### SQL Server 2008 R2 pagination
+- **Запрещено** использовать `OFFSET/FETCH` (требует SQL Server 2012+). Вместо этого — `ROW_NUMBER()`:
+  ```sql
+  SELECT * FROM (
+      SELECT _src.*, ROW_NUMBER() OVER (ORDER BY {orderBy}) AS _rn
+      FROM ({selectSql}) _src
+  ) _p WHERE _rn BETWEEN @__start AND @__end
+  ```
+- Параметры: `@__start = (pageNumber - 1) * pageSize + 1`, `@__end = pageNumber * pageSize`
+- Реализовано в `Entity.GetPagedAsync<T>()` — статические врапперы сущностей вызывают его через `Entity.GetPagedAsync<MyEntity>(...)`
+
 ## Entity CRUD & Lookup pattern
 → [docs/entity-crud.md](docs/entity-crud.md)
 
@@ -96,6 +108,73 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoErrorService** (Scoped) — хранит состояние последней ошибки SQL, реализует `ISqlErrorHandler`. Используется `KescoErrorBar` |
 | **ISqlErrorHandler** (DALC) — интерфейс, вызываемый `DbManager` при `SqlException`. Регистрируется в DI |
 
+## Server-side grouping architecture
+
+Группировка выполняется **на стороне SQL Server** двумя отдельными запросами (подход DevExpress Blazor Grid):
+
+1. **Запрос групповых агрегатов** — `GROUP BY` + `COUNT(*)`, возвращает уникальные значения группировки и количество записей
+2. **Запрос детальных строк** — выборка конкретных записей с `ROW_NUMBER()` и фильтром по значениям группы
+
+### Модель данных
+- `IGridRow` — маркерный интерфейс строки в плоском списке (`Kesco.Lib.Entities/GridRow.cs`)
+- `GroupHeaderRow` — заголовок группы: `FullKey`, `DisplayValue`, `ItemCount`, `Depth`, `IsExpanded`
+- `DetailRow<T>` — обёртка сущности: `Item`, `GroupKey`
+- `GroupedPage<T>` — результат запроса: `Rows` (плоский список) + `TotalEffectiveRows`
+- `KescoDataQuery.ExpandedGroups` — `HashSet<string>` полных ключей развёрнутых групп (разделитель `\u001F`)
+
+### Рендеринг
+- **Плоская модель**: заголовки групп и строки детализации передаются как единый `IEnumerable<IGridRow>`
+- Колонки грида используют `TemplateColumn T="IGridRow"` с проверкой типа в `CellTemplate`:
+  ```razor
+  @if (context.Item is GroupHeaderRow header) { /* рендер заголовка */ }
+  else if (context.Item is DetailRow<MyEntity> detail) { /* рендер данных */ }
+  ```
+- **Запрещено** использовать MudBlazor `GroupBy`/`Groupable`/`GroupExpanded`/`GroupTemplate` — группировка управляется сервером
+- `SortMode` на MudDataGrid **не задаётся** — порядок строк определяется серверным SQL
+
+### Пагинация с группами
+- Каждый заголовок группы = 1 эффективная строка, каждая строка детализации = 1
+- `TotalCount` = общее эффективное количество строк (а не сырых записей)
+- При сворачивании/разворачивании группы количество видимых строк меняется, страница пересчитывается
+- При разворачивании последней группы на странице, если её детали не влезают — автоматический переход на следующую страницу
+
+### Многоуровневая группировка
+- SQL: `GROUP BY Col1, Col2, ...` — возвращает листовые агрегаты
+- C#: синтетические родительские узлы создаются из листовых, `ItemCount` родителя = сумма дочерних
+- `ComputeParentCounts()` рекурсивно вычисляет `ItemCount` для всех промежуточных уровней
+- Уровень вложенности: `Depth` (0 = внешний), отступ заголовка: `Depth * 16px`
+
+### Отображение колонок
+- Колонки, участвующие в группировке, скрываются в гриде через `Hidden` на `TemplateColumn`:
+  ```razor
+  Hidden="@(_dataGrid?.GroupColumns.Contains("SqlColName") ?? false)"
+  ```
+- Иконка раскрытия/сворачивания и название группы отображаются в первой колонке (Код)
+
+### Групповой WHERE
+- В подзапросах `FROM (SELECT ...) _g` / `FROM (SELECT ...) _src` видны только выходные имена колонок (не табличные алиасы)
+- Для grouped-режима `BuildWhereClause` должен использовать выходные имена колонок: `"НазваниеАнализа"`, `"TestTypeName"` (не `"a.НазваниеАнализа"`, `"t.ТипМедицинскогоАнализа"`)
+- В плоском режиме WHERE напрямую в SELECT, табличные алиасы допустимы: `"a.НазваниеАнализа"`
+
+### `GroupExprMap` — сопоставление SQL-имён колонок
+- В странице определяется словарь, сопоставляющий имена колонок из `GroupColumns` с их выходными именами в подзапросе:
+  ```csharp
+  private static readonly Dictionary<string, string> GroupExprMap = new()
+  {
+      ["TestTypeName"] = "TestTypeName",
+      ["КодМедицинскогоАнализа"] = "КодМедицинскогоАнализа",
+      ["НазваниеАнализа"] = "НазваниеАнализа",
+      ["Порядок"] = "Порядок"
+  };
+  ```
+
+### Порядок сортировки в групповых запросах
+- Групповой агрегатный запрос учитывает направление сортировки из `SortColumns`:
+  ```sql
+  ORDER BY TestTypeName DESC, Порядок ASC
+  ```
+- Детальные строки внутри группы сортируются по колонкам, НЕ участвующим в группировке
+
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**
 - No tests exist in this repo
@@ -105,23 +184,21 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - Each SQL constant must be documented with `///` XML doc and `--` inline SQL comments for every column
 - Every public/protected class, method, property, and field must have a `/// <summary>` XML doc comment
 - Database column names are defined exactly once in `ColumnNames.cs` and referenced from `[Column]` attributes (SQLQueries constants are exempt)
-- Grouping column must be hidden when grouping is active — add `Hidden="@(_dataGrid?.GroupColumns.Contains("SqlColumn") ?? false)"` on the `PropertyColumn` used for grouping. Drag-and-drop column headers must have `draggable="true"` with `@ondragstart` setting `KescoDragState.DraggedColumn`
-- **Multi-level grouping order** must be declared via `GroupByOrder="@(_dataGrid?.GetGroupByOrder("SqlColumn") ?? 0)"` on every groupable `PropertyColumn`. `KescoDataList.GetGroupByOrder(sqlCol)` returns the column's index in `_groupColumns` (0 = outermost). Without this binding MudBlazor uses DOM order, not tray order. Never use `@key` or reflection to fix group order — the declarative binding is the only correct approach
 - Data loading goes in `OnAfterRenderAsync(bool firstRender)` with `if (firstRender)` guard, **not** in `OnInitializedAsync` — avoids double-load from Blazor prerendering
-- Sorting, searching, grouping, and **pagination** for data grids must be performed on SQL Server side (not in-memory) — use `GetPagedAsync` + `GetCountAsync`
+- Sorting, searching, grouping, and **pagination** for data grids must be performed on SQL Server side (not in-memory)
 - Sort column headers use null-conditional `_dataGrid?.ToggleSort("SqlColumn")` — `_dataGrid` is set via `@ref` on `KescoDataList`
 - `appsettings.Development.json` is gitignored — use it for local connection strings
 - All modal/dialog windows must be draggable
 - Data grid header row must be fixed (not scroll with data) — `KescoDataList` does this automatically
 - При вызове `Db.ExecuteAsync()` с сырым SQL обязательно передавать `commandType: CommandType.Text` — по умолчанию `ExecuteAsync` использует `CommandType.StoredProcedure`
 - `DapperColumnMapper` делает fallback на имя свойства, если `[Column]`-атрибут не совпал с колонкой результата — это позволяет использовать SQL-алиасы (`SELECT КодТипа AS Id`) даже при наличии `[Column("КодТипа")]` на свойстве `Id`
-- **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере
-- **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). OFFSET/FETCH передаются как `@__offset`/`@__fetch` через `DynamicParameters`
+- **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере. `ExpandedGroups` управляется страницей и **не перезаписывается** из query
+- **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). Параметры пагинации передаются как `@__start`/`@__end` через `DynamicParameters`
 - **Обработка ошибок БД**: `DbManager` автоматически перехватывает `SqlException` и вызывает `ISqlErrorHandler.HandleSqlError()`. Страницам **не нужно** вызывать `ErrorService.Report()` вручную — только `try/finally` для `_loading = false`. Баннер `KescoErrorBar` в `MainLayout` показывает ошибку со строкой подключения, SQL и параметрами
 - **Grouping tray**: заголовки колонок должны быть `draggable="true"` с `@ondragstart`,
   устанавливающим `KescoDragState.DraggedColumn`. При перетаскивании на панель группировки колонка
-  добавляется автоматически. Сортировка по сгруппированным колонкам разрешена. Панель скрыта по
-  умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре. Кнопки тулбара
-  (группировка, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
+  добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
+  Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
+  Кнопки тулбара (группировка, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
   `toolbar-add-btn` и тултипами — не `MudButton Variant.Filled`
 - `Program.cs` регистрирует `KescoErrorService` как Scoped и как `ISqlErrorHandler`, передаёт `ISqlErrorHandler` в конструктор `DbManager`

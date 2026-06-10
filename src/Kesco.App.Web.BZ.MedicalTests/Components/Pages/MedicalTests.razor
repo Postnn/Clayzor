@@ -1,4 +1,6 @@
 @page "/medical-tests"
+@using System.Data
+@using Dapper
 @using Kesco.Lib.DALC
 @using Kesco.Lib.Web.Settings
 @using Kesco.Lib.Web.BZ.Controls
@@ -11,32 +13,26 @@
 
 <PageTitle>Медицинские исследования</PageTitle>
 
-<KescoDataList TEntity="MedicalTest"
+<KescoDataList TEntity="IGridRow"
                @ref="_dataGrid"
                Title="Медицинские исследования"
-               Items="_tests"
+               Items="_rows"
                Loading="_loading"
                PageSize="@AppSettings.DefaultPageSize"
                ShowGroupingTray="true"
                AvailableGroupColumns="@_groupColumnsDef"
-               Groupable="@(_dataGrid?.GroupColumns.Count > 0)"
                TotalCount="@_query.TotalCount"
                ShowPagination="true"
                OnAdd="OpenAddDialog"
                OnRowClick="OnRowClicked"
                OnQueryChanged="OnQueryChanged">
-    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Id" Sortable="false"
-                    Title="Код"
-                    Groupable="true"
-                    Grouping="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)"
-                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("КодМедицинскогоАнализа") ?? 0)"
-                    GroupBy="@(x => x.Id)">
+    <TemplateColumn T="IGridRow" Title="Код" Sortable="false"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)">
         <HeaderTemplate>
              <div style="display:flex;align-items:center;width:100%;cursor:pointer"
                   draggable="true"
                   @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "КодМедицинскогоАнализа"; })"
-                  @onclick="@(() => _dataGrid?.ToggleSort("КодМедицинскогоАнализа"))">
+                                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("КодМедицинскогоАнализа"); })">
                 <MudText Style="flex:1;text-align:center">Код</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -44,24 +40,30 @@
                 }
             </div>
         </HeaderTemplate>
-        <GroupTemplate>
-            <MudText Typo="Typo.body1" Style="font-weight:600">
-                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
-            </MudText>
-        </GroupTemplate>
-    </PropertyColumn>
-    <PropertyColumn T="MedicalTest" TProperty="string" Property="x => x.Name" Sortable="false"
-                    Title="Название"
-                    Groupable="true"
-                    Grouping="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)"
-                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("НазваниеАнализа") ?? 0)"
-                    GroupBy="@(x => x.Name ?? "")">
+        <CellTemplate>
+            @if (context.Item is GroupHeaderRow header)
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Style="@($"padding-left:{header.Depth * 16}px")">
+                    <MudIconButton Icon="@(header.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                   Size="Size.Small"
+                                   OnClick="() => ToggleGroup(header)"
+                                   Style="padding:0;width:22px;height:22px;min-width:22px" />
+                    <MudText Style="font-weight:600;font-size:0.875rem">@header.DisplayValue (@header.ItemCount шт.)</MudText>
+                </MudStack>
+            }
+            else if (context.Item is DetailRow<MedicalTest> detail)
+            {
+                <MudText>@detail.Item.Id</MudText>
+            }
+        </CellTemplate>
+    </TemplateColumn>
+    <TemplateColumn T="IGridRow" Title="Название" Sortable="false"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)">
         <HeaderTemplate>
              <div style="display:flex;align-items:center;width:100%;cursor:pointer"
                   draggable="true"
                   @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "НазваниеАнализа"; })"
-                  @onclick="@(() => _dataGrid?.ToggleSort("НазваниеАнализа"))">
+                                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("НазваниеАнализа"); })">
                 <MudText Style="flex:1;text-align:center">Название</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -69,24 +71,20 @@
                 }
             </div>
         </HeaderTemplate>
-        <GroupTemplate>
-            <MudText Typo="Typo.body1" Style="font-weight:600">
-                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
-            </MudText>
-        </GroupTemplate>
-    </PropertyColumn>
-    <PropertyColumn T="MedicalTest" TProperty="string" Property="x => x.TestTypeName" Sortable="false"
-                    Title="Тип"
-                    Groupable="true"
-                    Grouping="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)"
-                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("TestTypeName") ?? 0)"
-                    GroupBy="@(x => x.TestTypeName ?? "")">
+        <CellTemplate>
+            @if (context.Item is DetailRow<MedicalTest> detail)
+            {
+                <MudText>@detail.Item.Name</MudText>
+            }
+        </CellTemplate>
+    </TemplateColumn>
+    <TemplateColumn T="IGridRow" Title="Тип" Sortable="false"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)">
         <HeaderTemplate>
              <div style="display:flex;align-items:center;width:100%;cursor:pointer"
                   draggable="true"
                   @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "TestTypeName"; })"
-                  @onclick="@(() => _dataGrid?.ToggleSort("TestTypeName"))">
+                                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("TestTypeName"); })">
                 <MudText Style="flex:1;text-align:center">Тип</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -94,24 +92,20 @@
                 }
             </div>
         </HeaderTemplate>
-        <GroupTemplate>
-            <MudText Typo="Typo.body1" Style="font-weight:600">
-                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
-            </MudText>
-        </GroupTemplate>
-    </PropertyColumn>
-    <PropertyColumn T="MedicalTest" TProperty="int" Property="x => x.Order" Sortable="false"
-                    Title="Порядок"
-                    Groupable="true"
-                    Grouping="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)"
-                    GroupByOrder="@(_dataGrid?.GetGroupByOrder("Порядок") ?? 0)"
-                    GroupBy="@(x => x.Order)">
+        <CellTemplate>
+            @if (context.Item is DetailRow<MedicalTest> detail)
+            {
+                <MudText>@detail.Item.TestTypeName</MudText>
+            }
+        </CellTemplate>
+    </TemplateColumn>
+    <TemplateColumn T="IGridRow" Title="Порядок" Sortable="false"
+                    Hidden="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)">
         <HeaderTemplate>
              <div style="display:flex;align-items:center;width:100%;cursor:pointer"
                   draggable="true"
                   @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "Порядок"; })"
-                  @onclick="@(() => _dataGrid?.ToggleSort("Порядок"))">
+                                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("Порядок"); })">
                 <MudText Style="flex:1;text-align:center">Порядок</MudText>
                 @if (_dataGrid is not null)
                 {
@@ -119,30 +113,37 @@
                 }
             </div>
         </HeaderTemplate>
-        <GroupTemplate>
-            <MudText Typo="Typo.body1" Style="font-weight:600">
-                @context.Grouping!.Key (@context.Grouping!.Count() шт.)
-            </MudText>
-        </GroupTemplate>
-    </PropertyColumn>
-    <TemplateColumn T="MedicalTest" Title="Группа">
         <CellTemplate>
-            <MudIcon Icon="@(context.Item.IsGroup ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
-                     Color="@(context.Item.IsGroup ? Color.Success : Color.Default)"
-                     Size="Size.Small" />
+            @if (context.Item is DetailRow<MedicalTest> detail)
+            {
+                <MudText>@detail.Item.Order</MudText>
+            }
         </CellTemplate>
     </TemplateColumn>
-    <TemplateColumn T="MedicalTest" Title="Заключение">
+    <TemplateColumn T="IGridRow" Title="Группа">
         <CellTemplate>
-            <MudIcon Icon="@(context.Item.IsConclusion ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
-                     Color="@(context.Item.IsConclusion ? Color.Success : Color.Default)"
-                     Size="Size.Small" />
+            @if (context.Item is DetailRow<MedicalTest> detail)
+            {
+                <MudIcon Icon="@(detail.Item.IsGroup ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                         Color="@(detail.Item.IsGroup ? Color.Success : Color.Default)"
+                         Size="Size.Small" />
+            }
+        </CellTemplate>
+    </TemplateColumn>
+    <TemplateColumn T="IGridRow" Title="Заключение">
+        <CellTemplate>
+            @if (context.Item is DetailRow<MedicalTest> detail)
+            {
+                <MudIcon Icon="@(detail.Item.IsConclusion ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                         Color="@(detail.Item.IsConclusion ? Color.Success : Color.Default)"
+                         Size="Size.Small" />
+            }
         </CellTemplate>
     </TemplateColumn>
 </KescoDataList>
 
 @code {
-    private KescoDataList<MedicalTest> _dataGrid = null!;
+    private KescoDataList<IGridRow> _dataGrid = null!;
     private KescoDataQuery _query = new();
 
     private Dictionary<string, string> _groupColumnsDef = new()
@@ -153,7 +154,19 @@
         ["Порядок"] = "Порядок"
     };
 
-    private List<MedicalTest> _tests = [];
+    /// <summary>
+    /// Имена колонок как они выходят из подзапроса SELECT_МедицинскиеАнализы
+    /// (для GROUP BY и WHERE поверх обёртки FROM (SELECT...) _g / _src).
+    /// </summary>
+    private static readonly Dictionary<string, string> GroupExprMap = new()
+    {
+        ["TestTypeName"] = "TestTypeName",
+        ["КодМедицинскогоАнализа"] = "КодМедицинскогоАнализа",
+        ["НазваниеАнализа"] = "НазваниеАнализа",
+        ["Порядок"] = "Порядок"
+    };
+
+    private List<IGridRow> _rows = [];
     private bool _loading = true;
 
     private async Task OnQueryChanged(KescoDataQuery query)
@@ -179,14 +192,12 @@
     private async Task LoadData()
     {
         _loading = true;
-        var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
-        var where = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
-        var param = new { search = $"%{_query.SearchText}%" };
-
         try
         {
-            _query.TotalCount = await MedicalTest.GetCountAsync(Db, where, param);
-            _tests = (await MedicalTest.GetPagedAsync(Db, where, orderBy, param, _query.PageNumber, _query.PageSize)).ToList();
+            if (_query.GroupEnabled && _query.GroupColumns.Count > 0)
+                await LoadGroupedData();
+            else
+                await LoadFlatData();
         }
         catch (Exception)
         {
@@ -197,6 +208,341 @@
             _loading = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async Task LoadFlatData()
+    {
+        var where = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
+        var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
+        var param = new { search = $"%{_query.SearchText}%" };
+
+        _query.TotalCount = await MedicalTest.GetCountAsync(Db, where, param);
+        var items = await MedicalTest.GetPagedAsync(Db, where, orderBy, param, _query.PageNumber, _query.PageSize);
+        _rows = items.Select(i => (IGridRow)new DetailRow<MedicalTest> { Item = i }).ToList();
+    }
+
+    private async Task LoadGroupedData()
+    {
+        // Use subquery-visible column names (no table aliases a./t. outside _g)
+        var where = _query.BuildWhereClause("НазваниеАнализа", "TestTypeName");
+        var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
+        var param = new { search = $"%{_query.SearchText}%" };
+
+        var groupCols = _query.GroupColumns;
+        var exprs = groupCols.Select(c => GroupExprMap.GetValueOrDefault(c, c)).ToList();
+
+        // Step 1: build group aggregate SQL (SQL Server 2008 R2 compatible)
+        var groupSql = BuildGroupSql(exprs, where);
+        var groupRows = await Db.QueryAsync<GroupRow>(groupSql, param);
+
+        // Step 2: build aggregate list from flat rows, creating synthetic parent nodes
+        var aggregates = new List<GroupAgg>();
+        var seenKeys = new HashSet<string>();
+        foreach (var gr in groupRows)
+        {
+            var keys = new List<string>();
+            if (gr.K0 is not null) keys.Add(gr.K0.ToString()!);
+            if (gr.K1 is not null) keys.Add(gr.K1.ToString()!);
+
+            var depth = keys.Count - 1;
+            var rawKeyValues = new object?[] { gr.K0, gr.K1 }.Take(keys.Count).ToList();
+
+            // Create synthetic parent aggregates for all intermediate levels
+            for (int d = 0; d < depth; d++)
+            {
+                var parentKeys = keys.Take(d + 1).ToList();
+                var parentFullKey = string.Join("\u001F", parentKeys);
+                if (seenKeys.Add(parentFullKey))
+                {
+                    aggregates.Add(new GroupAgg
+                    {
+                        FullKey = parentFullKey,
+                        DisplayValue = parentKeys.Last(),
+                        ItemCount = 0,
+                        Depth = d,
+                        ParentKey = d > 0 ? string.Join("\u001F", parentKeys.Take(d)) : "",
+                        KeyValues = parentKeys,
+                        RawKeys = [],
+                    });
+                }
+            }
+
+            var fullKey = string.Join("\u001F", keys);
+            var parentKey = depth > 0
+                ? string.Join("\u001F", keys.Take(depth))
+                : "";
+
+            aggregates.Add(new GroupAgg
+            {
+                FullKey = fullKey,
+                DisplayValue = keys.Last(),
+                ItemCount = gr.Cnt,
+                Depth = depth,
+                ParentKey = parentKey,
+                KeyValues = keys,
+                RawKeys = rawKeyValues,
+            });
+        }
+
+        // Step 3: build tree and compute effective rows
+        var rootGroups = new List<GroupNode>();
+        var lookup = new Dictionary<string, GroupNode>();
+        foreach (var a in aggregates)
+        {
+            var node = new GroupNode { Aggregate = a, Children = [] };
+            lookup[a.FullKey] = node;
+            if (string.IsNullOrEmpty(a.ParentKey))
+                rootGroups.Add(node);
+            else if (lookup.TryGetValue(a.ParentKey, out var parent))
+                parent.Children.Add(node);
+        }
+
+        // Compute parent ItemCount from children (sum of child ItemCounts)
+        ComputeParentCounts(rootGroups);
+
+        int totalEffective = 0;
+        foreach (var root in rootGroups)
+            totalEffective += ComputeEffectiveRows(root, _query.ExpandedGroups);
+
+        // Step 4: collect visible group headers and detail ranges
+        var layout = new List<LayoutItem>();
+        int currentRow = 1;
+        int pageStart = (_query.PageNumber - 1) * _query.PageSize + 1;
+        int pageEnd = _query.PageNumber * _query.PageSize;
+        WalkTree(rootGroups, _query.ExpandedGroups, pageStart, pageEnd, ref currentRow, layout);
+
+        // Step 5: load detail rows for expanded groups and build final list
+        var newRows = new List<IGridRow>();
+        foreach (var item in layout)
+        {
+            if (item.Header is not null)
+            {
+                newRows.Add(item.Header);
+            }
+
+            if (item.HasDetailRange && item.Aggregate is not null)
+            {
+                var ag = item.Aggregate;
+                var detailRows = await LoadDetailRows(exprs, ag.RawKeys, where, orderBy,
+                    param, item.DetailStart, item.DetailEnd);
+                newRows.AddRange(detailRows);
+            }
+        }
+        _rows = newRows;
+
+        _query.TotalCount = totalEffective;
+    }
+
+    private string BuildGroupSql(List<string> exprs, string? where)
+    {
+        var selectParts = new List<string>();
+        for (int i = 0; i < 3; i++)
+        {
+            if (i < exprs.Count)
+                selectParts.Add($"{exprs[i]} AS K{i}");
+            else
+                selectParts.Add($"CAST(NULL AS SQL_VARIANT) AS K{i}");
+        }
+        var sel = string.Join(", ", selectParts);
+        var grp = string.Join(", ", exprs);
+
+        var ordParts = new List<string>();
+        foreach (var expr in exprs)
+        {
+            var sortCol = _query.SortColumns.Find(s => s.Column == expr);
+            if (sortCol is not null)
+                ordParts.Add($"{expr} {(sortCol.Desc ? "DESC" : "ASC")}");
+            else
+                ordParts.Add(expr);
+        }
+        var ord = string.Join(", ", ordParts);
+
+        var sql = $"SELECT {sel}, COUNT(*) AS Cnt";
+        sql += $" FROM ({SQLQueries.SELECT_МедицинскиеАнализы}) _g";
+        if (where is not null)
+            sql += $" WHERE {where}";
+        sql += $" GROUP BY {grp}";
+        sql += $" ORDER BY {ord}";
+        return sql;
+    }
+
+    private int ComputeEffectiveRows(GroupNode node, HashSet<string> expanded)
+    {
+        int rows = 1;
+        if (expanded.Contains(node.Aggregate.FullKey))
+        {
+            foreach (var child in node.Children)
+                rows += ComputeEffectiveRows(child, expanded);
+            rows += node.Aggregate.ItemCount;
+        }
+        node.EffectiveRows = rows;
+        return rows;
+    }
+
+    /// <summary>
+    /// Вычисляет ItemCount родительских групп как сумму ItemCount всех дочерних листьев.
+    /// Родительские синтетические узлы создаются с ItemCount=0; здесь заполняются реальные значения.
+    /// </summary>
+    private static int ComputeParentCounts(List<GroupNode> roots)
+    {
+        int total = 0;
+        foreach (var node in roots)
+        {
+            if (node.Children.Count > 0)
+            {
+                int childSum = ComputeParentCounts(node.Children);
+                node.Aggregate.ItemCount = childSum;
+                total += childSum;
+            }
+            else
+            {
+                total += node.Aggregate.ItemCount;
+            }
+        }
+        return total;
+    }
+
+    private void WalkTree(List<GroupNode> nodes, HashSet<string> expanded,
+        int pageStart, int pageEnd, ref int currentRow, List<LayoutItem> layout)
+    {
+        foreach (var node in nodes)
+        {
+            int groupStart = currentRow;
+            int groupEnd = currentRow + node.EffectiveRows - 1;
+
+            if (groupStart > pageEnd)
+            {
+                currentRow = groupEnd + 1;
+                return;
+            }
+
+            bool overlaps = groupEnd >= pageStart && groupStart <= pageEnd;
+
+            if (overlaps)
+            {
+                bool isExpanded = expanded.Contains(node.Aggregate.FullKey);
+                layout.Add(new LayoutItem
+                {
+                    Header = new GroupHeaderRow
+                    {
+                        DisplayValue = node.Aggregate.DisplayValue,
+                        FullKey = node.Aggregate.FullKey,
+                        ItemCount = node.Aggregate.ItemCount,
+                        Depth = node.Aggregate.Depth,
+                        IsExpanded = isExpanded,
+                        GroupKeys = node.Aggregate.KeyValues,
+                    },
+                    Aggregate = node.Aggregate,
+                });
+            }
+            currentRow++;
+
+            if (expanded.Contains(node.Aggregate.FullKey))
+            {
+                WalkTree(node.Children, expanded, pageStart, pageEnd, ref currentRow, layout);
+                if (currentRow > pageEnd)
+                {
+                    currentRow = groupEnd + 1;
+                    return;
+                }
+
+                int detailCount = node.Aggregate.ItemCount;
+                if (overlaps && detailCount > 0)
+                {
+                    int firstDetail = Math.Max(1, pageStart - currentRow + 1);
+                    int lastDetail = Math.Min(detailCount, pageEnd - currentRow + 1);
+                    if (firstDetail <= lastDetail)
+                    {
+                        var last = layout.Last();
+                        last.DetailStart = firstDetail;
+                        last.DetailEnd = lastDetail;
+                        last.HasDetailRange = true;
+                    }
+                }
+                currentRow += detailCount;
+            }
+            else
+            {
+                currentRow = groupEnd + 1;
+            }
+        }
+    }
+
+    private async Task<List<DetailRow<MedicalTest>>> LoadDetailRows(
+        List<string> exprs, List<object?> rawKeys,
+        string? where, string orderBy, object? param,
+        int detailStart, int detailEnd)
+    {
+        var parts = new List<string>();
+        if (where is not null)
+            parts.Add($"({where})");
+
+        var detailParams = new DynamicParameters();
+        if (param is not null)
+            detailParams.AddDynamicParams(param);
+
+        for (int i = 0; i < rawKeys.Count; i++)
+        {
+            parts.Add($"{exprs[i]} = @dk{i}");
+            detailParams.Add($"dk{i}", rawKeys[i]);
+        }
+
+        var fullWhere = string.Join(" AND ", parts);
+
+        // Remove group columns from ORDER BY for detail ordering
+        var groupCols = _query.GroupColumns.ToHashSet();
+        var detailOrderParts = new List<string>();
+        foreach (var part in orderBy.Split(", ", StringSplitOptions.RemoveEmptyEntries))
+        {
+            var col = part.Split(' ')[0];
+            if (!groupCols.Contains(col))
+                detailOrderParts.Add(part);
+        }
+        var detailOrder = detailOrderParts.Count > 0
+            ? string.Join(", ", detailOrderParts)
+            : "Порядок, НазваниеАнализа";
+
+        detailParams.Add("__start", detailStart);
+        detailParams.Add("__end", detailEnd);
+
+        var sql = $"SELECT * FROM (";
+        sql += $"SELECT _src.*, ROW_NUMBER() OVER (ORDER BY {detailOrder}) AS _drn";
+        sql += $" FROM ({SQLQueries.SELECT_МедицинскиеАнализы}) _src";
+        if (!string.IsNullOrWhiteSpace(fullWhere))
+            sql += $" WHERE {fullWhere}";
+        sql += $") _d WHERE _drn BETWEEN @__start AND @__end";
+
+        var items = await Db.QueryAsync<MedicalTest>(sql, detailParams);
+        return items.Select(i => new DetailRow<MedicalTest> { Item = i }).ToList();
+    }
+
+    private async Task ToggleGroup(GroupHeaderRow header)
+    {
+        var wasExpanded = _query.ExpandedGroups.Contains(header.FullKey);
+        if (wasExpanded)
+            _query.ExpandedGroups.Remove(header.FullKey);
+        else
+            _query.ExpandedGroups.Add(header.FullKey);
+
+        await LoadData();
+
+        // If expanding and detail rows don't appear on this page, advance
+        if (!wasExpanded)
+        {
+            var expandedHeader = _rows.OfType<GroupHeaderRow>()
+                .FirstOrDefault(h => h.FullKey == header.FullKey);
+            if (expandedHeader is not null)
+            {
+                var headerIdx = _rows.IndexOf(expandedHeader);
+                if (headerIdx >= 0 && headerIdx == _rows.Count - 1 && header.ItemCount > 0)
+                {
+                    _query.PageNumber++;
+                    await LoadData();
+                }
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task OpenAddDialog()
@@ -217,20 +563,69 @@
         }
     }
 
-    private async Task OnRowClicked(DataGridRowClickEventArgs<MedicalTest> args)
+    private async Task OnRowClicked(DataGridRowClickEventArgs<IGridRow> args)
     {
-        var parameters = new DialogParameters<MedicalTestEditDialog>
+        if (args.Item is GroupHeaderRow header)
         {
-            { x => x.Model, args.Item }
-        };
-        var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
-        var dialog = await DialogService.ShowExAsync<MedicalTestEditDialog>("Редактирование", parameters, options);
-        var result = await dialog.Result;
-
-        if (result is not null && !result.Canceled)
-        {
-            Snackbar.Add("Запись обновлена", Severity.Success);
+            await ToggleGroup(header);
+            return;
         }
-        await LoadData();
+        if (args.Item is DetailRow<MedicalTest> detail)
+        {
+            var parameters = new DialogParameters<MedicalTestEditDialog>
+            {
+                { x => x.Model, detail.Item }
+            };
+            var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
+            var dialog = await DialogService.ShowExAsync<MedicalTestEditDialog>("Редактирование", parameters, options);
+            var result = await dialog.Result;
+
+            if (result is not null && !result.Canceled)
+            {
+                Snackbar.Add("Запись обновлена", Severity.Success);
+            }
+            await LoadData();
+        }
+    }
+
+    // ── Helper types for group aggregate query ──
+
+    /// <summary>Строка результата запроса групповых агрегатов.</summary>
+    private class GroupRow
+    {
+        public object K0 { get; set; } = "";
+        public object? K1 { get; set; }
+        public object? K2 { get; set; }
+        public int Cnt { get; set; }
+    }
+
+    /// <summary>Групповой агрегат.</summary>
+    private class GroupAgg
+    {
+        public string FullKey { get; set; } = "";
+        public string DisplayValue { get; set; } = "";
+        public int ItemCount { get; set; }
+        public int Depth { get; set; }
+        public string ParentKey { get; set; } = "";
+        public List<string> KeyValues { get; set; } = [];
+        public List<object?> RawKeys { get; set; } = [];
+    }
+
+    /// <summary>Узел дерева групп.</summary>
+    private class GroupNode
+    {
+        public GroupAgg Aggregate { get; set; } = default!;
+        public List<GroupNode> Children { get; set; } = [];
+        public int EffectiveRows { get; set; }
+    }
+
+    /// <summary>Элемент макета страницы: либо заголовок группы, либо диапазон детальных строк.</summary>
+    private class LayoutItem
+    {
+        public GroupHeaderRow? Header { get; set; }
+        public int DetailStart { get; set; }
+        public int DetailEnd { get; set; }
+        public bool HasDetailRange { get; set; }
+        public GroupAgg? Aggregate { get; set; }
     }
 }
