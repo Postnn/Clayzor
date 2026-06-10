@@ -1,0 +1,254 @@
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="display:flex;align-items:center;gap:8px">
+            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" />
+            Фильтр: @ColumnDisplayName
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudSelect T="ColumnFilterOperator"
+                       Label="Условие"
+                       @bind-Value="_operator"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       AnchorOrigin="Origin.BottomLeft">
+                @foreach (var op in _availableOperators)
+                {
+                    <MudSelectItem Value="@op">@GetOperatorLabel(op)</MudSelectItem>
+                }
+            </MudSelect>
+
+            @if (ColumnType == ColumnType.Text)
+            {
+                <MudTextField T="string"
+                              Label="Значение"
+                              @bind-Value="_textValue"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Clearable="true" />
+            }
+            else if (ColumnType == ColumnType.Number)
+            {
+                <MudNumericField T="int?"
+                                 Label="Значение"
+                                 @bind-Value="_numberValue"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Clearable="true" />
+            }
+            else if (ColumnType == ColumnType.Boolean)
+            {
+                <MudSelect T="bool?"
+                           Label="Значение"
+                           @bind-Value="_boolValue"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           AnchorOrigin="Origin.BottomLeft"
+                           Clearable="true">
+                    <MudSelectItem Value="@((bool?)true)">Да</MudSelectItem>
+                    <MudSelectItem Value="@((bool?)false)">Нет</MudSelectItem>
+                </MudSelect>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Отмена</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Apply"
+                   Disabled="@(!HasValidValue)">
+            Применить
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    /// <summary>Отображаемое имя колонки (заголовок диалога).</summary>
+    [Parameter] public string ColumnDisplayName { get; set; } = "";
+
+    /// <summary>SQL-имя колонки — включается в возвращаемый <see cref="ColumnFilter"/>.</summary>
+    [Parameter] public string ColumnSqlName { get; set; } = "";
+
+    /// <summary>Тип данных колонки — определяет доступные операторы и поле ввода.</summary>
+    [Parameter] public ColumnType ColumnType { get; set; } = ColumnType.Text;
+
+    /// <summary>Существующий фильтр для режима редактирования. null — новый фильтр.</summary>
+    [Parameter] public ColumnFilter? ExistingFilter { get; set; }
+
+    private ColumnFilterOperator _operator;
+    private string? _textValue;
+    private int? _numberValue;
+    private bool? _boolValue;
+
+    private IReadOnlyList<ColumnFilterOperator> _availableOperators = [];
+
+    /// <summary>
+    /// Возвращает читаемое описание фильтра для отображения в чипе панели фильтров.
+    /// </summary>
+    /// <param name="filter">Условие фильтра.</param>
+    /// <param name="displayName">Отображаемое имя колонки.</param>
+    public static string GetFilterDescription(ColumnFilter filter, string displayName)
+    {
+        var opLabel = filter.Operator switch
+        {
+            ColumnFilterOperator.Contains          => "содержит",
+            ColumnFilterOperator.Equals            => "=",
+            ColumnFilterOperator.NotEquals         => "≠",
+            ColumnFilterOperator.StartsWith        => "начинается с",
+            ColumnFilterOperator.EndsWith          => "заканчивается на",
+            ColumnFilterOperator.GreaterThan       => ">",
+            ColumnFilterOperator.GreaterThanOrEqual => "≥",
+            ColumnFilterOperator.LessThan          => "<",
+            ColumnFilterOperator.LessThanOrEqual   => "≤",
+            _ => "="
+        };
+
+        var valueLabel = filter.Value switch
+        {
+            true  => "Да",
+            false => "Нет",
+            _     => $"«{filter.Value}»"
+        };
+
+        return $"{displayName} {opLabel} {valueLabel}";
+    }
+
+    protected override void OnParametersSet()
+    {
+        _availableOperators = ColumnType switch
+        {
+            ColumnType.Text => [
+                ColumnFilterOperator.Contains,
+                ColumnFilterOperator.Equals,
+                ColumnFilterOperator.NotEquals,
+                ColumnFilterOperator.StartsWith,
+                ColumnFilterOperator.EndsWith,
+            ],
+            ColumnType.Number => [
+                ColumnFilterOperator.Equals,
+                ColumnFilterOperator.NotEquals,
+                ColumnFilterOperator.GreaterThan,
+                ColumnFilterOperator.GreaterThanOrEqual,
+                ColumnFilterOperator.LessThan,
+                ColumnFilterOperator.LessThanOrEqual,
+            ],
+            ColumnType.Boolean => [
+                ColumnFilterOperator.Equals,
+            ],
+            _ => [ColumnFilterOperator.Equals]
+        };
+
+        if (ExistingFilter is not null)
+        {
+            _operator = ExistingFilter.Operator;
+            switch (ColumnType)
+            {
+                case ColumnType.Text:
+                    _textValue = ExistingFilter.Value?.ToString();
+                    break;
+                case ColumnType.Number:
+                    _numberValue = ExistingFilter.Value is int i ? i
+                        : ExistingFilter.Value is not null ? (int?)Convert.ToInt32(ExistingFilter.Value)
+                        : null;
+                    break;
+                case ColumnType.Boolean:
+                    _boolValue = ExistingFilter.Value is bool b ? b : null;
+                    break;
+            }
+        }
+        else
+        {
+            _operator = _availableOperators[0];
+        }
+    }
+
+    private bool HasValidValue => ColumnType switch
+    {
+        ColumnType.Text    => !string.IsNullOrEmpty(_textValue),
+        ColumnType.Number  => _numberValue.HasValue,
+        ColumnType.Boolean => _boolValue.HasValue,
+        _ => false
+    };
+
+    private void Cancel() => MudDialog?.Cancel();
+
+    private void Apply()
+    {
+        if (!HasValidValue) return;
+
+        var paramName = "cf_" + ColumnSqlName.Replace(".", "_")
+                                              .Replace(" ", "_")
+                                              .Replace("А","A").Replace("а","a")
+                                              .Replace("Б","B").Replace("б","b")
+                                              .Replace("В","V").Replace("в","v")
+                                              .Replace("Г","G").Replace("г","g")
+                                              .Replace("Д","D").Replace("д","d")
+                                              .Replace("Е","E").Replace("е","e")
+                                              .Replace("Ё","Yo").Replace("ё","yo")
+                                              .Replace("Ж","Zh").Replace("ж","zh")
+                                              .Replace("З","Z").Replace("з","z")
+                                              .Replace("И","I").Replace("и","i")
+                                              .Replace("Й","Y").Replace("й","y")
+                                              .Replace("К","K").Replace("к","k")
+                                              .Replace("Л","L").Replace("л","l")
+                                              .Replace("М","M").Replace("м","m")
+                                              .Replace("Н","N").Replace("н","n")
+                                              .Replace("О","O").Replace("о","o")
+                                              .Replace("П","P").Replace("п","p")
+                                              .Replace("Р","R").Replace("р","r")
+                                              .Replace("С","S").Replace("с","s")
+                                              .Replace("Т","T").Replace("т","t")
+                                              .Replace("У","U").Replace("у","u")
+                                              .Replace("Ф","F").Replace("ф","f")
+                                              .Replace("Х","Kh").Replace("х","kh")
+                                              .Replace("Ц","Ts").Replace("ц","ts")
+                                              .Replace("Ч","Ch").Replace("ч","ch")
+                                              .Replace("Ш","Sh").Replace("ш","sh")
+                                              .Replace("Щ","Sch").Replace("щ","sch")
+                                              .Replace("Ъ","").Replace("ъ","")
+                                              .Replace("Ы","Y").Replace("ы","y")
+                                              .Replace("Ь","").Replace("ь","")
+                                              .Replace("Э","E").Replace("э","e")
+                                              .Replace("Ю","Yu").Replace("ю","yu")
+                                              .Replace("Я","Ya").Replace("я","ya");
+
+        object? value = ColumnType switch
+        {
+            ColumnType.Text    => _textValue,
+            ColumnType.Number  => _numberValue,
+            ColumnType.Boolean => (object?)_boolValue,
+            _ => _textValue
+        };
+
+        var filter = new ColumnFilter
+        {
+            Column    = ColumnSqlName,
+            ParamName = paramName,
+            Operator  = _operator,
+            Value     = value,
+        };
+
+        MudDialog?.Close(DialogResult.Ok(filter));
+    }
+
+    private static string GetOperatorLabel(ColumnFilterOperator op) => op switch
+    {
+        ColumnFilterOperator.Contains           => "содержит",
+        ColumnFilterOperator.Equals             => "равно",
+        ColumnFilterOperator.NotEquals          => "не равно",
+        ColumnFilterOperator.StartsWith         => "начинается с",
+        ColumnFilterOperator.EndsWith           => "заканчивается на",
+        ColumnFilterOperator.GreaterThan        => "больше (>)",
+        ColumnFilterOperator.GreaterThanOrEqual => "больше или равно (≥)",
+        ColumnFilterOperator.LessThan           => "меньше (<)",
+        ColumnFilterOperator.LessThanOrEqual    => "меньше или равно (≤)",
+        _ => op.ToString()
+    };
+}

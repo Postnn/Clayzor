@@ -1,4 +1,7 @@
 @typeparam TEntity where TEntity : class
+@inject IDialogService DialogService
+@using MudBlazor.Extensions
+@using MudBlazor.Extensions.Options
 
 <MudPaper Elevation="1" Class="pa-4">
     <div class="d-flex flex-wrap justify-space-between gap-2 mb-4" style="align-items:center">
@@ -22,6 +25,15 @@
                                    Size="Size.Small"
                                    Class="@(_trayExpanded ? "grouping-toggle-btn grouping-toggle-btn--active" : "grouping-toggle-btn")"
                                    OnClick="@ToggleTray" />
+                </MudTooltip>
+            }
+            @if (ShowFilterTray)
+            {
+                <MudTooltip Text="@(_filterTrayExpanded ? "Скрыть фильтры" : "Фильтровать")" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
+                                   Size="Size.Small"
+                                   Class="@(_filterTrayExpanded ? "filter-toggle-btn filter-toggle-btn--active" : "filter-toggle-btn")"
+                                   OnClick="@ToggleFilterTray" />
                 </MudTooltip>
             }
             @if (ShowAddButton)
@@ -71,6 +83,39 @@
         </div>
     }
 
+    @if (ShowFilterTray && _filterTrayExpanded)
+    {
+        <div class="filter-tray d-flex align-items-center flex-wrap gap-2 mb-2"
+             @ondragover="OnFilterTrayDragOver"
+             @ondragover:preventDefault="true"
+             @ondrop="OnFilterTrayDrop">
+            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Class="filter-tray-icon" />
+            @foreach (var kv in _activeFilters)
+            {
+                var sqlName = kv.Key;
+                var filter  = kv.Value;
+                var dispName = AvailableFilterColumns.FirstOrDefault(p => p.Value == sqlName).Key ?? sqlName;
+                var desc = ColumnFilterDialog.GetFilterDescription(filter, dispName);
+                <div class="filter-chip">
+                    <span class="chip-label chip-label-clickable"
+                          @onclick="async () => await OpenFilterDialog(sqlName, dispName)"
+                          @onclick:stopPropagation="true">
+                        @desc
+                    </span>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                   Size="Size.Small"
+                                   OnClick="async () => await RemoveFilter(sqlName)"
+                                   Class="chip-remove-btn pa-0"
+                                   Style="width:18px;height:18px" />
+                </div>
+            }
+            @if (_activeFilters.Count == 0)
+            {
+                <span class="filter-tray-hint">Перетащите заголовок колонки сюда для фильтрации</span>
+            }
+        </div>
+    }
+
     <MudDataGrid T="TEntity"
                  @key="_dataKey"
                  Items="@Items"
@@ -111,15 +156,28 @@
 @code {
     private string? _searchText;
     private bool _trayExpanded = false;
+    private bool _filterTrayExpanded = false;
     private List<string> _groupColumns = [];
     private int _dragSourceIndex = -1;
     private List<SortColumn> _sortState = [];
+    private Dictionary<string, ColumnFilter> _activeFilters = [];
     private int _pageNumber = 1;
     private int _pageSize;
     private int _dataKey;
-    private string _gridHeight => ShowGroupingTray && _trayExpanded
-        ? "calc(100vh - 330px)"
-        : "calc(100vh - 280px)";
+
+    private string _gridHeight
+    {
+        get
+        {
+            var trays = (_trayExpanded ? 1 : 0) + (_filterTrayExpanded ? 1 : 0);
+            return trays switch
+            {
+                2 => "calc(100vh - 380px)",
+                1 => "calc(100vh - 330px)",
+                _ => "calc(100vh - 280px)",
+            };
+        }
+    }
     [Parameter] public string Title { get; set; } = "Список";
     [Parameter] public IEnumerable<TEntity> Items { get; set; } = [];
     [Parameter] public bool Loading { get; set; }
@@ -134,6 +192,12 @@
     [Parameter] public int TotalCount { get; set; }
     [Parameter] public bool ShowPagination { get; set; } = true;
     [Parameter] public bool AllowColumnReorder { get; set; } = true;
+    /// <summary>Показывать кнопку и панель фильтрации по колонкам.</summary>
+    [Parameter] public bool ShowFilterTray { get; set; }
+    /// <summary>Доступные для фильтрации колонки: ключ — отображаемое имя, значение — SQL-имя.</summary>
+    [Parameter] public Dictionary<string, string> AvailableFilterColumns { get; set; } = [];
+    /// <summary>Тип данных для каждой фильтруемой колонки: ключ — SQL-имя, значение — <see cref="ColumnType"/>.</summary>
+    [Parameter] public Dictionary<string, ColumnType> FilterColumnTypes { get; set; } = [];
 
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
@@ -332,17 +396,99 @@
         await NotifyQueryChanged();
     }
 
+    // ── Filter tray ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Включает/выключает панель фильтрации.
+    /// При выключении сбрасывает все активные фильтры и перезагружает данные.
+    /// </summary>
+    private async Task ToggleFilterTray()
+    {
+        _filterTrayExpanded = !_filterTrayExpanded;
+        if (!_filterTrayExpanded)
+        {
+            _activeFilters.Clear();
+            _pageNumber = 1;
+            await NotifyQueryChanged();
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+
+    private void OnFilterTrayDragOver(DragEventArgs e)
+    {
+        e.DataTransfer.DropEffect = "move";
+    }
+
+    private async Task OnFilterTrayDrop(DragEventArgs e)
+    {
+        var draggedSqlName = KescoDragState.DraggedColumn;
+        KescoDragState.DraggedColumn = null;
+
+        if (string.IsNullOrEmpty(draggedSqlName))
+            return;
+        if (!AvailableFilterColumns.ContainsValue(draggedSqlName))
+            return;
+
+        var displayName = AvailableFilterColumns.FirstOrDefault(p => p.Value == draggedSqlName).Key ?? draggedSqlName;
+        await OpenFilterDialog(draggedSqlName, displayName);
+    }
+
+    /// <summary>
+    /// Открывает диалог настройки фильтра для указанной колонки.
+    /// При подтверждении сохраняет фильтр и перезагружает данные.
+    /// </summary>
+    private async Task OpenFilterDialog(string sqlName, string displayName)
+    {
+        var colType = FilterColumnTypes.TryGetValue(sqlName, out var t) ? t : ColumnType.Text;
+        _activeFilters.TryGetValue(sqlName, out var existing);
+
+        var parameters = new DialogParameters<ColumnFilterDialog>
+        {
+            { x => x.ColumnDisplayName, displayName },
+            { x => x.ColumnSqlName,     sqlName },
+            { x => x.ColumnType,        colType },
+            { x => x.ExistingFilter,    existing },
+        };
+        var options = new DialogOptionsEx
+        {
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true,
+            DragMode = MudDialogDragMode.Simple,
+        };
+        var dialog = await DialogService.ShowExAsync<ColumnFilterDialog>(
+            $"Фильтр: {displayName}", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is ColumnFilter colFilter)
+        {
+            _activeFilters[sqlName] = colFilter;
+            _pageNumber = 1;
+            await NotifyQueryChanged();
+        }
+    }
+
+    private async Task RemoveFilter(string sqlName)
+    {
+        _activeFilters.Remove(sqlName);
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
     private async Task NotifyQueryChanged()
     {
         _dataKey++;
         var query = new KescoDataQuery
         {
-            SearchText = _searchText,
+            SearchText   = _searchText,
             GroupEnabled = _groupColumns.Count > 0,
             GroupColumns = _groupColumns.ToList(),
-            SortColumns = _sortState.ToList(),
-            PageNumber = _pageNumber,
-            PageSize = _pageSize
+            SortColumns  = _sortState.ToList(),
+            PageNumber   = _pageNumber,
+            PageSize     = _pageSize,
+            ColumnFilters = _activeFilters.ToDictionary(kv => kv.Key, kv => kv.Value),
         };
         await OnQueryChanged.InvokeAsync(query);
     }

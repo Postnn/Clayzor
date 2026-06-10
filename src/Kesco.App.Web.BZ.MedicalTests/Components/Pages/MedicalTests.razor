@@ -21,6 +21,9 @@
                PageSize="@AppSettings.DefaultPageSize"
                ShowGroupingTray="true"
                AvailableGroupColumns="@_groupColumnsDef"
+               ShowFilterTray="true"
+               AvailableFilterColumns="@_filterColumnsDef"
+               FilterColumnTypes="@_filterColumnTypes"
                TotalCount="@_query.TotalCount"
                ShowPagination="true"
                OnAdd="OpenAddDialog"
@@ -166,17 +169,55 @@
         ["Порядок"] = "Порядок"
     };
 
+    /// <summary>Доступные для фильтрации колонки: отображаемое имя → SQL-имя.</summary>
+    private static readonly Dictionary<string, string> _filterColumnsDef = new()
+    {
+        ["Код"]        = "КодМедицинскогоАнализа",
+        ["Название"]   = "НазваниеАнализа",
+        ["Тип"]        = "TestTypeName",
+        ["Порядок"]    = "Порядок",
+        ["Группа"]     = "Группа",
+        ["Заключение"] = "Заключение",
+    };
+
+    /// <summary>Тип данных для каждой фильтруемой колонки: SQL-имя → ColumnType.</summary>
+    private static readonly Dictionary<string, ColumnType> _filterColumnTypes = new()
+    {
+        ["КодМедицинскогоАнализа"] = ColumnType.Number,
+        ["НазваниеАнализа"]        = ColumnType.Text,
+        ["TestTypeName"]           = ColumnType.Text,
+        ["Порядок"]                = ColumnType.Number,
+        ["Группа"]                 = ColumnType.Boolean,
+        ["Заключение"]             = ColumnType.Boolean,
+    };
+
+    /// <summary>
+    /// Маппинг SQL-имён фильтра на имена для плоского режима (с табличными алиасами).
+    /// Используется в <see cref="LoadFlatData"/> для замены колонок, которые в плоском SELECT
+    /// доступны через алиас таблицы, а не через выходное имя подзапроса.
+    /// </summary>
+    private static readonly Dictionary<string, string> _filterFlatColumnMap = new()
+    {
+        ["TestTypeName"] = "t.ТипМедицинскогоАнализа",
+        ["НазваниеАнализа"] = "a.НазваниеАнализа",
+        ["КодМедицинскогоАнализа"] = "a.КодМедицинскогоАнализа",
+        ["Порядок"] = "a.Порядок",
+        ["Группа"] = "a.Группа",
+        ["Заключение"] = "a.Заключение",
+    };
+
     private List<IGridRow> _rows = [];
     private bool _loading = true;
 
     private async Task OnQueryChanged(KescoDataQuery query)
     {
-        _query.SearchText = query.SearchText;
-        _query.GroupEnabled = query.GroupEnabled;
-        _query.GroupColumns = query.GroupColumns;
-        _query.SortColumns = query.SortColumns;
-        _query.PageNumber = query.PageNumber;
-        _query.PageSize = query.PageSize;
+        _query.SearchText    = query.SearchText;
+        _query.GroupEnabled  = query.GroupEnabled;
+        _query.GroupColumns  = query.GroupColumns;
+        _query.SortColumns   = query.SortColumns;
+        _query.PageNumber    = query.PageNumber;
+        _query.PageSize      = query.PageSize;
+        _query.ColumnFilters = query.ColumnFilters;
         await LoadData();
     }
 
@@ -212,28 +253,47 @@
 
     private async Task LoadFlatData()
     {
-        var where = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
+        var searchWhere = _query.BuildWhereClause("a.НазваниеАнализа", "t.ТипМедицинскогоАнализа");
         var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
-        var param = new { search = $"%{_query.SearchText}%" };
 
-        _query.TotalCount = await MedicalTest.GetCountAsync(Db, where, param);
-        var items = await MedicalTest.GetPagedAsync(Db, where, orderBy, param, _query.PageNumber, _query.PageSize);
+        // Объединяем параметры поиска и фильтров по колонкам.
+        // Для плоского режима заменяем SQL-имена фильтров на алиасы таблиц (a./t.),
+        // т.к. WHERE применяется к джойновому запросу напрямую, а не к подзапросу.
+        var dp = new DynamicParameters();
+        dp.Add("search", $"%{_query.SearchText}%");
+        var colFilterWhere = _query.BuildColumnFilterClause(dp, _filterFlatColumnMap);
+
+        var whereParts = new List<string>();
+        if (searchWhere is not null) whereParts.Add($"({searchWhere})");
+        if (colFilterWhere is not null) whereParts.Add($"({colFilterWhere})");
+        var where = whereParts.Count > 0 ? string.Join(" AND ", whereParts) : null;
+
+        _query.TotalCount = await MedicalTest.GetCountAsync(Db, where, dp);
+        var items = await MedicalTest.GetPagedAsync(Db, where, orderBy, dp, _query.PageNumber, _query.PageSize);
         _rows = items.Select(i => (IGridRow)new DetailRow<MedicalTest> { Item = i }).ToList();
     }
 
     private async Task LoadGroupedData()
     {
         // Use subquery-visible column names (no table aliases a./t. outside _g)
-        var where = _query.BuildWhereClause("НазваниеАнализа", "TestTypeName");
+        var searchWhere = _query.BuildWhereClause("НазваниеАнализа", "TestTypeName");
         var orderBy = _query.BuildOrderBy("Порядок, НазваниеАнализа");
-        var param = new { search = $"%{_query.SearchText}%" };
+
+        var dp = new DynamicParameters();
+        dp.Add("search", $"%{_query.SearchText}%");
+        var colFilterWhere = _query.BuildColumnFilterClause(dp);
+
+        var whereParts = new List<string>();
+        if (searchWhere is not null) whereParts.Add($"({searchWhere})");
+        if (colFilterWhere is not null) whereParts.Add($"({colFilterWhere})");
+        var where = whereParts.Count > 0 ? string.Join(" AND ", whereParts) : null;
 
         var groupCols = _query.GroupColumns;
         var exprs = groupCols.Select(c => GroupExprMap.GetValueOrDefault(c, c)).ToList();
 
         // Step 1: build group aggregate SQL (SQL Server 2008 R2 compatible)
         var groupSql = BuildGroupSql(exprs, where);
-        var groupRows = await Db.QueryAsync<GroupRow>(groupSql, param);
+        var groupRows = await Db.QueryAsync<GroupRow>(groupSql, dp);
 
         // Step 2: build aggregate list from flat rows, creating synthetic parent nodes
         var aggregates = new List<GroupAgg>();
@@ -324,7 +384,7 @@
             {
                 var ag = item.Aggregate;
                 var detailRows = await LoadDetailRows(exprs, ag.RawKeys, where, orderBy,
-                    param, item.DetailStart, item.DetailEnd, ag.Depth);
+                    dp, item.DetailStart, item.DetailEnd, ag.Depth);
                 newRows.AddRange(detailRows);
             }
         }

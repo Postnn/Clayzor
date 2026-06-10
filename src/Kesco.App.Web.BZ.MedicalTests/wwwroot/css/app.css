@@ -350,6 +350,85 @@ html, body {
     background: rgba(255, 255, 255, 0.12) !important;
 }
 
+/* ── Filter Toggle Button ── */
+.filter-toggle-btn {
+    color: var(--lh-grey-mid) !important;
+    border-radius: 2px !important;
+    transition: color 0.15s, background 0.15s;
+}
+
+.filter-toggle-btn:hover {
+    color: var(--lh-navy) !important;
+    background: rgba(5, 22, 77, 0.06) !important;
+}
+
+.filter-toggle-btn--active {
+    color: var(--lh-navy) !important;
+    background: rgba(5, 22, 77, 0.08) !important;
+    box-shadow: inset 0 -2px 0 var(--lh-gold);
+}
+
+.filter-toggle-btn--active:hover {
+    background: rgba(5, 22, 77, 0.12) !important;
+}
+
+/* ── Filter Tray (drag‑and‑drop column filter panel) ── */
+.filter-tray {
+    min-height: 34px;
+    padding: 4px 10px;
+    background: var(--lh-offwhite);
+    border: 1px solid var(--lh-grey-light);
+    border-left: 3px solid var(--lh-gold);
+    border-bottom: 2px solid var(--lh-navy);
+    border-radius: 0;
+    transition: border-left-color 0.15s, background 0.15s;
+}
+
+.filter-tray:has(.filter-chip:hover),
+.filter-tray.drag-over {
+    background: rgba(5, 22, 77, 0.03);
+    border-left-color: var(--lh-navy);
+}
+
+.filter-tray-icon {
+    color: var(--lh-gold) !important;
+    opacity: 0.8;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.filter-tray-hint {
+    font-size: 0.75rem;
+    color: var(--lh-grey-mid);
+    font-style: italic;
+    letter-spacing: 0.02em;
+    line-height: 26px;
+}
+
+/* ── Filter Chips ── */
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 2px 0 8px;
+    height: 24px;
+    background: rgba(5, 22, 77, 0.72);
+    color: var(--lh-white);
+    border-radius: 0;
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    cursor: default;
+    user-select: none;
+    transition: background 0.15s, box-shadow 0.15s;
+    border-bottom: 2px solid var(--lh-gold);
+}
+
+.filter-chip:hover {
+    background: rgba(5, 22, 77, 0.88);
+}
+
 /* ── Group Header Rows (server-side grouping) ── */
 .mud-table-row:has(.group-header-cell) {
     background-color: rgba(5, 22, 77, 0.04) !important;
