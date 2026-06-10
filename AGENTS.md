@@ -174,6 +174,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
   ORDER BY TestTypeName DESC, Порядок ASC
   ```
 - Детальные строки внутри группы сортируются по колонкам, НЕ участвующим в группировке
+- **Запрещено** пересортировывать список агрегатов после получения из БД (`aggregates.OrderBy(...)`) — это уничтожает порядок, заданный `ORDER BY` в SQL. Синтетические родительские узлы строятся непосредственно внутри цикла `foreach (var gr in groupRows)` до листового узла, поэтому при обходе `aggregates` (без `.OrderBy`) порядок родитель-перед-детьми всегда соблюдается
 
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**
@@ -186,7 +187,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - Database column names are defined exactly once in `ColumnNames.cs` and referenced from `[Column]` attributes (SQLQueries constants are exempt)
 - Data loading goes in `OnAfterRenderAsync(bool firstRender)` with `if (firstRender)` guard, **not** in `OnInitializedAsync` — avoids double-load from Blazor prerendering
 - Sorting, searching, grouping, and **pagination** for data grids must be performed on SQL Server side (not in-memory)
-- Sort column headers use null-conditional `_dataGrid?.ToggleSort("SqlColumn")` — `_dataGrid` is set via `@ref` on `KescoDataList`
+- Sort column headers call `async Task ToggleSort(string column)` via `@onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("SqlColumn"); })"` — `_dataGrid` is set via `@ref` on `KescoDataList`. Chips in the grouping tray use `@onclick="async () => await ToggleSort(col)"` inside KescoDataList itself. **Do not call `ToggleSort` as fire-and-forget void** — Blazor will not await the data reload
 - `appsettings.Development.json` is gitignored — use it for local connection strings
 - All modal/dialog windows must be draggable
 - Data grid header row must be fixed (not scroll with data) — `KescoDataList` does this automatically
