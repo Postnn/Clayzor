@@ -1,18 +1,19 @@
 @page "/medical-tests"
 @using Kesco.Lib.Web.Settings
 @using Kesco.Lib.Web.BZ.Controls
-@using MudBlazor.Extensions
-@using MudBlazor.Extensions.Options
 @inherits KescoGridPageBase<MedicalTest>
-
-@inject IDialogService DialogService
 @inject KescoAppSettings AppSettings
 
 <PageTitle>Медицинские исследования</PageTitle>
 
+<CascadingValue Value="(IKescoGridDataLoader)this" IsFixed="true">
 <KescoGrid TEntity="IGridRow"
            @ref="_dataGrid"
            Title="Медицинские исследования"
+           SelectSql="@SQLQueries.SELECT_МедицинскиеАнализы"
+           SearchColumns="@(new[]{"НазваниеАнализа","TestTypeName"})"
+           DefaultOrder="Порядок, НазваниеАнализа"
+           EditDialogType="@typeof(MedicalTestEditDialog)"
            Items="_rows"
            Loading="_loading"
            PageSize="@AppSettings.DefaultPageSize"
@@ -20,8 +21,7 @@
            TotalCount="@_query.TotalCount"
            ShowPagination="true"
            OnAdd="OpenAddDialog"
-           OnRowClick="OnRowClicked"
-           OnQueryChanged="OnQueryChanged">
+           OnRowClick="OnRowClicked">
 
     <ColumnDefs>
         <KescoColumnDef SqlName="TestTypeName"            DisplayName="Тип"         Groupable="true" Filterable="true" />
@@ -35,26 +35,14 @@
     <Columns>
 
         <TemplateColumn T="IGridRow" Title="Код" Sortable="false"
-                        Hidden="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)">
+                        Hidden="@(_dataGrid?.IsGrouped("КодМедицинскогоАнализа") ?? false)">
             <HeaderTemplate>
-                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                     draggable="true"
-                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "КодМедицинскогоАнализа"; })"
-                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("КодМедицинскогоАнализа"); })">
-                    <MudText Style="flex:1;text-align:center">Код</MudText>
-                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("КодМедицинскогоАнализа") }
-                </div>
+                <KescoSortableColumnHeader SqlName="КодМедицинскогоАнализа" DisplayName="Код" Grid="_dataGrid" />
             </HeaderTemplate>
             <CellTemplate>
                 @if (context.Item is GroupHeaderRow header)
                 {
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Style="@($"padding-left:{header.Depth * 16}px")">
-                        <MudIconButton Icon="@(header.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                                       Size="Size.Small"
-                                       OnClick="() => ToggleGroup(header)"
-                                       Style="padding:0;width:22px;height:22px;min-width:22px" />
-                        <MudText Style="font-weight:600;font-size:0.875rem">@header.DisplayValue (@header.ItemCount шт.)</MudText>
-                    </MudStack>
+                    <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
                 }
                 else if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -64,15 +52,9 @@
         </TemplateColumn>
 
         <TemplateColumn T="IGridRow" Title="Название" Sortable="false"
-                        Hidden="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)">
+                        Hidden="@(_dataGrid?.IsGrouped("НазваниеАнализа") ?? false)">
             <HeaderTemplate>
-                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                     draggable="true"
-                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "НазваниеАнализа"; })"
-                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("НазваниеАнализа"); })">
-                    <MudText Style="flex:1;text-align:center">Название</MudText>
-                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("НазваниеАнализа") }
-                </div>
+                <KescoSortableColumnHeader SqlName="НазваниеАнализа" DisplayName="Название" Grid="_dataGrid" />
             </HeaderTemplate>
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
@@ -83,15 +65,9 @@
         </TemplateColumn>
 
         <TemplateColumn T="IGridRow" Title="Тип" Sortable="false"
-                        Hidden="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)">
+                        Hidden="@(_dataGrid?.IsGrouped("TestTypeName") ?? false)">
             <HeaderTemplate>
-                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                     draggable="true"
-                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "TestTypeName"; })"
-                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("TestTypeName"); })">
-                    <MudText Style="flex:1;text-align:center">Тип</MudText>
-                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("TestTypeName") }
-                </div>
+                <KescoSortableColumnHeader SqlName="TestTypeName" DisplayName="Тип" Grid="_dataGrid" />
             </HeaderTemplate>
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
@@ -102,15 +78,9 @@
         </TemplateColumn>
 
         <TemplateColumn T="IGridRow" Title="Порядок" Sortable="false"
-                        Hidden="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)">
+                        Hidden="@(_dataGrid?.IsGrouped("Порядок") ?? false)">
             <HeaderTemplate>
-                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                     draggable="true"
-                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "Порядок"; })"
-                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("Порядок"); })">
-                    <MudText Style="flex:1;text-align:center">Порядок</MudText>
-                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("Порядок") }
-                </div>
+                <KescoSortableColumnHeader SqlName="Порядок" DisplayName="Порядок" Grid="_dataGrid" />
             </HeaderTemplate>
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
@@ -145,65 +115,11 @@
     </Columns>
 
 </KescoGrid>
+</CascadingValue>
 
 @code {
-    // ── Ссылка на грид ──────────────────────────────────────────────────────────
+    // Поле конкретного типа нужно для @ref и вызовов UI-методов (ToggleSort, GetSortBadge, GroupColumns).
+    // Grid в базовом классе заполняется через переопределение свойства.
     private KescoGrid<IGridRow> _dataGrid = null!;
-
-    // ── Настройки источника данных ──────────────────────────────────────────────
-
-    protected override string SelectSql => SQLQueries.SELECT_МедицинскиеАнализы;
-
-    /// <summary>
-    /// Колонки полнотекстового поиска — выходные имена SELECT (без алиасов таблиц).
-    /// WHERE применяется поверх подзапроса, алиасы a./t. не нужны.
-    /// </summary>
-    protected override string[] SearchColumns => ["НазваниеАнализа", "TestTypeName"];
-
-    protected override string DefaultOrder => "Порядок, НазваниеАнализа";
-
-    // ── Обработка событий грида ─────────────────────────────────────────────────
-
-    private Task OnQueryChanged(KescoDataQuery query) => OnQueryChangedBase(query);
-
-    // ── Диалоги ─────────────────────────────────────────────────────────────────
-
-    /// <summary>Открывает диалог добавления нового исследования.</summary>
-    private async Task OpenAddDialog()
-    {
-        var parameters = new DialogParameters<MedicalTestEditDialog>
-        {
-            { x => x.Model, new MedicalTest() }
-        };
-        var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
-        var dialog  = await DialogService.ShowExAsync<MedicalTestEditDialog>("Новое исследование", parameters, options);
-        if (!(await dialog.Result)?.Canceled ?? false)
-        {
-            Snackbar.Add("Запись добавлена", Severity.Success);
-            await LoadData();
-        }
-    }
-
-    /// <summary>Обрабатывает клик по строке: раскрывает группу или открывает диалог редактирования.</summary>
-    private async Task OnRowClicked(DataGridRowClickEventArgs<IGridRow> args)
-    {
-        if (args.Item is GroupHeaderRow header)
-        {
-            await ToggleGroup(header);
-            return;
-        }
-
-        if (args.Item is DetailRow<MedicalTest> detail)
-        {
-            var parameters = new DialogParameters<MedicalTestEditDialog>
-            {
-                { x => x.Model, detail.Item }
-            };
-            var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
-            var dialog  = await DialogService.ShowExAsync<MedicalTestEditDialog>("Редактирование", parameters, options);
-            if (!(await dialog.Result)?.Canceled ?? false)
-                Snackbar.Add("Запись обновлена", Severity.Success);
-            await LoadData();
-        }
-    }
+    protected override IKescoGrid? Grid => _dataGrid;
 }

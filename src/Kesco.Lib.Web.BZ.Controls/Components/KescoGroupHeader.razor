@@ -1,0 +1,31 @@
+@namespace Kesco.Lib.Web.BZ.Controls
+
+@*
+    Стандартный заголовок строки группировки в гриде.
+    Отображает иконку раскрытия/сворачивания, название группы и количество элементов.
+    Используется в <CellTemplate> первой колонки:
+
+        <CellTemplate>
+            @if (context.Item is GroupHeaderRow header)
+            {
+                <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
+            }
+            ...
+        </CellTemplate>
+*@
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Style="@($"padding-left:{Header.Depth * 16}px")">
+    <MudIconButton Icon="@(Header.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                   Size="Size.Small"
+                   OnClick="() => OnToggle.InvokeAsync(Header)"
+                   Style="padding:0;width:22px;height:22px;min-width:22px" />
+    <MudText Style="font-weight:600;font-size:0.875rem">@Header.DisplayValue (@Header.ItemCount шт.)</MudText>
+</MudStack>
+
+@code {
+    /// <summary>Данные строки заголовка группы.</summary>
+    [Parameter] public GroupHeaderRow Header { get; set; } = null!;
+
+    /// <summary>Вызывается при клике на иконку раскрытия/сворачивания группы.</summary>
+    [Parameter] public EventCallback<GroupHeaderRow> OnToggle { get; set; }
+}

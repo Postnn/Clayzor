@@ -1,0 +1,40 @@
+@namespace Kesco.Lib.Web.BZ.Controls
+
+@*
+    Стандартный заголовок сортируемой колонки грида.
+    Инкапсулирует drag-and-drop для трея группировки и серверную сортировку по клику.
+
+    Использование внутри <HeaderTemplate> колонки:
+        <HeaderTemplate>
+            <KescoSortableColumnHeader SqlName="НазваниеАнализа" DisplayName="Название" Grid="Grid" />
+        </HeaderTemplate>
+*@
+
+<div style="display:flex;align-items:center;width:100%;cursor:pointer"
+     draggable="true"
+     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = SqlName; })"
+     @onclick="HandleClick">
+    <MudText Style="flex:1;text-align:center">@DisplayName</MudText>
+    @if (Grid is not null) { @Grid.GetSortBadge(SqlName) }
+</div>
+
+@code {
+    /// <summary>SQL-имя колонки — используется для drag-to-group и серверной сортировки.</summary>
+    [Parameter] public string SqlName { get; set; } = string.Empty;
+
+    /// <summary>Отображаемый заголовок колонки.</summary>
+    [Parameter] public string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Ссылка на грид через <see cref="IKescoGrid"/>.
+    /// Используется для вызова <see cref="IKescoGrid.ToggleSort"/> и <see cref="IKescoGrid.GetSortBadge"/>.
+    /// </summary>
+    [Parameter] public IKescoGrid? Grid { get; set; }
+
+    /// <summary>Обрабатывает клик по заголовку: переключает серверную сортировку по колонке.</summary>
+    private async Task HandleClick()
+    {
+        if (Grid is not null)
+            await Grid.ToggleSort(SqlName);
+    }
+}

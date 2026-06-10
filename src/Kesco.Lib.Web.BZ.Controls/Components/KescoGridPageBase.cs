@@ -5,8 +5,24 @@ using Kesco.Lib.DALC;
 using Kesco.Lib.Entities;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using MudBlazor.Extensions;
+using MudBlazor.Extensions.Options;
 
 namespace Kesco.Lib.Web.BZ.Controls;
+
+/// <summary>
+/// Интерфейс обратного вызова, реализуемый <see cref="KescoGridPageBase{T}"/>.
+/// Позволяет <see cref="KescoGrid{TEntity}"/> уведомлять страницу об изменении запроса
+/// через каскадный параметр, без явной передачи <c>OnQueryChanged</c> в разметке.
+/// </summary>
+public interface IKescoGridDataLoader
+{
+    /// <summary>
+    /// Вызывается гридом при изменении любого параметра запроса:
+    /// поиска, сортировки, группировки, фильтрации, пагинации.
+    /// </summary>
+    Task OnQueryChangedAsync(KescoDataQuery query);
+}
 
 /// <summary>
 /// Базовый класс Blazor-страницы с серверным гридом <see cref="KescoGrid{TEntity}"/>.
@@ -15,15 +31,17 @@ namespace Kesco.Lib.Web.BZ.Controls;
 /// Страница-наследник должна:
 /// <list type="bullet">
 ///   <item>Унаследоваться: <c>@inherits KescoGridPageBase&lt;МояСущность&gt;</c></item>
-///   <item>Реализовать шесть abstract/virtual свойств (см. ниже)</item>
-///   <item>В обработчике <c>OnQueryChanged</c> вызвать <see cref="OnQueryChangedBase"/>:
-///     <code>private Task OnQueryChanged(KescoDataQuery q) =&gt; OnQueryChangedBase(q);</code>
-///   </item>
+///   <item>Передать SQL-параметры в атрибуты <c>&lt;KescoGrid&gt;</c>:
+///     <c>SelectSql</c>, <c>SearchColumns</c>, <c>DefaultOrder</c>, <c>EditDialogType</c></item>
+///   <item>Присвоить свойство <see cref="Grid"/> через <c>@ref</c>:
+///     <code>@ref="@(Grid = value)"</code> или объявить поле и переопределить свойство <see cref="Grid"/>.</item>
+///   <item>Обернуть <c>&lt;KescoGrid&gt;</c> в
+///     <c>&lt;CascadingValue Value="(IKescoGridDataLoader)this" IsFixed="true"&gt;</c></item>
 /// </list>
 /// </para>
 /// </summary>
 /// <typeparam name="T">Тип сущности — наследник <see cref="Entity"/>.</typeparam>
-public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
+public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader where T : Entity
 {
     // ── Инжектируемые сервисы ────────────────────────────────────────────────────
 
@@ -33,11 +51,31 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
     /// <summary>Сервис уведомлений — инжектируется автоматически.</summary>
     [Inject] protected ISnackbar Snackbar { get; set; } = null!;
 
+    /// <summary>Сервис диалоговых окон — инжектируется автоматически.</summary>
+    [Inject] protected IDialogService DialogService { get; set; } = null!;
+
+    // ── Ссылка на грид — устанавливается через @ref="_dataGrid" ─────────────────
+
+    /// <summary>
+    /// Ссылка на грид через интерфейс <see cref="IKescoGrid"/> для чтения SQL-параметров.
+    /// Заполняется автоматически при установке <see cref="Grid"/> на странице-наследнике:
+    /// <code>
+    /// protected override IKescoGrid? Grid
+    /// {
+    ///     get => _dataGrid;
+    ///     set => _dataGrid = value;   // _dataGrid объявлен как KescoGrid&lt;IGridRow&gt;
+    /// }
+    /// </code>
+    /// Или проще — страница переопределяет свойство <see cref="Grid"/> через <c>@ref</c>-поле.
+    /// </summary>
+    protected virtual IKescoGrid? Grid { get; set; }
+
     // ── Общее состояние страницы ─────────────────────────────────────────────────
 
     /// <summary>
     /// Текущее состояние запроса к данным.
-    /// Обновляется в <see cref="OnQueryChangedBase"/> при каждом взаимодействии с гридом.
+    /// Обновляется в <see cref="IKescoGridDataLoader.OnQueryChangedAsync"/> при каждом
+    /// взаимодействии с гридом.
     /// </summary>
     protected KescoDataQuery _query = new();
 
@@ -47,27 +85,21 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
     /// <summary>Признак загрузки данных — управляет индикатором в <see cref="KescoGrid{TEntity}"/>.</summary>
     protected bool _loading = true;
 
-    // ── Настройки источника данных — задаются в производном классе ──────────────
+    // ── Настройки уведомлений — могут быть переопределены на странице ─────────────
 
     /// <summary>
-    /// Базовый SQL-запрос SELECT (без WHERE / ORDER BY).
-    /// Пример: <c>SQLQueries.SELECT_МедицинскиеАнализы</c>
+    /// Текст уведомления после успешного добавления записи.
+    /// Может быть переопределён на странице.
     /// </summary>
-    protected abstract string SelectSql { get; }
+    protected virtual string AddSuccessMessage => "Запись добавлена";
 
     /// <summary>
-    /// Колонки полнотекстового поиска — выходные имена колонок SELECT без алиасов таблиц.
-    /// WHERE строится поверх подзапроса <c>SELECT * FROM ({SelectSql}) _q</c>,
-    /// поэтому алиасы <c>a.</c>/<c>t.</c> не нужны ни в плоском, ни в группированном режиме.
-    /// Пример: <c>["НазваниеАнализа", "TestTypeName"]</c>
+    /// Текст уведомления после успешного сохранения записи.
+    /// Может быть переопределён на странице.
     /// </summary>
-    protected abstract string[] SearchColumns { get; }
+    protected virtual string SaveSuccessMessage => "Запись обновлена";
 
-    /// <summary>
-    /// Порядок сортировки по умолчанию (когда пользователь не задал сортировку).
-    /// Пример: <c>"Порядок, НазваниеАнализа"</c>
-    /// </summary>
-    protected abstract string DefaultOrder { get; }
+    // ── Типы колонок для фильтрации — вычисляются автоматически ─────────────────
 
     /// <summary>
     /// Типы данных фильтруемых колонок, автоматически определённые по <see cref="ColumnAttribute"/>
@@ -117,13 +149,14 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
         return ColumnType.Text;
     }
 
-    // ── Инфраструктура (не переопределяются на странице) ────────────────────────
+    // ── IKescoGridDataLoader — вызывается гридом при изменении запроса ───────────
 
     /// <summary>
-    /// Стандартный обработчик события <c>OnQueryChanged</c> грида.
+    /// Реализация <see cref="IKescoGridDataLoader.OnQueryChangedAsync"/>.
     /// Копирует все поля из <paramref name="query"/> в <see cref="_query"/> и запускает загрузку.
+    /// Вызывается автоматически гридом через каскадный параметр.
     /// </summary>
-    protected async Task OnQueryChangedBase(KescoDataQuery query)
+    async Task IKescoGridDataLoader.OnQueryChangedAsync(KescoDataQuery query)
     {
         _query.SearchText    = query.SearchText;
         _query.GroupEnabled  = query.GroupEnabled;
@@ -135,9 +168,12 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
         await LoadData();
     }
 
+    // ── Инфраструктура (не переопределяются на странице) ────────────────────────
+
     /// <summary>
     /// Загружает данные при первом рендере.
     /// Guard <c>firstRender</c> предотвращает двойную загрузку при Blazor prerendering.
+    /// К этому моменту <see cref="Grid"/> уже установлен через <c>@ref</c>.
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -216,24 +252,78 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
         await InvokeAsync(StateHasChanged);
     }
 
+    // ── Диалоги редактирования ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Открывает диалог добавления новой записи типа <typeparamref name="T"/>.
+    /// Тип диалога берётся из параметра <c>EditDialogType</c> грида.
+    /// После подтверждения показывает уведомление и перезагружает данные.
+    /// </summary>
+    protected async Task OpenAddDialog()
+    {
+        var dialogType = Grid?.EditDialogType;
+        if (dialogType is null) return;
+
+        var parameters = new DialogParameters { ["Model"] = Activator.CreateInstance<T>() };
+        var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
+        var dialog = await DialogService.ShowExAsync(dialogType, string.Empty, parameters, options);
+        if (!(await dialog.Result)?.Canceled ?? false)
+        {
+            Snackbar.Add(AddSuccessMessage, Severity.Success);
+            await LoadData();
+        }
+    }
+
+    /// <summary>
+    /// Обрабатывает клик по строке грида:
+    /// если строка — заголовок группы, переключает её раскрытие/сворачивание;
+    /// если строка — детальная запись, открывает диалог редактирования.
+    /// Тип диалога берётся из параметра <c>EditDialogType</c> грида.
+    /// После подтверждения редактирования показывает уведомление и перезагружает данные.
+    /// </summary>
+    protected async Task OnRowClicked(DataGridRowClickEventArgs<IGridRow> args)
+    {
+        if (args.Item is GroupHeaderRow header)
+        {
+            await ToggleGroup(header);
+            return;
+        }
+
+        if (args.Item is DetailRow<T> detail)
+        {
+            var dialogType = Grid?.EditDialogType;
+            if (dialogType is null) return;
+
+            var parameters = new DialogParameters { ["Model"] = detail.Item };
+            var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
+            var dialog = await DialogService.ShowExAsync(dialogType, string.Empty, parameters, options);
+            if (!(await dialog.Result)?.Canceled ?? false)
+                Snackbar.Add(SaveSuccessMessage, Severity.Success);
+            await LoadData();
+        }
+    }
+
     // ── Загрузка данных (реализованы здесь, не переопределяются) ────────────────
 
     /// <summary>
     /// Плоский режим: загружает страницу записей с учётом поиска и фильтрации по колонкам.
-    /// WHERE применяется поверх подзапроса <c>SELECT * FROM ({SelectSql}) _q</c> —
-    /// алиасы таблиц не нужны, используются выходные имена колонок.
+    /// SQL-параметры читаются из <see cref="Grid"/>.
     /// </summary>
     private async Task LoadFlatData()
     {
-        var searchWhere    = _query.BuildWhereClause(SearchColumns);
-        var orderBy        = _query.BuildOrderBy(DefaultOrder);
+        var selectSql     = Grid?.SelectSql     ?? string.Empty;
+        var searchColumns = Grid?.SearchColumns ?? [];
+        var defaultOrder  = Grid?.DefaultOrder  ?? string.Empty;
+
+        var searchWhere    = _query.BuildWhereClause(searchColumns);
+        var orderBy        = _query.BuildOrderBy(defaultOrder);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
         var colFilterWhere = _query.BuildColumnFilterClause(dp);
         var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
 
-        _query.TotalCount = await Entity.GetCountAsync<T>(Db, SelectSql, where, dp);
-        var items         = await Entity.GetPagedAsync<T>(Db, SelectSql, where, orderBy, dp, _query.PageNumber, _query.PageSize);
+        _query.TotalCount = await Entity.GetCountAsync<T>(Db, selectSql, where, dp);
+        var items         = await Entity.GetPagedAsync<T>(Db, selectSql, where, orderBy, dp, _query.PageNumber, _query.PageSize);
         _rows             = items.Select(i => (IGridRow)new DetailRow<T> { Item = i }).ToList();
     }
 
@@ -241,12 +331,16 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
     /// Режим группировки: строит агрегатный SQL, формирует дерево групп через
     /// <see cref="KescoGroupingEngine"/>, загружает видимые на текущей странице
     /// детальные строки и собирает итоговый плоский список <see cref="_rows"/>.
-    /// WHERE применяется поверх подзапроса — имена колонок едины с плоским режимом.
+    /// SQL-параметры читаются из <see cref="Grid"/>.
     /// </summary>
     private async Task LoadGroupedData()
     {
-        var searchWhere    = _query.BuildWhereClause(SearchColumns);
-        var orderBy        = _query.BuildOrderBy(DefaultOrder);
+        var selectSql     = Grid?.SelectSql     ?? string.Empty;
+        var searchColumns = Grid?.SearchColumns ?? [];
+        var defaultOrder  = Grid?.DefaultOrder  ?? string.Empty;
+
+        var searchWhere    = _query.BuildWhereClause(searchColumns);
+        var orderBy        = _query.BuildOrderBy(defaultOrder);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
         var colFilterWhere = _query.BuildColumnFilterClause(dp);
@@ -256,7 +350,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
         var exprs = _query.GroupColumns.ToList();
 
         // Шаг 1: агрегатный запрос GROUP BY
-        var groupSql  = KescoGroupingEngine.BuildGroupAggregateSql(SelectSql, exprs, where, _query.SortColumns);
+        var groupSql  = KescoGroupingEngine.BuildGroupAggregateSql(selectSql, exprs, where, _query.SortColumns);
         var groupRows = await Db.QueryAsync<GridGroupRow>(groupSql, dp);
 
         // Шаг 2: строим дерево групп
@@ -274,7 +368,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
 
         // Шаг 4: загружаем детальные строки для раскрытых групп
         var newRows     = new List<IGridRow>();
-        var detailOrder = KescoGroupingEngine.BuildDetailOrder(orderBy, _query.GroupColumns, DefaultOrder);
+        var detailOrder = KescoGroupingEngine.BuildDetailOrder(orderBy, _query.GroupColumns, defaultOrder);
 
         foreach (var item in layout)
         {
@@ -295,7 +389,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
                 detailParams.Add("__start", item.DetailStart);
                 detailParams.Add("__end",   item.DetailEnd);
 
-                var sql   = KescoGroupingEngine.BuildDetailPageSql(SelectSql, detailWhere, detailOrder);
+                var sql   = KescoGroupingEngine.BuildDetailPageSql(selectSql, detailWhere, detailOrder);
                 var rows  = await Db.QueryAsync<T>(sql, detailParams);
                 newRows.AddRange(rows.Select(i => new DetailRow<T> { Item = i, Depth = ag.Depth }));
             }

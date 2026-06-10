@@ -225,6 +225,27 @@
     [Parameter] public IReadOnlyDictionary<string, ColumnType> FilterColumnTypes { get; set; }
         = new Dictionary<string, ColumnType>();
 
+    /// <summary>Базовый SQL-запрос SELECT (без WHERE / ORDER BY).</summary>
+    [Parameter] public string SelectSql { get; set; } = string.Empty;
+
+    /// <summary>Выходные имена колонок SELECT для полнотекстового поиска.</summary>
+    [Parameter] public string[] SearchColumns { get; set; } = [];
+
+    /// <summary>Порядок сортировки по умолчанию.</summary>
+    [Parameter] public string DefaultOrder { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Тип компонента диалога редактирования.
+    /// Диалог должен принимать параметр <c>Model</c> типа сущности.
+    /// </summary>
+    [Parameter] public Type? EditDialogType { get; set; }
+
+    /// <summary>
+    /// Загрузчик данных страницы — принимается через каскадный параметр от <see cref="KescoGridPageBase{T}"/>.
+    /// Если задан, <see cref="NotifyQueryChanged"/> вызывает его вместо <see cref="OnQueryChanged"/>.
+    /// </summary>
+    [CascadingParameter] private IKescoGridDataLoader? DataLoader { get; set; }
+
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
     private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
@@ -521,10 +542,26 @@
             PageSize      = _pageSize,
             ColumnFilters = _activeFilters.ToDictionary(kv => kv.Key, kv => kv.Value),
         };
-        await OnQueryChanged.InvokeAsync(query);
+        if (DataLoader is not null)
+            await DataLoader.OnQueryChangedAsync(query);
+        else
+            await OnQueryChanged.InvokeAsync(query);
     }
 
-    // ── IKescoGrid — регистрация метаданных колонок из KescoColumnDef ──────────
+    // ── IKescoGrid — настройки источника данных и регистрация метаданных колонок ─
+
+    string IKescoGrid.SelectSql        => SelectSql;
+    string[] IKescoGrid.SearchColumns  => SearchColumns;
+    string IKescoGrid.DefaultOrder     => DefaultOrder;
+    Type? IKescoGrid.EditDialogType    => EditDialogType;
+    /// <summary>
+    /// Возвращает <c>true</c> если колонка участвует в текущей группировке.
+    /// Используется для <c>Hidden</c> на колонках грида через <see cref="IKescoGrid"/>.
+    /// </summary>
+    public bool IsGrouped(string sqlName)                 => _groupColumns.Contains(sqlName);
+    bool IKescoGrid.IsGrouped(string sqlName)             => IsGrouped(sqlName);
+    Task IKescoGrid.ToggleSort(string column)             => ToggleSort(column);
+    RenderFragment IKescoGrid.GetSortBadge(string column) => GetSortBadge(column);
 
     /// <summary>
     /// Регистрирует колонку.

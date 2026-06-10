@@ -378,8 +378,8 @@ html, body {
     padding: 4px 10px;
     background: var(--lh-offwhite);
     border: 1px solid var(--lh-grey-light);
-    border-left: 3px solid var(--lh-gold);
-    border-bottom: 2px solid var(--lh-navy);
+    border-left: 3px solid var(--lh-navy);
+    border-bottom: 2px solid var(--lh-gold);
     border-radius: 0;
     transition: border-left-color 0.15s, background 0.15s;
 }
@@ -387,12 +387,12 @@ html, body {
 .filter-tray:has(.filter-chip:hover),
 .filter-tray.drag-over {
     background: rgba(5, 22, 77, 0.03);
-    border-left-color: var(--lh-navy);
+    border-left-color: var(--lh-gold);
 }
 
 .filter-tray-icon {
-    color: var(--lh-gold) !important;
-    opacity: 0.8;
+    color: var(--lh-navy) !important;
+    opacity: 0.45;
     flex-shrink: 0;
     margin-right: 4px;
 }
