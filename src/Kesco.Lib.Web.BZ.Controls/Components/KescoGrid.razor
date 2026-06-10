@@ -33,7 +33,7 @@
                                    OnClick="@ToggleTray" />
                 </MudTooltip>
             }
-            @if (ShowFilterTray)
+            @if (_registeredFilterColumns.Count > 0)
             {
                 <MudTooltip Text="@(_filterTrayExpanded ? "Скрыть фильтры" : "Фильтровать")" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
@@ -89,7 +89,7 @@
         </div>
     }
 
-    @if (ShowFilterTray && _filterTrayExpanded)
+    @if (_filterTrayExpanded)
     {
         <div class="filter-tray d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnFilterTrayDragOver"
@@ -98,9 +98,9 @@
             <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Class="filter-tray-icon" />
             @foreach (var kv in _activeFilters)
             {
-                var sqlName = kv.Key;
-                var filter  = kv.Value;
-                var dispName = AvailableFilterColumns.FirstOrDefault(p => p.Value == sqlName).Key ?? sqlName;
+                var sqlName  = kv.Key;
+                var filter   = kv.Value;
+                var dispName = _registeredFilterColumns.TryGetValue(sqlName, out var dn) ? dn : sqlName;
                 var desc = ColumnFilterDialog.GetFilterDescription(filter, dispName);
                 <div class="filter-chip">
                     <span class="chip-label chip-label-clickable"
@@ -172,11 +172,16 @@
     private int _dataKey;
 
     /// <summary>
-    /// SQL-имя → отображаемое имя для всех колонок, зарегистрированных через <see cref="KescoColumnDef"/>
-    /// с <c>Groupable="true"</c>.
-    /// Заполняется в <see cref="RegisterColumn"/>, используется в трее группировки.
+    /// SQL-имя → отображаемое имя для колонок с <c>Groupable="true"</c>.
+    /// Заполняется из <see cref="KescoColumnDef"/>; используется в трее группировки.
     /// </summary>
     private readonly Dictionary<string, string> _registeredGroupColumns = new();
+
+    /// <summary>
+    /// SQL-имя → отображаемое имя для колонок с <c>Filterable="true"</c>.
+    /// Заполняется из <see cref="KescoColumnDef"/>; используется в трее фильтрации.
+    /// </summary>
+    private readonly Dictionary<string, string> _registeredFilterColumns = new();
 
     private string _gridHeight
     {
@@ -212,10 +217,6 @@
     [Parameter] public int TotalCount { get; set; }
     [Parameter] public bool ShowPagination { get; set; } = true;
     [Parameter] public bool AllowColumnReorder { get; set; } = true;
-    /// <summary>Показывать кнопку и панель фильтрации по колонкам.</summary>
-    [Parameter] public bool ShowFilterTray { get; set; }
-    /// <summary>Доступные для фильтрации колонки: ключ — отображаемое имя, значение — SQL-имя.</summary>
-    [Parameter] public Dictionary<string, string> AvailableFilterColumns { get; set; } = [];
     /// <summary>
     /// Тип данных для каждой фильтруемой колонки: ключ — SQL-имя, значение — <see cref="ColumnType"/>.
     /// Передаётся из <see cref="KescoGridPageBase{T}.FilterColumnTypes"/>, определяемого автоматически
@@ -459,10 +460,10 @@
 
         if (string.IsNullOrEmpty(draggedSqlName))
             return;
-        if (!AvailableFilterColumns.ContainsValue(draggedSqlName))
+        if (!_registeredFilterColumns.ContainsKey(draggedSqlName))
             return;
 
-        var displayName = AvailableFilterColumns.FirstOrDefault(p => p.Value == draggedSqlName).Key ?? draggedSqlName;
+        var displayName = _registeredFilterColumns.TryGetValue(draggedSqlName, out var dn) ? dn : draggedSqlName;
         await OpenFilterDialog(draggedSqlName, displayName);
     }
 
@@ -526,15 +527,16 @@
     // ── IKescoGrid — регистрация метаданных колонок из KescoColumnDef ──────────
 
     /// <summary>
-    /// Регистрирует группируемую колонку.
+    /// Регистрирует колонку.
     /// Вызывается из <see cref="KescoColumnDef"/> при инициализации.
-    /// После регистрации первой колонки автоматически появляется кнопка группировки в тулбаре.
+    /// Кнопки группировки и фильтрации появляются автоматически как только
+    /// зарегистрирована хотя бы одна колонка с соответствующим флагом.
     /// </summary>
-    void IKescoGrid.RegisterColumn(string sqlName, string displayName, bool groupable)
+    void IKescoGrid.RegisterColumn(string sqlName, string displayName, bool groupable, bool filterable)
     {
-        if (groupable && !string.IsNullOrEmpty(sqlName))
-            _registeredGroupColumns[sqlName] = displayName;
-        // StateHasChanged вызывается Blazor автоматически после OnInitialized дочернего компонента
+        if (string.IsNullOrEmpty(sqlName)) return;
+        if (groupable)  _registeredGroupColumns[sqlName]  = displayName;
+        if (filterable) _registeredFilterColumns[sqlName] = displayName;
     }
 
     /// <summary>
@@ -543,5 +545,6 @@
     void IKescoGrid.UnregisterColumn(string sqlName)
     {
         _registeredGroupColumns.Remove(sqlName);
+        _registeredFilterColumns.Remove(sqlName);
     }
 }

@@ -27,9 +27,15 @@
     /// </summary>
     [Parameter] public bool Groupable { get; set; }
 
+    /// <summary>
+    /// Разрешить фильтрацию по этой колонке.
+    /// При <c>true</c> заголовок колонки можно перетащить на панель фильтрации.
+    /// </summary>
+    [Parameter] public bool Filterable { get; set; }
+
     /// <summary>Регистрирует колонку в гриде при инициализации компонента.</summary>
     protected override void OnInitialized()
-        => Grid?.RegisterColumn(SqlName, DisplayName, Groupable);
+        => Grid?.RegisterColumn(SqlName, DisplayName, Groupable, Filterable);
 
     /// <summary>Отменяет регистрацию при уничтожении компонента.</summary>
     public void Dispose()

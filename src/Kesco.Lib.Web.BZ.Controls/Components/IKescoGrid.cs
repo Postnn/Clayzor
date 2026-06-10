@@ -12,9 +12,10 @@ public interface IKescoGrid
     /// Вызывается из <see cref="KescoColumnDef.OnInitialized"/>.
     /// </summary>
     /// <param name="sqlName">SQL-имя колонки (выходное имя SELECT).</param>
-    /// <param name="displayName">Отображаемое имя (для чипа в трее группировки).</param>
+    /// <param name="displayName">Отображаемое имя (для чипов в треях группировки и фильтрации).</param>
     /// <param name="groupable">Разрешить группировку по этой колонке.</param>
-    void RegisterColumn(string sqlName, string displayName, bool groupable);
+    /// <param name="filterable">Разрешить фильтрацию по этой колонке.</param>
+    void RegisterColumn(string sqlName, string displayName, bool groupable, bool filterable);
 
     /// <summary>
     /// Отменяет регистрацию колонки.

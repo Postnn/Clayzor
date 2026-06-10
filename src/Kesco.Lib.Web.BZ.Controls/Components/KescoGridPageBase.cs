@@ -56,39 +56,18 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
     protected abstract string SelectSql { get; }
 
     /// <summary>
-    /// Колонки полнотекстового поиска для <b>плоского</b> режима (с алиасами таблиц).
-    /// WHERE применяется напрямую к JOIN-запросу — нужны алиасы <c>a.</c>/<c>t.</c>.
-    /// Пример: <c>["a.НазваниеАнализа", "t.ТипМедицинскогоАнализа"]</c>
-    /// </summary>
-    protected abstract string[] FlatSearchColumns { get; }
-
-    /// <summary>
-    /// Колонки полнотекстового поиска для <b>группированного</b> режима (выходные имена подзапроса).
-    /// WHERE применяется поверх <c>FROM (SELECT ...) _g</c> — без алиасов таблиц.
+    /// Колонки полнотекстового поиска — выходные имена колонок SELECT без алиасов таблиц.
+    /// WHERE строится поверх подзапроса <c>SELECT * FROM ({SelectSql}) _q</c>,
+    /// поэтому алиасы <c>a.</c>/<c>t.</c> не нужны ни в плоском, ни в группированном режиме.
     /// Пример: <c>["НазваниеАнализа", "TestTypeName"]</c>
     /// </summary>
-    protected abstract string[] GroupedSearchColumns { get; }
+    protected abstract string[] SearchColumns { get; }
 
     /// <summary>
     /// Порядок сортировки по умолчанию (когда пользователь не задал сортировку).
     /// Пример: <c>"Порядок, НазваниеАнализа"</c>
     /// </summary>
     protected abstract string DefaultOrder { get; }
-
-    /// <summary>
-    /// Маппинг SQL-имён из <c>GroupColumns</c> на выходные имена подзапроса GROUP BY.
-    /// Если имена совпадают — можно вернуть пустой словарь (тогда имена берутся как есть).
-    /// Пример: <c>{ ["TestTypeName"] = "TestTypeName", ["КодМедицинскогоАнализа"] = "КодМедицинскогоАнализа" }</c>
-    /// </summary>
-    protected abstract Dictionary<string, string> GroupExprMap { get; }
-
-    /// <summary>
-    /// Необязательный маппинг SQL-имён фильтра на алиасы таблиц для плоского WHERE.
-    /// Нужен когда имя колонки в ColumnFilters отличается от имени в JOIN-запросе.
-    /// Пример: <c>{ ["TestTypeName"] = "t.ТипМедицинскогоАнализа" }</c>
-    /// Если все имена совпадают — оставьте <c>null</c> (значение по умолчанию).
-    /// </summary>
-    protected virtual Dictionary<string, string>? FilterFlatColumnMap => null;
 
     /// <summary>
     /// Типы данных фильтруемых колонок, автоматически определённые по <see cref="ColumnAttribute"/>
@@ -241,16 +220,16 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
 
     /// <summary>
     /// Плоский режим: загружает страницу записей с учётом поиска и фильтрации по колонкам.
-    /// Использует <see cref="FlatSearchColumns"/> и <see cref="FilterFlatColumnMap"/>
-    /// для построения WHERE, <see cref="DefaultOrder"/> для ORDER BY.
+    /// WHERE применяется поверх подзапроса <c>SELECT * FROM ({SelectSql}) _q</c> —
+    /// алиасы таблиц не нужны, используются выходные имена колонок.
     /// </summary>
     private async Task LoadFlatData()
     {
-        var searchWhere    = _query.BuildWhereClause(FlatSearchColumns);
+        var searchWhere    = _query.BuildWhereClause(SearchColumns);
         var orderBy        = _query.BuildOrderBy(DefaultOrder);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp, FilterFlatColumnMap);
+        var colFilterWhere = _query.BuildColumnFilterClause(dp);
         var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
 
         _query.TotalCount = await Entity.GetCountAsync<T>(Db, SelectSql, where, dp);
@@ -262,21 +241,19 @@ public abstract class KescoGridPageBase<T> : ComponentBase where T : Entity
     /// Режим группировки: строит агрегатный SQL, формирует дерево групп через
     /// <see cref="KescoGroupingEngine"/>, загружает видимые на текущей странице
     /// детальные строки и собирает итоговый плоский список <see cref="_rows"/>.
-    /// Использует <see cref="GroupedSearchColumns"/>, <see cref="GroupExprMap"/>
-    /// и <see cref="DefaultOrder"/>.
+    /// WHERE применяется поверх подзапроса — имена колонок едины с плоским режимом.
     /// </summary>
     private async Task LoadGroupedData()
     {
-        var searchWhere    = _query.BuildWhereClause(GroupedSearchColumns);
+        var searchWhere    = _query.BuildWhereClause(SearchColumns);
         var orderBy        = _query.BuildOrderBy(DefaultOrder);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
         var colFilterWhere = _query.BuildColumnFilterClause(dp);
         var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
 
-        var exprs = _query.GroupColumns
-            .Select(c => GroupExprMap.GetValueOrDefault(c, c))
-            .ToList();
+        // GroupColumns — это выходные имена колонок SELECT, они же используются в GROUP BY
+        var exprs = _query.GroupColumns.ToList();
 
         // Шаг 1: агрегатный запрос GROUP BY
         var groupSql  = KescoGroupingEngine.BuildGroupAggregateSql(SelectSql, exprs, where, _query.SortColumns);

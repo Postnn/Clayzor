@@ -62,15 +62,16 @@ public abstract class Entity
         int pageNumber, int pageSize)
         where T : Entity
     {
-        var innerSql = selectSql;
-        if (whereClause is not null)
-            innerSql += $" WHERE {whereClause}";
+        // Оборачиваем selectSql в подзапрос _q, чтобы WHERE оперировал
+        // выходными именами колонок (без алиасов таблиц a./t.),
+        // унифицируя плоский и группированный режимы.
+        var filteredSql = whereClause is not null
+            ? $"SELECT * FROM ({selectSql}) _q WHERE {whereClause}"
+            : $"SELECT * FROM ({selectSql}) _q";
 
         var orderBy = orderByClause ?? "(SELECT 0)";
-        var sql = $"SELECT * FROM (";
-        sql += $"SELECT _src.*, ROW_NUMBER() OVER (ORDER BY {orderBy}) AS _rn";
-        sql += $" FROM ({innerSql}) _src";
-        sql += $") _p WHERE _rn BETWEEN @__start AND @__end";
+        var sql = $"SELECT * FROM (SELECT _src.*, ROW_NUMBER() OVER (ORDER BY {orderBy}) AS _rn"
+                + $" FROM ({filteredSql}) _src) _p WHERE _rn BETWEEN @__start AND @__end";
 
         var parameters = new DynamicParameters();
         if (param is not null)
@@ -83,17 +84,18 @@ public abstract class Entity
 
     /// <summary>
     /// Возвращает общее количество записей, соответствующих фильтру.
-    /// Оборачивает SELECT в подзапрос COUNT(*).
+    /// WHERE применяется поверх подзапроса _q — алиасы таблиц не нужны,
+    /// используются выходные имена колонок SELECT.
     /// </summary>
     public static async Task<int> GetCountAsync<T>(
         DbManager db, string selectSql,
         string? whereClause, object? param)
         where T : Entity
     {
-        var sql = $"SELECT COUNT(*) FROM ({selectSql}";
-        if (whereClause is not null)
-            sql += $" WHERE {whereClause}";
-        sql += ") AS _cnt";
+        var filteredSql = whereClause is not null
+            ? $"SELECT * FROM ({selectSql}) _q WHERE {whereClause}"
+            : $"SELECT * FROM ({selectSql}) _q";
+        var sql = $"SELECT COUNT(*) FROM ({filteredSql}) AS _cnt";
         return await db.ExecuteScalarAsync<int>(sql, param, commandType: System.Data.CommandType.Text);
     }
 

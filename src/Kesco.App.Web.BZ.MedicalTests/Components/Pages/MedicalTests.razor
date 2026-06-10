@@ -16,8 +16,6 @@
            Items="_rows"
            Loading="_loading"
            PageSize="@AppSettings.DefaultPageSize"
-           ShowFilterTray="true"
-           AvailableFilterColumns="@_filterColumnsDef"
            FilterColumnTypes="@FilterColumnTypes"
            TotalCount="@_query.TotalCount"
            ShowPagination="true"
@@ -26,11 +24,12 @@
            OnQueryChanged="OnQueryChanged">
 
     <ColumnDefs>
-        @* Колонки с Groupable="true" автоматически добавляют кнопку группировки в тулбар *@
-        <KescoColumnDef SqlName="TestTypeName"            DisplayName="Тип"      Groupable="true" />
-        <KescoColumnDef SqlName="КодМедицинскогоАнализа" DisplayName="Код"      Groupable="true" />
-        <KescoColumnDef SqlName="НазваниеАнализа"        DisplayName="Название" Groupable="true" />
-        <KescoColumnDef SqlName="Порядок"                DisplayName="Порядок"  Groupable="true" />
+        <KescoColumnDef SqlName="TestTypeName"            DisplayName="Тип"         Groupable="true" Filterable="true" />
+        <KescoColumnDef SqlName="КодМедицинскогоАнализа" DisplayName="Код"         Groupable="true" Filterable="true" />
+        <KescoColumnDef SqlName="НазваниеАнализа"        DisplayName="Название"    Groupable="true" Filterable="true" />
+        <KescoColumnDef SqlName="Порядок"                DisplayName="Порядок"     Groupable="true" Filterable="true" />
+        <KescoColumnDef SqlName="Группа"                 DisplayName="Группа"                       Filterable="true" />
+        <KescoColumnDef SqlName="Заключение"             DisplayName="Заключение"                   Filterable="true" />
     </ColumnDefs>
 
     <Columns>
@@ -155,54 +154,13 @@
 
     protected override string SelectSql => SQLQueries.SELECT_МедицинскиеАнализы;
 
-    /// <summary>Поиск в плоском режиме по алиасам JOIN-запроса.</summary>
-    protected override string[] FlatSearchColumns    => ["a.НазваниеАнализа", "t.ТипМедицинскогоАнализа"];
-
-    /// <summary>Поиск в группированном режиме по выходным именам подзапроса.</summary>
-    protected override string[] GroupedSearchColumns => ["НазваниеАнализа", "TestTypeName"];
+    /// <summary>
+    /// Колонки полнотекстового поиска — выходные имена SELECT (без алиасов таблиц).
+    /// WHERE применяется поверх подзапроса, алиасы a./t. не нужны.
+    /// </summary>
+    protected override string[] SearchColumns => ["НазваниеАнализа", "TestTypeName"];
 
     protected override string DefaultOrder => "Порядок, НазваниеАнализа";
-
-    protected override Dictionary<string, string> GroupExprMap => _groupExprMap;
-
-    protected override Dictionary<string, string>? FilterFlatColumnMap => _filterFlatColumnMap;
-
-    // ── Конфигурация колонок ────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Маппинг SQL-имён из GroupColumns на выходные имена подзапроса GROUP BY.
-    /// </summary>
-    private static readonly Dictionary<string, string> _groupExprMap = new()
-    {
-        ["TestTypeName"]           = "TestTypeName",
-        ["КодМедицинскогоАнализа"] = "КодМедицинскогоАнализа",
-        ["НазваниеАнализа"]        = "НазваниеАнализа",
-        ["Порядок"]                = "Порядок",
-    };
-
-    /// <summary>Колонки доступные для фильтрации: отображаемое имя → SQL-имя.</summary>
-    private static readonly Dictionary<string, string> _filterColumnsDef = new()
-    {
-        ["Код"]        = "КодМедицинскогоАнализа",
-        ["Название"]   = "НазваниеАнализа",
-        ["Тип"]        = "TestTypeName",
-        ["Порядок"]    = "Порядок",
-        ["Группа"]     = "Группа",
-        ["Заключение"] = "Заключение",
-    };
-
-    /// <summary>
-    /// Маппинг SQL-имён фильтра → алиасы таблиц для плоского WHERE.
-    /// </summary>
-    private static readonly Dictionary<string, string> _filterFlatColumnMap = new()
-    {
-        ["TestTypeName"]           = "t.ТипМедицинскогоАнализа",
-        ["НазваниеАнализа"]        = "a.НазваниеАнализа",
-        ["КодМедицинскогоАнализа"] = "a.КодМедицинскогоАнализа",
-        ["Порядок"]                = "a.Порядок",
-        ["Группа"]                 = "a.Группа",
-        ["Заключение"]             = "a.Заключение",
-    };
 
     // ── Обработка событий грида ─────────────────────────────────────────────────
 
