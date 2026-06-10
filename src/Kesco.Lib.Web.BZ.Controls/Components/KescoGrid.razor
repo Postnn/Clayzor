@@ -1,7 +1,13 @@
 @typeparam TEntity where TEntity : class
+@implements IKescoGrid
 @inject IDialogService DialogService
 @using MudBlazor.Extensions
 @using MudBlazor.Extensions.Options
+
+@* Невидимый блок — рендерит KescoColumnDef-регистраторы и предоставляет им каскадный IKescoGrid *@
+<CascadingValue Value="(IKescoGrid)this" IsFixed="true">
+    @ColumnDefs
+</CascadingValue>
 
 <MudPaper Elevation="1" Class="pa-4">
     <div class="d-flex flex-wrap justify-space-between gap-2 mb-4" style="align-items:center">
@@ -18,7 +24,7 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Style="max-width:250px;min-width:140px" />
-            @if (ShowGroupingTray)
+            @if (_registeredGroupColumns.Count > 0)
             {
                 <MudTooltip Text="@(_trayExpanded ? "Отключить группировку" : "Группировать")" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
@@ -48,7 +54,7 @@
         </MudStack>
     </div>
 
-    @if (ShowGroupingTray && _trayExpanded)
+    @if (_trayExpanded)
     {
         <div class="grouping-tray d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnTrayDragOver"
@@ -59,7 +65,7 @@
             {
                 var idx = i;
                 var col = _groupColumns[i];
-                var displayName = AvailableGroupColumns.FirstOrDefault(kvp => kvp.Value == col).Key ?? col;
+                var displayName = _registeredGroupColumns.TryGetValue(col, out var dn) ? dn : col;
                 <div class="grouping-chip"
                      draggable="true"
                      @ondragstart="@(e => OnChipDragStart(e, idx))"
@@ -130,7 +136,7 @@
                  RowsPerPage="@_pageSize"
                  DragDropColumnReordering="@AllowColumnReorder">
         <Columns>
-            @ChildContent
+            @Columns
         </Columns>
     </MudDataGrid>
     @if (ShowPagination)
@@ -165,6 +171,13 @@
     private int _pageSize;
     private int _dataKey;
 
+    /// <summary>
+    /// SQL-имя → отображаемое имя для всех колонок, зарегистрированных через <see cref="KescoColumnDef"/>
+    /// с <c>Groupable="true"</c>.
+    /// Заполняется в <see cref="RegisterColumn"/>, используется в трее группировки.
+    /// </summary>
+    private readonly Dictionary<string, string> _registeredGroupColumns = new();
+
     private string _gridHeight
     {
         get
@@ -183,11 +196,18 @@
     [Parameter] public bool Loading { get; set; }
     [Parameter] public bool ShowAddButton { get; set; } = true;
     [Parameter] public int PageSize { get; set; } = 50;
-    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>
+    /// Колонки грида — <c>TemplateColumn</c> / <c>PropertyColumn</c>.
+    /// Передаются внутрь <c>MudDataGrid.Columns</c>.
+    /// </summary>
+    [Parameter] public RenderFragment? Columns { get; set; }
+    /// <summary>
+    /// Метаданные колонок — <see cref="KescoColumnDef"/> компоненты.
+    /// Рендерятся вне грида через <c>CascadingValue</c> для регистрации группируемых колонок.
+    /// </summary>
+    [Parameter] public RenderFragment? ColumnDefs { get; set; }
     [Parameter] public EventCallback OnAdd { get; set; }
     [Parameter] public EventCallback<DataGridRowClickEventArgs<TEntity>> OnRowClick { get; set; }
-    [Parameter] public bool ShowGroupingTray { get; set; }
-    [Parameter] public Dictionary<string, string> AvailableGroupColumns { get; set; } = [];
     [Parameter] public EventCallback<KescoDataQuery> OnQueryChanged { get; set; }
     [Parameter] public int TotalCount { get; set; }
     [Parameter] public bool ShowPagination { get; set; } = true;
@@ -333,7 +353,7 @@
         var draggedData = KescoDragState.DraggedColumn;
         KescoDragState.DraggedColumn = null;
 
-        if (!string.IsNullOrEmpty(draggedData) && AvailableGroupColumns.ContainsValue(draggedData) && !_groupColumns.Contains(draggedData))
+        if (!string.IsNullOrEmpty(draggedData) && _registeredGroupColumns.ContainsKey(draggedData) && !_groupColumns.Contains(draggedData))
         {
             _groupColumns.Add(draggedData);
             _dragSourceIndex = -1;
@@ -492,14 +512,36 @@
         _dataKey++;
         var query = new KescoDataQuery
         {
-            SearchText   = _searchText,
-            GroupEnabled = _groupColumns.Count > 0,
-            GroupColumns = _groupColumns.ToList(),
-            SortColumns  = _sortState.ToList(),
-            PageNumber   = _pageNumber,
-            PageSize     = _pageSize,
+            SearchText    = _searchText,
+            GroupEnabled  = _groupColumns.Count > 0,
+            GroupColumns  = _groupColumns.ToList(),
+            SortColumns   = _sortState.ToList(),
+            PageNumber    = _pageNumber,
+            PageSize      = _pageSize,
             ColumnFilters = _activeFilters.ToDictionary(kv => kv.Key, kv => kv.Value),
         };
         await OnQueryChanged.InvokeAsync(query);
+    }
+
+    // ── IKescoGrid — регистрация метаданных колонок из KescoColumnDef ──────────
+
+    /// <summary>
+    /// Регистрирует группируемую колонку.
+    /// Вызывается из <see cref="KescoColumnDef"/> при инициализации.
+    /// После регистрации первой колонки автоматически появляется кнопка группировки в тулбаре.
+    /// </summary>
+    void IKescoGrid.RegisterColumn(string sqlName, string displayName, bool groupable)
+    {
+        if (groupable && !string.IsNullOrEmpty(sqlName))
+            _registeredGroupColumns[sqlName] = displayName;
+        // StateHasChanged вызывается Blazor автоматически после OnInitialized дочернего компонента
+    }
+
+    /// <summary>
+    /// Отменяет регистрацию колонки при уничтожении <see cref="KescoColumnDef"/>.
+    /// </summary>
+    void IKescoGrid.UnregisterColumn(string sqlName)
+    {
+        _registeredGroupColumns.Remove(sqlName);
     }
 }

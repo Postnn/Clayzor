@@ -1,0 +1,37 @@
+@implements IDisposable
+
+@* Невидимый компонент-регистратор. Не рендерит HTML.
+   Размещается внутри блока <ColumnDefs> компонента KescoGrid.
+   При инициализации регистрирует метаданные колонки (SQL-имя, отображаемое имя, группируемость)
+   в родительском KescoGrid через каскадный параметр IKescoGrid. *@
+
+@code {
+    /// <summary>Родительский грид — получается через каскадный параметр.</summary>
+    [CascadingParameter] private IKescoGrid? Grid { get; set; }
+
+    /// <summary>
+    /// SQL-имя колонки — выходное имя из SELECT.
+    /// Пример: <c>"КодМедицинскогоАнализа"</c>, <c>"TestTypeName"</c>.
+    /// </summary>
+    [Parameter] public string SqlName { get; set; } = "";
+
+    /// <summary>
+    /// Отображаемое имя колонки — используется в чипе трея группировки.
+    /// Пример: <c>"Код"</c>, <c>"Тип"</c>.
+    /// </summary>
+    [Parameter] public string DisplayName { get; set; } = "";
+
+    /// <summary>
+    /// Разрешить группировку по этой колонке.
+    /// При <c>true</c> заголовок колонки можно перетащить на панель группировки.
+    /// </summary>
+    [Parameter] public bool Groupable { get; set; }
+
+    /// <summary>Регистрирует колонку в гриде при инициализации компонента.</summary>
+    protected override void OnInitialized()
+        => Grid?.RegisterColumn(SqlName, DisplayName, Groupable);
+
+    /// <summary>Отменяет регистрацию при уничтожении компонента.</summary>
+    public void Dispose()
+        => Grid?.UnregisterColumn(SqlName);
+}

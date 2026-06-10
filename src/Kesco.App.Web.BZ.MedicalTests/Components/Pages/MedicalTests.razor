@@ -16,124 +16,134 @@
            Items="_rows"
            Loading="_loading"
            PageSize="@AppSettings.DefaultPageSize"
-           ShowGroupingTray="true"
-           AvailableGroupColumns="@_groupColumnsDef"
-               ShowFilterTray="true"
-               AvailableFilterColumns="@_filterColumnsDef"
-               FilterColumnTypes="@FilterColumnTypes"
+           ShowFilterTray="true"
+           AvailableFilterColumns="@_filterColumnsDef"
+           FilterColumnTypes="@FilterColumnTypes"
            TotalCount="@_query.TotalCount"
            ShowPagination="true"
            OnAdd="OpenAddDialog"
            OnRowClick="OnRowClicked"
            OnQueryChanged="OnQueryChanged">
 
-    <TemplateColumn T="IGridRow" Title="Код" Sortable="false"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)">
-        <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 draggable="true"
-                 @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "КодМедицинскогоАнализа"; })"
-                 @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("КодМедицинскогоАнализа"); })">
-                <MudText Style="flex:1;text-align:center">Код</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("КодМедицинскогоАнализа") }
-            </div>
-        </HeaderTemplate>
-        <CellTemplate>
-            @if (context.Item is GroupHeaderRow header)
-            {
-                <MudStack Row="true" AlignItems="AlignItems.Center" Style="@($"padding-left:{header.Depth * 16}px")">
-                    <MudIconButton Icon="@(header.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                                   Size="Size.Small"
-                                   OnClick="() => ToggleGroup(header)"
-                                   Style="padding:0;width:22px;height:22px;min-width:22px" />
-                    <MudText Style="font-weight:600;font-size:0.875rem">@header.DisplayValue (@header.ItemCount шт.)</MudText>
-                </MudStack>
-            }
-            else if (context.Item is DetailRow<MedicalTest> detail)
-            {
-                <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
-            }
-        </CellTemplate>
-    </TemplateColumn>
+    <ColumnDefs>
+        @* Колонки с Groupable="true" автоматически добавляют кнопку группировки в тулбар *@
+        <KescoColumnDef SqlName="TestTypeName"            DisplayName="Тип"      Groupable="true" />
+        <KescoColumnDef SqlName="КодМедицинскогоАнализа" DisplayName="Код"      Groupable="true" />
+        <KescoColumnDef SqlName="НазваниеАнализа"        DisplayName="Название" Groupable="true" />
+        <KescoColumnDef SqlName="Порядок"                DisplayName="Порядок"  Groupable="true" />
+    </ColumnDefs>
 
-    <TemplateColumn T="IGridRow" Title="Название" Sortable="false"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)">
-        <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 draggable="true"
-                 @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "НазваниеАнализа"; })"
-                 @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("НазваниеАнализа"); })">
-                <MudText Style="flex:1;text-align:center">Название</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("НазваниеАнализа") }
-            </div>
-        </HeaderTemplate>
-        <CellTemplate>
-            @if (context.Item is DetailRow<MedicalTest> detail)
-            {
-                <MudText>@detail.Item.Name</MudText>
-            }
-        </CellTemplate>
-    </TemplateColumn>
+    <Columns>
 
-    <TemplateColumn T="IGridRow" Title="Тип" Sortable="false"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)">
-        <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 draggable="true"
-                 @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "TestTypeName"; })"
-                 @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("TestTypeName"); })">
-                <MudText Style="flex:1;text-align:center">Тип</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("TestTypeName") }
-            </div>
-        </HeaderTemplate>
-        <CellTemplate>
-            @if (context.Item is DetailRow<MedicalTest> detail)
-            {
-                <MudText>@detail.Item.TestTypeName</MudText>
-            }
-        </CellTemplate>
-    </TemplateColumn>
+        <TemplateColumn T="IGridRow" Title="Код" Sortable="false"
+                        Hidden="@(_dataGrid?.GroupColumns.Contains("КодМедицинскогоАнализа") ?? false)">
+            <HeaderTemplate>
+                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                     draggable="true"
+                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "КодМедицинскогоАнализа"; })"
+                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("КодМедицинскогоАнализа"); })">
+                    <MudText Style="flex:1;text-align:center">Код</MudText>
+                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("КодМедицинскогоАнализа") }
+                </div>
+            </HeaderTemplate>
+            <CellTemplate>
+                @if (context.Item is GroupHeaderRow header)
+                {
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Style="@($"padding-left:{header.Depth * 16}px")">
+                        <MudIconButton Icon="@(header.IsExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                       Size="Size.Small"
+                                       OnClick="() => ToggleGroup(header)"
+                                       Style="padding:0;width:22px;height:22px;min-width:22px" />
+                        <MudText Style="font-weight:600;font-size:0.875rem">@header.DisplayValue (@header.ItemCount шт.)</MudText>
+                    </MudStack>
+                }
+                else if (context.Item is DetailRow<MedicalTest> detail)
+                {
+                    <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
+                }
+            </CellTemplate>
+        </TemplateColumn>
 
-    <TemplateColumn T="IGridRow" Title="Порядок" Sortable="false"
-                    Hidden="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)">
-        <HeaderTemplate>
-            <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-                 draggable="true"
-                 @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "Порядок"; })"
-                 @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("Порядок"); })">
-                <MudText Style="flex:1;text-align:center">Порядок</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("Порядок") }
-            </div>
-        </HeaderTemplate>
-        <CellTemplate>
-            @if (context.Item is DetailRow<MedicalTest> detail)
-            {
-                <MudText>@detail.Item.Order</MudText>
-            }
-        </CellTemplate>
-    </TemplateColumn>
+        <TemplateColumn T="IGridRow" Title="Название" Sortable="false"
+                        Hidden="@(_dataGrid?.GroupColumns.Contains("НазваниеАнализа") ?? false)">
+            <HeaderTemplate>
+                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                     draggable="true"
+                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "НазваниеАнализа"; })"
+                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("НазваниеАнализа"); })">
+                    <MudText Style="flex:1;text-align:center">Название</MudText>
+                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("НазваниеАнализа") }
+                </div>
+            </HeaderTemplate>
+            <CellTemplate>
+                @if (context.Item is DetailRow<MedicalTest> detail)
+                {
+                    <MudText>@detail.Item.Name</MudText>
+                }
+            </CellTemplate>
+        </TemplateColumn>
 
-    <TemplateColumn T="IGridRow" Title="Группа">
-        <CellTemplate>
-            @if (context.Item is DetailRow<MedicalTest> detail)
-            {
-                <MudIcon Icon="@(detail.Item.IsGroup ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
-                         Color="@(detail.Item.IsGroup ? Color.Success : Color.Default)"
-                         Size="Size.Small" />
-            }
-        </CellTemplate>
-    </TemplateColumn>
+        <TemplateColumn T="IGridRow" Title="Тип" Sortable="false"
+                        Hidden="@(_dataGrid?.GroupColumns.Contains("TestTypeName") ?? false)">
+            <HeaderTemplate>
+                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                     draggable="true"
+                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "TestTypeName"; })"
+                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("TestTypeName"); })">
+                    <MudText Style="flex:1;text-align:center">Тип</MudText>
+                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("TestTypeName") }
+                </div>
+            </HeaderTemplate>
+            <CellTemplate>
+                @if (context.Item is DetailRow<MedicalTest> detail)
+                {
+                    <MudText>@detail.Item.TestTypeName</MudText>
+                }
+            </CellTemplate>
+        </TemplateColumn>
 
-    <TemplateColumn T="IGridRow" Title="Заключение">
-        <CellTemplate>
-            @if (context.Item is DetailRow<MedicalTest> detail)
-            {
-                <MudIcon Icon="@(detail.Item.IsConclusion ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
-                         Color="@(detail.Item.IsConclusion ? Color.Success : Color.Default)"
-                         Size="Size.Small" />
-            }
-        </CellTemplate>
-    </TemplateColumn>
+        <TemplateColumn T="IGridRow" Title="Порядок" Sortable="false"
+                        Hidden="@(_dataGrid?.GroupColumns.Contains("Порядок") ?? false)">
+            <HeaderTemplate>
+                <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+                     draggable="true"
+                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = "Порядок"; })"
+                     @onclick="@(async () => { if (_dataGrid is not null) await _dataGrid.ToggleSort("Порядок"); })">
+                    <MudText Style="flex:1;text-align:center">Порядок</MudText>
+                    @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("Порядок") }
+                </div>
+            </HeaderTemplate>
+            <CellTemplate>
+                @if (context.Item is DetailRow<MedicalTest> detail)
+                {
+                    <MudText>@detail.Item.Order</MudText>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="IGridRow" Title="Группа">
+            <CellTemplate>
+                @if (context.Item is DetailRow<MedicalTest> detail)
+                {
+                    <MudIcon Icon="@(detail.Item.IsGroup ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                             Color="@(detail.Item.IsGroup ? Color.Success : Color.Default)"
+                             Size="Size.Small" />
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn T="IGridRow" Title="Заключение">
+            <CellTemplate>
+                @if (context.Item is DetailRow<MedicalTest> detail)
+                {
+                    <MudIcon Icon="@(detail.Item.IsConclusion ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                             Color="@(detail.Item.IsConclusion ? Color.Success : Color.Default)"
+                             Size="Size.Small" />
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+    </Columns>
 
 </KescoGrid>
 
@@ -158,15 +168,6 @@
     protected override Dictionary<string, string>? FilterFlatColumnMap => _filterFlatColumnMap;
 
     // ── Конфигурация колонок ────────────────────────────────────────────────────
-
-    /// <summary>Колонки доступные для группировки: отображаемое имя → SQL-имя.</summary>
-    private static readonly Dictionary<string, string> _groupColumnsDef = new()
-    {
-        ["Тип"]      = "TestTypeName",
-        ["Код"]      = "КодМедицинскогоАнализа",
-        ["Название"] = "НазваниеАнализа",
-        ["Порядок"]  = "Порядок",
-    };
 
     /// <summary>
     /// Маппинг SQL-имён из GroupColumns на выходные имена подзапроса GROUP BY.
