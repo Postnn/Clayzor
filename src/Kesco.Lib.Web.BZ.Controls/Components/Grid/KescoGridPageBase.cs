@@ -8,7 +8,7 @@ using MudBlazor;
 using MudBlazor.Extensions;
 using MudBlazor.Extensions.Options;
 
-namespace Kesco.Lib.Web.BZ.Controls;
+namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
 /// <summary>
 /// Интерфейс обратного вызова, реализуемый <see cref="KescoGridPageBase{T}"/>.

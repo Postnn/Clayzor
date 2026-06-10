@@ -1,4 +1,4 @@
-namespace Kesco.Lib.Web.BZ.Controls;
+namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
 /// <summary>
 /// Временное хранилище имени перетаскиваемой SQL-колонки

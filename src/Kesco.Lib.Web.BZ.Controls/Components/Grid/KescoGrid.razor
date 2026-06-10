@@ -101,7 +101,7 @@
                 var sqlName  = kv.Key;
                 var filter   = kv.Value;
                 var dispName = _registeredFilterColumns.TryGetValue(sqlName, out var dn) ? dn : sqlName;
-                var desc = ColumnFilterDialog.GetFilterDescription(filter, dispName);
+                var desc = KescoColumnFilterDialog.GetFilterDescription(filter, dispName);
                 <div class="filter-chip">
                     <span class="chip-label chip-label-clickable"
                           @onclick="async () => await OpenFilterDialog(sqlName, dispName)"
@@ -497,7 +497,7 @@
         var colType = FilterColumnTypes.TryGetValue(sqlName, out var t) ? t : ColumnType.Text;
         _activeFilters.TryGetValue(sqlName, out var existing);
 
-        var parameters = new DialogParameters<ColumnFilterDialog>
+        var parameters = new DialogParameters<KescoColumnFilterDialog>
         {
             { x => x.ColumnDisplayName, displayName },
             { x => x.ColumnSqlName,     sqlName },
@@ -510,7 +510,7 @@
             FullWidth = true,
             DragMode = MudDialogDragMode.Simple,
         };
-        var dialog = await DialogService.ShowExAsync<ColumnFilterDialog>(
+        var dialog = await DialogService.ShowExAsync<KescoColumnFilterDialog>(
             $"Фильтр: {displayName}", parameters, options);
         var result = await dialog.Result;
 

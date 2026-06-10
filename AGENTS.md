@@ -99,7 +99,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPageBase\<T>** — базовый класс страниц с гридом: `LoadFlatData`/`LoadGroupedData`, `ToggleGroup`, `OnAfterRenderAsync`, `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnDef** — невидимый регистратор метаданных колонки: SqlName, DisplayName, Groupable, Filterable | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **ColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами | [docs/column-filter-dialog.md](docs/column-filter-dialog.md) |
+| **KescoColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами | [docs/kesco-column-filter-dialog.md](docs/kesco-column-filter-dialog.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
 | **KescoErrorBar** — баннер ошибок БД с детализацией (SQL, параметры) | [docs/kesco-error-bar.md](docs/kesco-error-bar.md) |
@@ -187,7 +187,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 ## Server-side column filtering
 
 Фильтрация по колонкам выполняется **на стороне SQL Server** через `BuildColumnFilterClause`.
-UI — панель фильтров (filter tray) с drag-and-drop заголовков и диалогом `ColumnFilterDialog` для настройки условий.
+UI — панель фильтров (filter tray) с drag-and-drop заголовков и диалогом `KescoColumnFilterDialog` для настройки условий.
 
 ### Модель данных
 - `ColumnType` — тип данных колонки: `Text` (Contains/Equals/StartsWith/EndsWith/NotEquals), `Number` (равенство + сравнения >/</>=/<=), `Boolean` (Equals)
@@ -201,11 +201,11 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 ### Filter tray
 - Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)
-- Добавление фильтра: перетаскивание заголовка колонки на панель → открывается `ColumnFilterDialog`
+- Добавление фильтра: перетаскивание заголовка колонки на панель → открывается `KescoColumnFilterDialog`
 - Редактирование: клик по чипу фильтра → повторно открывается диалог с текущими значениями
 - Удаление: клик по × на чипе
 - При выключении панели все фильтры сбрасываются, данные перезагружаются
-- Чип показывает читаемое описание: `«Название содержит «грипп»»` (через `ColumnFilterDialog.GetFilterDescription`)
+- Чип показывает читаемое описание: `«Название содержит «грипп»»` (через `KescoColumnFilterDialog.GetFilterDescription`)
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице (через KescoGridPageBase\<T>)

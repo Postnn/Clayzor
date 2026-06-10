@@ -1,6 +1,6 @@
 using Kesco.Lib.Entities;
 
-namespace Kesco.Lib.Web.BZ.Controls;
+namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
 // ── Вспомогательные типы серверной группировки ─────────────────────────────
 

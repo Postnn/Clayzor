@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Components;
 
-namespace Kesco.Lib.Web.BZ.Controls;
+namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
 /// <summary>
 /// Интерфейс регистрации метаданных колонок и настроек источника данных,
