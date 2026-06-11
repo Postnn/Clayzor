@@ -4,11 +4,10 @@
 @using MudBlazor.Extensions
 @using MudBlazor.Extensions.Options
 
-@* Невидимый блок — рендерит KescoColumnDef-регистраторы и предоставляет им каскадный IKescoGrid *@
+@* CascadingValue охватывает весь рендер — и KescoColumnDef (регистрация метаданных),
+   и KescoColumn внутри MudDataGrid (построение заголовков) получают одну ссылку на IKescoGrid *@
 <CascadingValue Value="(IKescoGrid)this" IsFixed="true">
-    @ColumnDefs
-</CascadingValue>
-
+@ColumnDefs
 <MudPaper Elevation="1" Class="pa-4">
     <div class="d-flex flex-wrap justify-space-between gap-2 mb-4" style="align-items:center">
         <MudText Typo="Typo.h5">@Title</MudText>
@@ -24,7 +23,7 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Style="max-width:250px;min-width:140px" />
-            @if (_registeredGroupColumns.Count > 0)
+            @if (_columnBySqlName.Values.Any(c => c.Groupable))
             {
                 <MudTooltip Text="@(_trayExpanded ? "Отключить группировку" : "Группировать")" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
@@ -33,7 +32,7 @@
                                    OnClick="@ToggleTray" />
                 </MudTooltip>
             }
-            @if (_registeredFilterColumns.Count > 0)
+            @if (_columnBySqlName.Values.Any(c => c.Filterable))
             {
                 <MudTooltip Text="@(_filterTrayExpanded ? "Скрыть фильтры" : "Фильтровать")" Placement="Placement.Bottom">
                     <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
@@ -65,7 +64,7 @@
             {
                 var idx = i;
                 var col = _groupColumns[i];
-                var displayName = _registeredGroupColumns.TryGetValue(col, out var dn) ? dn : col;
+                var displayName = _columnBySqlName.TryGetValue(col, out var meta) ? meta.DisplayName : col;
                 <div class="grouping-chip"
                      draggable="true"
                      @ondragstart="@(e => OnChipDragStart(e, idx))"
@@ -100,7 +99,7 @@
             {
                 var sqlName  = kv.Key;
                 var filter   = kv.Value;
-                var dispName = _registeredFilterColumns.TryGetValue(sqlName, out var dn) ? dn : sqlName;
+                var dispName = _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName;
                 var desc = KescoColumnFilterDialog.GetFilterDescription(filter, dispName);
                 <div class="filter-chip">
                     <span class="chip-label chip-label-clickable"
@@ -158,30 +157,46 @@
         </div>
     }
 </MudPaper>
+</CascadingValue>
 
 @code {
+    // ── Private state ────────────────────────────────────────────────────────────
     private string? _searchText;
     private bool _trayExpanded = false;
     private bool _filterTrayExpanded = false;
     private List<string> _groupColumns = [];
     private int _dragSourceIndex = -1;
+
+    /// <summary>
+    /// Состояние сортировки: <c>Column</c> содержит <see cref="KescoColumnMeta.SortName"/>
+    /// (реальное выражение для ORDER BY), а не SqlName колонки.
+    /// </summary>
     private List<SortColumn> _sortState = [];
+
     private Dictionary<string, ColumnFilter> _activeFilters = [];
     private int _pageNumber = 1;
     private int _pageSize;
     private int _dataKey;
 
     /// <summary>
-    /// SQL-имя → отображаемое имя для колонок с <c>Groupable="true"</c>.
-    /// Заполняется из <see cref="KescoColumnDef"/>; используется в трее группировки.
+    /// Срабатывает при регистрации или отмене регистрации колонки.
+    /// <see cref="KescoColumn{TEntity}"/> подписывается и вызывает <c>StateHasChanged</c>,
+    /// чтобы отобразить <c>DisplayName</c> после того, как <see cref="KescoColumnDef"/>
+    /// завершит инициализацию и зарегистрирует метаданные.
     /// </summary>
-    private readonly Dictionary<string, string> _registeredGroupColumns = new();
+    public event Action? ColumnsChanged;
 
     /// <summary>
-    /// SQL-имя → отображаемое имя для колонок с <c>Filterable="true"</c>.
-    /// Заполняется из <see cref="KescoColumnDef"/>; используется в трее фильтрации.
+    /// Индекс по числовому идентификатору: ColumnId → <see cref="KescoColumnMeta"/>.
+    /// Используется <see cref="KescoColumn{TEntity}"/> для поиска метаданных при построении заголовка.
     /// </summary>
-    private readonly Dictionary<string, string> _registeredFilterColumns = new();
+    private readonly Dictionary<int, KescoColumnMeta> _columnById = new();
+
+    /// <summary>
+    /// Индекс по SQL-имени: SqlName → <see cref="KescoColumnMeta"/>.
+    /// Используется для группировки, фильтрации, drag-and-drop и <see cref="IsGrouped"/>.
+    /// </summary>
+    private readonly Dictionary<string, KescoColumnMeta> _columnBySqlName = new();
 
     private string _gridHeight
     {
@@ -196,31 +211,56 @@
             };
         }
     }
+
+    // ── Parameters ───────────────────────────────────────────────────────────────
+    /// <summary>Заголовок грида.</summary>
     [Parameter] public string Title { get; set; } = "Список";
+
+    /// <summary>Данные для отображения.</summary>
     [Parameter] public IEnumerable<TEntity> Items { get; set; } = [];
+
+    /// <summary>Признак загрузки — управляет индикатором грида.</summary>
     [Parameter] public bool Loading { get; set; }
+
+    /// <summary>Показывать кнопку «Добавить» в тулбаре.</summary>
     [Parameter] public bool ShowAddButton { get; set; } = true;
+
+    /// <summary>Количество строк на странице по умолчанию.</summary>
     [Parameter] public int PageSize { get; set; } = 50;
+
     /// <summary>
-    /// Колонки грида — <c>TemplateColumn</c> / <c>PropertyColumn</c>.
+    /// Колонки грида — <c>KescoColumn</c> / <c>TemplateColumn</c> / <c>PropertyColumn</c>.
     /// Передаются внутрь <c>MudDataGrid.Columns</c>.
     /// </summary>
     [Parameter] public RenderFragment? Columns { get; set; }
+
     /// <summary>
     /// Метаданные колонок — <see cref="KescoColumnDef"/> компоненты.
-    /// Рендерятся вне грида через <c>CascadingValue</c> для регистрации группируемых колонок.
+    /// Рендерятся вне грида через <c>CascadingValue</c> для регистрации метаданных.
     /// </summary>
     [Parameter] public RenderFragment? ColumnDefs { get; set; }
+
+    /// <summary>Событие нажатия кнопки «Добавить».</summary>
     [Parameter] public EventCallback OnAdd { get; set; }
+
+    /// <summary>Событие клика по строке грида.</summary>
     [Parameter] public EventCallback<DataGridRowClickEventArgs<TEntity>> OnRowClick { get; set; }
+
+    /// <summary>Событие изменения параметров запроса (поиск, сортировка, пагинация и т.д.).</summary>
     [Parameter] public EventCallback<KescoDataQuery> OnQueryChanged { get; set; }
+
+    /// <summary>Общее количество записей — используется для пагинации.</summary>
     [Parameter] public int TotalCount { get; set; }
+
+    /// <summary>Показывать панель пагинации.</summary>
     [Parameter] public bool ShowPagination { get; set; } = true;
+
+    /// <summary>Разрешить перетаскивание колонок.</summary>
     [Parameter] public bool AllowColumnReorder { get; set; } = true;
+
     /// <summary>
     /// Тип данных для каждой фильтруемой колонки: ключ — SQL-имя, значение — <see cref="ColumnType"/>.
-    /// Передаётся из <see cref="KescoGridPageBase{T}.FilterColumnTypes"/>, определяемого автоматически
-    /// по C#-типам свойств сущности через рефлексию.
+    /// Передаётся из <see cref="KescoGridPageBase{T}.FilterColumnTypes"/>.
     /// </summary>
     [Parameter] public IReadOnlyDictionary<string, ColumnType> FilterColumnTypes { get; set; }
         = new Dictionary<string, ColumnType>();
@@ -241,30 +281,35 @@
     [Parameter] public Type? EditDialogType { get; set; }
 
     /// <summary>
-    /// Загрузчик данных страницы — принимается через каскадный параметр от <see cref="KescoGridPageBase{T}"/>.
+    /// Загрузчик данных страницы. Передаётся как <c>DataLoader="this"</c> со страницы,
+    /// наследующей <see cref="KescoGridPageBase{T}"/>.
     /// Если задан, <see cref="NotifyQueryChanged"/> вызывает его вместо <see cref="OnQueryChanged"/>.
     /// </summary>
-    [CascadingParameter] private IKescoGridDataLoader? DataLoader { get; set; }
+    [Parameter] public IKescoGridDataLoader? DataLoader { get; set; }
 
+    /// <summary>SQL-имена колонок текущей группировки.</summary>
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
     private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
 
+    // ── Lifecycle ────────────────────────────────────────────────────────────────
+    /// <inheritdoc/>
     protected override void OnInitialized()
     {
         _pageSize = PageSize;
     }
 
+    /// <inheritdoc/>
     protected override void OnParametersSet()
     {
         if (TotalCount > 0 && _pageNumber > _totalPages)
             _pageNumber = _totalPages;
     }
 
+    // ── Public API ───────────────────────────────────────────────────────────────
+
     /// <summary>
     /// Возвращает порядок группировки для указанной SQL-колонки.
-    /// Используется в биндинге <c>GroupByOrder</c> на колонках грида:
-    /// <c>GroupByOrder="@(_dataGrid?.GetGroupByOrder("SqlCol") ?? 0)"</c>.
     /// Меньшее значение = внешний уровень группировки.
     /// </summary>
     public int GetGroupByOrder(string sqlColumn)
@@ -273,9 +318,19 @@
         return idx < 0 ? 0 : idx;
     }
 
-    public async Task ToggleSort(string column)
+    /// <summary>
+    /// Переключает сортировку по колонке: нет → ASC → DESC → нет.
+    /// Принимает SqlName; реальное выражение ORDER BY берётся из
+    /// <see cref="KescoColumnMeta.SortName"/> зарегистрированной колонки.
+    /// </summary>
+    public async Task ToggleSort(string sqlName)
     {
-        var idx = _sortState.FindIndex(s => s.Column == column);
+        // Резолвим имя для ORDER BY: если зарегистрирован SortName — используем его
+        var sortName = _columnBySqlName.TryGetValue(sqlName, out var meta)
+            ? meta.SortName
+            : sqlName;
+
+        var idx = _sortState.FindIndex(s => s.Column == sortName);
         if (idx >= 0)
         {
             if (_sortState[idx].Desc)
@@ -285,7 +340,7 @@
         }
         else
         {
-            _sortState.Insert(0, new SortColumn(column, false));
+            _sortState.Insert(0, new SortColumn(sortName, false));
             if (_sortState.Count > 2)
                 _sortState.RemoveAt(2);
         }
@@ -297,11 +352,15 @@
 
     /// <summary>
     /// Возвращает бейдж сортировки для колонки: номер приоритета + стрелка направления.
-    /// Используется как в <c>HeaderTemplate</c> колонок грида, так и в чипах панели группировки.
+    /// Принимает SqlName; поиск в состоянии сортировки ведётся по резолвленному SortName.
     /// </summary>
-    public RenderFragment GetSortBadge(string column) => builder =>
+    public RenderFragment GetSortBadge(string sqlName) => builder =>
     {
-        var idx = _sortState.FindIndex(s => s.Column == column);
+        var sortName = _columnBySqlName.TryGetValue(sqlName, out var meta)
+            ? meta.SortName
+            : sqlName;
+
+        var idx = _sortState.FindIndex(s => s.Column == sortName);
         if (idx < 0) return;
         var arrow = _sortState[idx].Desc ? "\u2193" : "\u2191";
         var label = (idx + 1).ToString() + arrow;
@@ -311,6 +370,7 @@
         builder.CloseElement();
     };
 
+    // ── Grouping tray ────────────────────────────────────────────────────────────
     private async Task ToggleTray()
     {
         _trayExpanded = !_trayExpanded;
@@ -353,15 +413,12 @@
     {
         e.DataTransfer.EffectAllowed = "move";
         _dragSourceIndex = index;
-        // Устанавливаем KescoDragState чтобы панель фильтрации могла принять дроп
-        // из чипа группировки (не только из заголовка колонки грида)
         KescoDragState.DraggedColumn = _groupColumns[index];
     }
 
     private void OnChipDragEnd()
     {
         _dragSourceIndex = -1;
-        // Сбрасываем, если дроп не состоялся (пользователь отменил перетаскивание)
         KescoDragState.DraggedColumn = null;
     }
 
@@ -375,7 +432,9 @@
         var draggedData = KescoDragState.DraggedColumn;
         KescoDragState.DraggedColumn = null;
 
-        if (!string.IsNullOrEmpty(draggedData) && _registeredGroupColumns.ContainsKey(draggedData) && !_groupColumns.Contains(draggedData))
+        if (!string.IsNullOrEmpty(draggedData)
+            && _columnBySqlName.TryGetValue(draggedData, out var m) && m.Groupable
+            && !_groupColumns.Contains(draggedData))
         {
             _groupColumns.Add(draggedData);
             _dragSourceIndex = -1;
@@ -404,6 +463,7 @@
         await NotifyQueryChanged();
     }
 
+    // ── Pagination ───────────────────────────────────────────────────────────────
     private async Task OnPageSizeChangedAsync(int value)
     {
         _pageSize = value;
@@ -448,8 +508,7 @@
         await NotifyQueryChanged();
     }
 
-    // ── Filter tray ────────────────────────────────────────────────────────────
-
+    // ── Filter tray ──────────────────────────────────────────────────────────────
     /// <summary>
     /// Включает/выключает панель фильтрации.
     /// При выключении сбрасывает все активные фильтры и перезагружает данные.
@@ -481,11 +540,10 @@
 
         if (string.IsNullOrEmpty(draggedSqlName))
             return;
-        if (!_registeredFilterColumns.ContainsKey(draggedSqlName))
+        if (!_columnBySqlName.TryGetValue(draggedSqlName, out var cm) || !cm.Filterable)
             return;
 
-        var displayName = _registeredFilterColumns.TryGetValue(draggedSqlName, out var dn) ? dn : draggedSqlName;
-        await OpenFilterDialog(draggedSqlName, displayName);
+        await OpenFilterDialog(draggedSqlName, cm.DisplayName);
     }
 
     /// <summary>
@@ -529,6 +587,7 @@
         await NotifyQueryChanged();
     }
 
+    // ── Core notification ────────────────────────────────────────────────────────
     private async Task NotifyQueryChanged()
     {
         _dataKey++;
@@ -548,40 +607,73 @@
             await OnQueryChanged.InvokeAsync(query);
     }
 
-    // ── IKescoGrid — настройки источника данных и регистрация метаданных колонок ─
+    // ── IKescoGrid — реализация интерфейса ───────────────────────────────────────
+
+    event Action? IKescoGrid.ColumnsChanged
+    {
+        add    => ColumnsChanged += value;
+        remove => ColumnsChanged -= value;
+    }
 
     string IKescoGrid.SelectSql        => SelectSql;
     string[] IKescoGrid.SearchColumns  => SearchColumns;
     string IKescoGrid.DefaultOrder     => DefaultOrder;
     Type? IKescoGrid.EditDialogType    => EditDialogType;
-    /// <summary>
-    /// Возвращает <c>true</c> если колонка участвует в текущей группировке.
-    /// Используется для <c>Hidden</c> на колонках грида через <see cref="IKescoGrid"/>.
-    /// </summary>
-    public bool IsGrouped(string sqlName)                 => _groupColumns.Contains(sqlName);
-    bool IKescoGrid.IsGrouped(string sqlName)             => IsGrouped(sqlName);
-    Task IKescoGrid.ToggleSort(string column)             => ToggleSort(column);
-    RenderFragment IKescoGrid.GetSortBadge(string column) => GetSortBadge(column);
 
     /// <summary>
-    /// Регистрирует колонку.
-    /// Вызывается из <see cref="KescoColumnDef"/> при инициализации.
-    /// Кнопки группировки и фильтрации появляются автоматически как только
-    /// зарегистрирована хотя бы одна колонка с соответствующим флагом.
+    /// Возвращает <c>true</c> если колонка участвует в текущей группировке.
     /// </summary>
-    void IKescoGrid.RegisterColumn(string sqlName, string displayName, bool groupable, bool filterable)
+    public bool IsGrouped(string sqlName)      => _groupColumns.Contains(sqlName);
+    bool IKescoGrid.IsGrouped(string sqlName)  => IsGrouped(sqlName);
+
+    Task IKescoGrid.ToggleSort(string sqlName)             => ToggleSort(sqlName);
+    RenderFragment IKescoGrid.GetSortBadge(string sqlName) => GetSortBadge(sqlName);
+
+    /// <summary>
+    /// Возвращает метаданные колонки по её SQL-имени, либо <c>null</c>.
+    /// </summary>
+    public KescoColumnMeta? GetColumnMeta(string sqlName)
+        => _columnBySqlName.TryGetValue(sqlName, out var m) ? m : null;
+
+    KescoColumnMeta? IKescoGrid.GetColumnMeta(string sqlName) => GetColumnMeta(sqlName);
+
+    /// <summary>
+    /// Возвращает метаданные колонки по числовому <c>ColumnId</c>, либо <c>null</c>.
+    /// </summary>
+    public KescoColumnMeta? GetColumnMetaById(int columnId)
+        => _columnById.TryGetValue(columnId, out var m) ? m : null;
+
+    KescoColumnMeta? IKescoGrid.GetColumnMetaById(int columnId) => GetColumnMetaById(columnId);
+
+    /// <summary>
+    /// Регистрирует колонку. Вызывается из <see cref="KescoColumnDef"/> при инициализации.
+    /// Поддерживает два индекса: по <paramref name="columnId"/> и по <paramref name="sqlName"/>.
+    /// </summary>
+    void IKescoGrid.RegisterColumn(int columnId, string sqlName, string displayName, bool groupable, bool filterable, string? sortName)
     {
         if (string.IsNullOrEmpty(sqlName)) return;
-        if (groupable)  _registeredGroupColumns[sqlName]  = displayName;
-        if (filterable) _registeredFilterColumns[sqlName] = displayName;
+        var meta = new KescoColumnMeta
+        {
+            ColumnId    = columnId,
+            SqlName     = sqlName,
+            DisplayName = displayName,
+            SortName    = string.IsNullOrEmpty(sortName) ? sqlName : sortName,
+            Groupable   = groupable,
+            Filterable  = filterable,
+        };
+        _columnById[columnId]     = meta;
+        _columnBySqlName[sqlName] = meta;
+        ColumnsChanged?.Invoke();
     }
 
     /// <summary>
     /// Отменяет регистрацию колонки при уничтожении <see cref="KescoColumnDef"/>.
+    /// Удаляет из обоих индексов.
     /// </summary>
-    void IKescoGrid.UnregisterColumn(string sqlName)
+    void IKescoGrid.UnregisterColumn(int columnId, string sqlName)
     {
-        _registeredGroupColumns.Remove(sqlName);
-        _registeredFilterColumns.Remove(sqlName);
+        _columnById.Remove(columnId);
+        _columnBySqlName.Remove(sqlName);
+        ColumnsChanged?.Invoke();
     }
 }

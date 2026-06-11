@@ -1,0 +1,91 @@
+@namespace Kesco.Lib.Web.BZ.Controls.Components.Grid
+@typeparam TEntity where TEntity : class
+@implements IDisposable
+
+@*
+    Колонка грида с автоматически построенным заголовком.
+    Получает метаданные (DisplayName, SqlName, SortName, Groupable) из зарегистрированного
+    KescoColumnDef по числовому ColumnId.
+
+    Автоматически:
+    - Берёт Title из KescoColumnDef.DisplayName
+    - Строит HeaderTemplate с drag-and-drop (SqlName) и серверной сортировкой
+    - Скрывает колонку при группировке (Hidden = IsGrouped(SqlName))
+
+    Использование:
+        <KescoColumn TEntity="IGridRow" ColumnId="3">
+            <CellTemplate>
+                @if (context.Item is DetailRow<MedicalTest> detail) { <MudText>@detail.Item.Name</MudText> }
+            </CellTemplate>
+        </KescoColumn>
+*@
+
+<TemplateColumn T="TEntity"
+                Title="@_meta?.DisplayName"
+                Sortable="false"
+                Hidden="@_hidden">
+    <HeaderTemplate>
+        <div style="display:flex;align-items:center;width:100%;cursor:pointer"
+             draggable="true"
+             @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = _meta?.SqlName; })"
+             @onclick="HandleSortClick">
+            <MudText Style="flex:1;text-align:center">@_meta?.DisplayName</MudText>
+            @if (Grid is not null && _meta is not null) { @Grid.GetSortBadge(_meta.SqlName) }
+        </div>
+    </HeaderTemplate>
+    <CellTemplate>
+        @CellTemplate?.Invoke(context)
+    </CellTemplate>
+</TemplateColumn>
+
+@code {
+    /// <summary>Родительский грид — получается через каскадный параметр.</summary>
+    [CascadingParameter] private IKescoGrid? Grid { get; set; }
+
+    /// <summary>
+    /// Числовой идентификатор колонки — должен совпадать с <c>ColumnId</c> соответствующего
+    /// <see cref="KescoColumnDef"/>. По нему находятся метаданные (DisplayName, SqlName, SortName).
+    /// </summary>
+    [Parameter, EditorRequired] public int ColumnId { get; set; }
+
+    /// <summary>
+    /// Шаблон содержимого ячейки.
+    /// Контекст — <c>CellContext&lt;TEntity&gt;</c>, как в стандартном <c>TemplateColumn</c>.
+    /// </summary>
+    [Parameter] public RenderFragment<CellContext<TEntity>>? CellTemplate { get; set; }
+
+    // ── Вычисляемые значения из метаданных ──────────────────────────────────────
+    private KescoColumnMeta? _meta => Grid?.GetColumnMetaById(ColumnId);
+    private bool _hidden => _meta is not null && (Grid?.IsGrouped(_meta.SqlName) ?? false);
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Подписывается на <see cref="IKescoGrid.ColumnsChanged"/> при инициализации.
+    /// Когда <see cref="KescoColumnDef"/> регистрирует метаданные, компонент получает
+    /// уведомление и перерисовывается, чтобы отобразить актуальный <c>DisplayName</c>.
+    /// </summary>
+    protected override void OnInitialized()
+    {
+        if (Grid is not null)
+            Grid.ColumnsChanged += OnColumnsChanged;
+    }
+
+    /// <summary>Отписывается при уничтожении компонента.</summary>
+    public void Dispose()
+    {
+        if (Grid is not null)
+            Grid.ColumnsChanged -= OnColumnsChanged;
+    }
+
+    /// <summary>Вызывается гридом при изменении реестра колонок — инициирует перерисовку.</summary>
+    private void OnColumnsChanged()
+        => InvokeAsync(StateHasChanged);
+
+    /// <summary>Обрабатывает клик по заголовку: переключает серверную сортировку.</summary>
+    private async Task HandleSortClick()
+    {
+        if (Grid is not null && _meta is not null)
+            await Grid.ToggleSort(_meta.SqlName);
+    }
+}

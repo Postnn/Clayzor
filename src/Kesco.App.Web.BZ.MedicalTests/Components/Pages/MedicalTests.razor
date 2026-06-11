@@ -6,9 +6,9 @@
 
 <PageTitle>Медицинские исследования</PageTitle>
 
-<CascadingValue Value="(IKescoGridDataLoader)this" IsFixed="true">
 <KescoGrid TEntity="IGridRow"
            @ref="_dataGrid"
+           DataLoader="this"
            Title="Медицинские исследования"
            SelectSql="@SQLQueries.SELECT_МедицинскиеАнализы"
            SearchColumns="@(new[]{"НазваниеАнализа","TestTypeName"})"
@@ -24,21 +24,17 @@
            OnRowClick="OnRowClicked">
 
     <ColumnDefs>
-        <KescoColumnDef SqlName="TestTypeName"            DisplayName="Тип"         Groupable="true" Filterable="true" />
-        <KescoColumnDef SqlName="КодМедицинскогоАнализа" DisplayName="Код"         Groupable="true" Filterable="true" />
-        <KescoColumnDef SqlName="НазваниеАнализа"        DisplayName="Название"    Groupable="true" Filterable="true" />
-        <KescoColumnDef SqlName="Порядок"                DisplayName="Порядок"     Groupable="true" Filterable="true" />
-        <KescoColumnDef SqlName="Группа"                 DisplayName="Группа"                       Filterable="true" />
-        <KescoColumnDef SqlName="Заключение"             DisplayName="Заключение"                   Filterable="true" />
+        <KescoColumnDef ColumnId="1" SqlName="TestTypeName"            DisplayName="Тип"         Groupable="true" Filterable="true" />
+        <KescoColumnDef ColumnId="2" SqlName="КодМедицинскогоАнализа" DisplayName="Код"         Groupable="true" Filterable="true" />
+        <KescoColumnDef ColumnId="3" SqlName="НазваниеАнализа"        DisplayName="Название"    Groupable="true" Filterable="true" />
+        <KescoColumnDef ColumnId="4" SqlName="Порядок"                DisplayName="Порядок"     Groupable="true" Filterable="true" />
+        <KescoColumnDef ColumnId="5" SqlName="Группа"                 DisplayName="Группа"                       Filterable="true" />
+        <KescoColumnDef ColumnId="6" SqlName="Заключение"             DisplayName="Заключение"                   Filterable="true" />
     </ColumnDefs>
 
     <Columns>
 
-        <TemplateColumn T="IGridRow" Title="Код" Sortable="false"
-                        Hidden="@(_dataGrid?.IsGrouped("КодМедицинскогоАнализа") ?? false)">
-            <HeaderTemplate>
-                <KescoSortableColumnHeader SqlName="КодМедицинскогоАнализа" DisplayName="Код" Grid="_dataGrid" />
-            </HeaderTemplate>
+        <KescoColumn TEntity="IGridRow" ColumnId="2">
             <CellTemplate>
                 @if (context.Item is GroupHeaderRow header)
                 {
@@ -49,48 +45,36 @@
                     <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </KescoColumn>
 
-        <TemplateColumn T="IGridRow" Title="Название" Sortable="false"
-                        Hidden="@(_dataGrid?.IsGrouped("НазваниеАнализа") ?? false)">
-            <HeaderTemplate>
-                <KescoSortableColumnHeader SqlName="НазваниеАнализа" DisplayName="Название" Grid="_dataGrid" />
-            </HeaderTemplate>
+        <KescoColumn TEntity="IGridRow" ColumnId="3">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
                     <MudText>@detail.Item.Name</MudText>
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </KescoColumn>
 
-        <TemplateColumn T="IGridRow" Title="Тип" Sortable="false"
-                        Hidden="@(_dataGrid?.IsGrouped("TestTypeName") ?? false)">
-            <HeaderTemplate>
-                <KescoSortableColumnHeader SqlName="TestTypeName" DisplayName="Тип" Grid="_dataGrid" />
-            </HeaderTemplate>
+        <KescoColumn TEntity="IGridRow" ColumnId="1">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
                     <MudText>@detail.Item.TestTypeName</MudText>
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </KescoColumn>
 
-        <TemplateColumn T="IGridRow" Title="Порядок" Sortable="false"
-                        Hidden="@(_dataGrid?.IsGrouped("Порядок") ?? false)">
-            <HeaderTemplate>
-                <KescoSortableColumnHeader SqlName="Порядок" DisplayName="Порядок" Grid="_dataGrid" />
-            </HeaderTemplate>
+        <KescoColumn TEntity="IGridRow" ColumnId="4">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
                     <MudText>@detail.Item.Order</MudText>
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </KescoColumn>
 
-        <TemplateColumn T="IGridRow" Title="Группа">
+        <KescoColumn TEntity="IGridRow" ColumnId="5">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -99,9 +83,9 @@
                              Size="Size.Small" />
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </KescoColumn>
 
-        <TemplateColumn T="IGridRow" Title="Заключение">
+        <KescoColumn TEntity="IGridRow" ColumnId="6">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -110,12 +94,11 @@
                              Size="Size.Small" />
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </KescoColumn>
 
     </Columns>
 
 </KescoGrid>
-</CascadingValue>
 
 @code {
     // Поле конкретного типа нужно для @ref и вызовов UI-методов (ToggleSort, GetSortBadge, GroupColumns).

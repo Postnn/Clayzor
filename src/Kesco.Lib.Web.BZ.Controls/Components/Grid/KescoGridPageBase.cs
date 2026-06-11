@@ -35,8 +35,7 @@ public interface IKescoGridDataLoader
 ///     <c>SelectSql</c>, <c>SearchColumns</c>, <c>DefaultOrder</c>, <c>EditDialogType</c></item>
 ///   <item>Присвоить свойство <see cref="Grid"/> через <c>@ref</c>:
 ///     <code>@ref="@(Grid = value)"</code> или объявить поле и переопределить свойство <see cref="Grid"/>.</item>
-///   <item>Обернуть <c>&lt;KescoGrid&gt;</c> в
-///     <c>&lt;CascadingValue Value="(IKescoGridDataLoader)this" IsFixed="true"&gt;</c></item>
+///   <item>Передать <c>DataLoader="this"</c> в параметры <c>&lt;KescoGrid&gt;</c></item>
 /// </list>
 /// </para>
 /// </summary>

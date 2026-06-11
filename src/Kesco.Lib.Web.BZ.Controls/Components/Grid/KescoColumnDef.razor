@@ -2,24 +2,41 @@
 
 @* Невидимый компонент-регистратор. Не рендерит HTML.
    Размещается внутри блока <ColumnDefs> компонента KescoGrid.
-   При инициализации регистрирует метаданные колонки (SQL-имя, отображаемое имя, группируемость)
-   в родительском KescoGrid через каскадный параметр IKescoGrid. *@
+   При инициализации регистрирует метаданные колонки в родительском KescoGrid
+   через каскадный параметр IKescoGrid. *@
 
 @code {
     /// <summary>Родительский грид — получается через каскадный параметр.</summary>
     [CascadingParameter] private IKescoGrid? Grid { get; set; }
 
     /// <summary>
+    /// Числовой идентификатор колонки — связывает <see cref="KescoColumnDef"/> с
+    /// соответствующим <see cref="KescoColumn{TEntity}"/> по значению <c>ColumnId</c>.
+    /// Должен быть уникальным в пределах грида.
+    /// </summary>
+    [Parameter, EditorRequired] public int ColumnId { get; set; }
+
+    /// <summary>
     /// SQL-имя колонки — выходное имя из SELECT.
+    /// Используется как идентификатор для группировки, фильтрации, drag-and-drop и <c>IsGrouped</c>.
     /// Пример: <c>"КодМедицинскогоАнализа"</c>, <c>"TestTypeName"</c>.
     /// </summary>
     [Parameter] public string SqlName { get; set; } = "";
 
     /// <summary>
-    /// Отображаемое имя колонки — используется в чипе трея группировки.
+    /// Отображаемое имя колонки — используется в заголовке колонки грида,
+    /// в чипах трея группировки и в описании фильтров.
     /// Пример: <c>"Код"</c>, <c>"Тип"</c>.
     /// </summary>
     [Parameter] public string DisplayName { get; set; } = "";
+
+    /// <summary>
+    /// Имя колонки, используемое в ORDER BY при сортировке.
+    /// Если не задано — используется <see cref="SqlName"/>.
+    /// Задаётся когда SQL-алиас SELECT отличается от реального выражения сортировки,
+    /// например <c>"a.НазваниеАнализа"</c> вместо выходного <c>"НазваниеАнализа"</c>.
+    /// </summary>
+    [Parameter] public string? SortName { get; set; }
 
     /// <summary>
     /// Разрешить группировку по этой колонке.
@@ -35,9 +52,9 @@
 
     /// <summary>Регистрирует колонку в гриде при инициализации компонента.</summary>
     protected override void OnInitialized()
-        => Grid?.RegisterColumn(SqlName, DisplayName, Groupable, Filterable);
+        => Grid?.RegisterColumn(ColumnId, SqlName, DisplayName, Groupable, Filterable, SortName);
 
     /// <summary>Отменяет регистрацию при уничтожении компонента.</summary>
     public void Dispose()
-        => Grid?.UnregisterColumn(SqlName);
+        => Grid?.UnregisterColumn(ColumnId, SqlName);
 }
