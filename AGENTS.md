@@ -199,9 +199,10 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 UI — панель фильтров (filter tray) с drag-and-drop заголовков и диалогом `KescoColumnFilterDialog` для настройки условий.
 
 ### Модель данных
-- `ColumnType` — тип данных колонки: `Text` (Contains/Equals/StartsWith/EndsWith/NotEquals), `Number` (равенство + сравнения >/</>=/<=), `Boolean` (Equals)
-- `ColumnFilterOperator` — оператор сравнения: `Contains`, `Equals`, `NotEquals`, `StartsWith`, `EndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`
-- `ColumnFilter` — условие фильтра: `Column` (SQL-имя), `ParamName` (имя Dapper-параметра), `Operator`, `Value`
+- `ColumnType` — тип данных колонки: `Text` (10 операторов: Contains/NotContains/Equals/NotEquals/StartsWith/NotStartsWith/EndsWith/NotEndsWith/IsEmpty/IsNotEmpty), `Number` (равенство + сравнения >/</>=/<=), `Boolean` (Equals)
+- `ColumnFilterOperator` — оператор сравнения: `Contains`, `NotContains`, `Equals`, `NotEquals`, `StartsWith`, `NotStartsWith`, `EndsWith`, `NotEndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `IsEmpty`, `IsNotEmpty`
+- `LogicalOperator` — `And` / `Or` для объединения двух условий на одной колонке
+- `ColumnFilter` — условие фильтра: `Column`, `ParamName`, `Operator`, `Value` + опциональные `LogicalOperator`, `SecondOperator`, `SecondValue`, `SecondParamName` (до двух условий на колонку)
 - `KescoDataQuery.ColumnFilters` — `Dictionary<string, ColumnFilter>` — ключ = SQL-имя колонки
 
 ### SQL-генерация
@@ -214,7 +215,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Редактирование: клик по чипу фильтра → повторно открывается диалог с текущими значениями
 - Удаление: клик по × на чипе
 - При выключении панели все фильтры сбрасываются, данные перезагружаются
-- Чип показывает читаемое описание: `«Название содержит «грипп»»` (через `KescoColumnFilterDialog.GetFilterDescription`)
+- Чип показывает читаемое описание: `«Название содержит «грипп»»` или для двух условий `«Название: содержит «грипп» И не содержит «ковид»»` (через `KescoColumnFilterDialog.GetFilterDescription`)
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице (через KescoGridPageBase\<T>)
@@ -236,6 +237,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - All Razor markup and user-visible text is **Russian**
 - No tests exist in this repo
 - No CI/CD, no linter configuration
+- **Использовать готовые компоненты из `src\Kesco.Lib.Web.BZ.Controls`** при разработке форм (KescoEditForm, KescoComboBox, ConfirmDialog, KescoColumnFilterDialog, KescoErrorBar). Проверять наличие подходящего компонента перед использованием MudBlazor-компонентов напрямую.
 - `[Column]` attributes use exact Russian database column names — do not translate
 - SQL queries reference tables by Russian names (e.g. `МедицинскиеАнализы`, `МедицинскиеАнализыТипы`)
 - Each SQL constant must be documented with `///` XML doc and `--` inline SQL comments for every column

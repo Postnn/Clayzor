@@ -29,12 +29,20 @@ public enum ColumnFilterOperator
 {
     /// <summary>Содержит подстроку (LIKE).</summary>
     Contains,
+    /// <summary>Не содержит подстроку (NOT LIKE).</summary>
+    NotContains,
     /// <summary>Равно.</summary>
     Equals,
+    /// <summary>Не равно.</summary>
+    NotEquals,
     /// <summary>Начинается с.</summary>
     StartsWith,
+    /// <summary>Не начинается с (NOT LIKE).</summary>
+    NotStartsWith,
     /// <summary>Заканчивается на.</summary>
     EndsWith,
+    /// <summary>Не заканчивается на (NOT LIKE).</summary>
+    NotEndsWith,
     /// <summary>Больше (&gt;).</summary>
     GreaterThan,
     /// <summary>Больше или равно (&gt;=).</summary>
@@ -43,29 +51,100 @@ public enum ColumnFilterOperator
     LessThan,
     /// <summary>Меньше или равно (&lt;=).</summary>
     LessThanOrEqual,
-    /// <summary>Не равно.</summary>
-    NotEquals,
+    /// <summary>Пустая строка / NULL — не требует значения.</summary>
+    IsEmpty,
+    /// <summary>Не пустая строка / NOT NULL — не требует значения.</summary>
+    IsNotEmpty,
+}
+
+/// <summary>
+/// Логический оператор для объединения двух условий фильтрации.
+/// </summary>
+public enum LogicalOperator
+{
+    /// <summary>Логическое И.</summary>
+    And,
+    /// <summary>Логическое ИЛИ.</summary>
+    Or,
 }
 
 /// <summary>
 /// Условие фильтрации по одной SQL-колонке.
+/// Поддерживает до двух условий, объединяемых через <see cref="LogicalOperator"/>.
 /// </summary>
 public sealed class ColumnFilter
 {
     /// <summary>SQL-имя колонки (например, "НазваниеАнализа" или "a.НазваниеАнализа").</summary>
     public string Column { get; set; } = "";
 
-    /// <summary>Имя Dapper-параметра для значения фильтра (без @, уникальное в запросе).</summary>
+    /// <summary>Имя Dapper-параметра для значения первого условия (без @, уникальное в запросе).</summary>
     public string ParamName { get; set; } = "";
 
-    /// <summary>Значение фильтра. null или пустая строка — фильтр не активен.</summary>
+    /// <summary>Значение первого условия. null или пустая строка — условие не активно.</summary>
     public object? Value { get; set; }
 
-    /// <summary>Оператор сравнения.</summary>
+    /// <summary>Оператор сравнения первого условия.</summary>
     public ColumnFilterOperator Operator { get; set; } = ColumnFilterOperator.Contains;
 
-    /// <summary>Возвращает true, если фильтр имеет значимое значение.</summary>
-    public bool HasValue => Value is not null && Value.ToString() is { Length: > 0 };
+    /// <summary>Возвращает true, если первое условие имеет значимое значение.</summary>
+    public bool HasValue => Value is not null && (Operator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
+        || Value.ToString() is { Length: > 0 });
+
+    // ── Второе условие (опционально) ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Логический оператор между первым и вторым условием.
+    /// Игнорируется, если <see cref="HasSecondClause"/> = false.
+    /// </summary>
+    public LogicalOperator LogicalOperator { get; set; } = LogicalOperator.And;
+
+    /// <summary>Имя Dapper-параметра для значения второго условия (без @).</summary>
+    public string SecondParamName { get; set; } = "";
+
+    /// <summary>Значение второго условия. null — второе условие не активно.</summary>
+    public object? SecondValue { get; set; }
+
+    /// <summary>Оператор сравнения второго условия.</summary>
+    public ColumnFilterOperator SecondOperator { get; set; } = ColumnFilterOperator.Contains;
+
+    /// <summary>Возвращает true, если второе условие задано и имеет значение.</summary>
+    public bool HasSecondClause => SecondValue is not null && (SecondOperator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
+        || SecondValue.ToString() is { Length: > 0 });
+}
+
+/// <summary>
+/// Списки доступных операторов фильтрации для каждого типа колонки.
+/// </summary>
+public static class ColumnFilterOperatorList
+{
+    /// <summary>Операторы для текстовых колонок.</summary>
+    public static readonly IReadOnlyList<ColumnFilterOperator> TextOperators = [
+        ColumnFilterOperator.Contains,
+        ColumnFilterOperator.NotContains,
+        ColumnFilterOperator.Equals,
+        ColumnFilterOperator.NotEquals,
+        ColumnFilterOperator.StartsWith,
+        ColumnFilterOperator.NotStartsWith,
+        ColumnFilterOperator.EndsWith,
+        ColumnFilterOperator.NotEndsWith,
+        ColumnFilterOperator.IsEmpty,
+        ColumnFilterOperator.IsNotEmpty,
+    ];
+
+    /// <summary>Операторы для числовых колонок.</summary>
+    public static readonly IReadOnlyList<ColumnFilterOperator> NumberOperators = [
+        ColumnFilterOperator.Equals,
+        ColumnFilterOperator.NotEquals,
+        ColumnFilterOperator.GreaterThan,
+        ColumnFilterOperator.GreaterThanOrEqual,
+        ColumnFilterOperator.LessThan,
+        ColumnFilterOperator.LessThanOrEqual,
+    ];
+
+    /// <summary>Операторы для булевых колонок.</summary>
+    public static readonly IReadOnlyList<ColumnFilterOperator> BooleanOperators = [
+        ColumnFilterOperator.Equals,
+    ];
 }
 
 /// <summary>
@@ -107,6 +186,7 @@ public sealed class KescoDataQuery
 
     /// <summary>
     /// Строит фрагмент WHERE для фильтрации по колонкам из <see cref="ColumnFilters"/>.
+    /// Поддерживает до двух условий на колонку, объединяемых через <see cref="ColumnFilter.LogicalOperator"/>.
     /// Возвращает null, если нет активных фильтров.
     /// Параметры добавляются в <paramref name="parameters"/> через Dapper <c>DynamicParameters</c>.
     /// </summary>
@@ -129,53 +209,83 @@ public sealed class KescoDataQuery
             var colName = columnNameMap is not null && columnNameMap.TryGetValue(cf.Column, out var mapped)
                 ? mapped
                 : cf.Column;
-            string expr;
-            switch (cf.Operator)
+
+            var clause1 = BuildSingleClause(colName, cf.ParamName, cf.Operator, cf.Value, parameters);
+            if (clause1 is null) continue;
+
+            if (cf.HasSecondClause)
             {
-                case ColumnFilterOperator.Contains:
-                    parameters.Add(cf.ParamName, $"%{cf.Value}%");
-                    expr = $"{colName} LIKE @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.StartsWith:
-                    parameters.Add(cf.ParamName, $"{cf.Value}%");
-                    expr = $"{colName} LIKE @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.EndsWith:
-                    parameters.Add(cf.ParamName, $"%{cf.Value}");
-                    expr = $"{colName} LIKE @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.Equals:
-                    parameters.Add(cf.ParamName, cf.Value);
-                    expr = $"{colName} = @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.NotEquals:
-                    parameters.Add(cf.ParamName, cf.Value);
-                    expr = $"{colName} <> @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.GreaterThan:
-                    parameters.Add(cf.ParamName, cf.Value);
-                    expr = $"{colName} > @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.GreaterThanOrEqual:
-                    parameters.Add(cf.ParamName, cf.Value);
-                    expr = $"{colName} >= @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.LessThan:
-                    parameters.Add(cf.ParamName, cf.Value);
-                    expr = $"{colName} < @{cf.ParamName}";
-                    break;
-                case ColumnFilterOperator.LessThanOrEqual:
-                    parameters.Add(cf.ParamName, cf.Value);
-                    expr = $"{colName} <= @{cf.ParamName}";
-                    break;
-                default:
-                    parameters.Add(cf.ParamName, cf.Value);
-                    expr = $"{colName} = @{cf.ParamName}";
-                    break;
+                var clause2 = BuildSingleClause(colName, cf.SecondParamName, cf.SecondOperator, cf.SecondValue, parameters);
+                if (clause2 is not null)
+                {
+                    var logic = cf.LogicalOperator == LogicalOperator.Or ? "OR" : "AND";
+                    parts.Add($"({clause1} {logic} {clause2})");
+                }
+                else
+                {
+                    parts.Add(clause1);
+                }
             }
-            parts.Add(expr);
+            else
+            {
+                parts.Add(clause1);
+            }
         }
         return parts.Count > 0 ? string.Join(" AND ", parts) : null;
+    }
+
+    /// <summary>
+    /// Строит SQL-выражение для одного условия фильтрации.
+    /// Возвращает null, если значение отсутствует (для операторов, требующих значение).
+    /// </summary>
+    private static string? BuildSingleClause(string colName, string paramName, ColumnFilterOperator op, object? value, DynamicParameters dp)
+    {
+        switch (op)
+        {
+            case ColumnFilterOperator.IsEmpty:
+                return $"({colName} IS NULL OR {colName} = '')";
+            case ColumnFilterOperator.IsNotEmpty:
+                return $"({colName} IS NOT NULL AND {colName} <> '')";
+            case ColumnFilterOperator.Contains:
+                dp.Add(paramName, $"%{value}%");
+                return $"{colName} LIKE @{paramName}";
+            case ColumnFilterOperator.NotContains:
+                dp.Add(paramName, $"%{value}%");
+                return $"{colName} NOT LIKE @{paramName}";
+            case ColumnFilterOperator.StartsWith:
+                dp.Add(paramName, $"{value}%");
+                return $"{colName} LIKE @{paramName}";
+            case ColumnFilterOperator.NotStartsWith:
+                dp.Add(paramName, $"{value}%");
+                return $"{colName} NOT LIKE @{paramName}";
+            case ColumnFilterOperator.EndsWith:
+                dp.Add(paramName, $"%{value}");
+                return $"{colName} LIKE @{paramName}";
+            case ColumnFilterOperator.NotEndsWith:
+                dp.Add(paramName, $"%{value}");
+                return $"{colName} NOT LIKE @{paramName}";
+            case ColumnFilterOperator.Equals:
+                dp.Add(paramName, value);
+                return $"{colName} = @{paramName}";
+            case ColumnFilterOperator.NotEquals:
+                dp.Add(paramName, value);
+                return $"{colName} <> @{paramName}";
+            case ColumnFilterOperator.GreaterThan:
+                dp.Add(paramName, value);
+                return $"{colName} > @{paramName}";
+            case ColumnFilterOperator.GreaterThanOrEqual:
+                dp.Add(paramName, value);
+                return $"{colName} >= @{paramName}";
+            case ColumnFilterOperator.LessThan:
+                dp.Add(paramName, value);
+                return $"{colName} < @{paramName}";
+            case ColumnFilterOperator.LessThanOrEqual:
+                dp.Add(paramName, value);
+                return $"{colName} <= @{paramName}";
+            default:
+                dp.Add(paramName, value);
+                return $"{colName} = @{paramName}";
+        }
     }
 
     /// <summary>
