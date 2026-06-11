@@ -444,3 +444,31 @@ html, body {
     font-weight: 600;
     color: var(--lh-navy);
 }
+
+/* ── Column header menu (mobile) ── */
+@media (min-width: 961px) {
+    .column-menu-mobile { display: none !important; }
+}
+
+/* ── Kesco column menu button ── */
+/* Кнопка ⋮ находится внутри HeaderTemplate (не внутри .column-options).
+   Заголовок таблицы имеет color:white !important, поэтому SVG наследует белый цвет.
+   Явно задаём цвет иконке через fill на SVG-уровне. */
+.kesco-column-menu {
+    flex-shrink: 0;
+}
+
+.kesco-column-menu .mud-icon-button {
+    opacity: 0.55;
+    transition: opacity 0.15s;
+}
+
+.kesco-column-menu:hover .mud-icon-button,
+.mud-table-cell:hover .kesco-column-menu .mud-icon-button {
+    opacity: 1;
+}
+
+/* SVG-иконка: золотой цвет поверх белого фона заголовка */
+.kesco-column-menu .mud-svg-icon path:not([fill="none"]) {
+    fill: var(--lh-gold) !important;
+}

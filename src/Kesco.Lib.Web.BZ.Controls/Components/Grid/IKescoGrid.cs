@@ -50,6 +50,13 @@ public interface IKescoGrid
     /// </summary>
     event Action? ColumnsChanged;
 
+    /// <summary>
+    /// Срабатывает при открытии или закрытии панели группировки или фильтрации.
+    /// <see cref="KescoColumn{TEntity}"/> подписывается и вызывает <c>StateHasChanged</c>,
+    /// чтобы показать или скрыть кнопку меню (⋮) в заголовке колонки.
+    /// </summary>
+    event Action? TrayStateChanged;
+
     /// <summary>Базовый SQL-запрос SELECT (без WHERE / ORDER BY).</summary>
     string SelectSql { get; }
 
@@ -124,4 +131,31 @@ public interface IKescoGrid
     /// <param name="columnId">Числовой идентификатор колонки.</param>
     /// <param name="sqlName">SQL-имя колонки.</param>
     void UnregisterColumn(int columnId, string sqlName);
+
+    /// <summary>
+    /// Режим отображения кнопки меню (⋮) в заголовках колонок.
+    /// </summary>
+    ColumnMenuMode ColumnMenuMode { get; }
+
+    /// <summary>
+    /// Открыта ли панель группировки в данный момент.
+    /// </summary>
+    bool IsGroupingTrayExpanded { get; }
+
+    /// <summary>
+    /// Открыта ли панель фильтрации в данный момент.
+    /// </summary>
+    bool IsFilterTrayExpanded { get; }
+
+    /// <summary>
+    /// Добавляет колонку в трей группировки (альтернатива drag-and-drop для мобильных).
+    /// </summary>
+    /// <param name="sqlName">SQL-имя колонки.</param>
+    Task AddGroupAsync(string sqlName);
+
+    /// <summary>
+    /// Открывает диалог фильтрации для колонки (альтернатива drag-and-drop для мобильных).
+    /// </summary>
+    /// <param name="sqlName">SQL-имя колонки.</param>
+    Task AddFilterAsync(string sqlName);
 }

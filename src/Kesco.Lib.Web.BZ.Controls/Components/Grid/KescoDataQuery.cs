@@ -69,6 +69,19 @@ public enum LogicalOperator
 }
 
 /// <summary>
+/// Режим отображения кнопки меню в заголовках колонок грида.
+/// </summary>
+public enum ColumnMenuMode
+{
+    /// <summary>Кнопка всегда скрыта.</summary>
+    Hidden,
+    /// <summary>Кнопка всегда видна (десктоп + мобильные).</summary>
+    Always,
+    /// <summary>Кнопка только на мобильных устройствах (≤960px).</summary>
+    Mobile,
+}
+
+/// <summary>
 /// Условие фильтрации по одной SQL-колонке.
 /// Поддерживает до двух условий, объединяемых через <see cref="LogicalOperator"/>.
 /// </summary>

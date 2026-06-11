@@ -187,6 +187,13 @@
     public event Action? ColumnsChanged;
 
     /// <summary>
+    /// Срабатывает при открытии или закрытии панели группировки или фильтрации.
+    /// <see cref="KescoColumn{TEntity}"/> подписывается и вызывает <c>StateHasChanged</c>,
+    /// чтобы показать или скрыть кнопку меню (⋮) в заголовке колонки.
+    /// </summary>
+    public event Action? TrayStateChanged;
+
+    /// <summary>
     /// Индекс по числовому идентификатору: ColumnId → <see cref="KescoColumnMeta"/>.
     /// Используется <see cref="KescoColumn{TEntity}"/> для поиска метаданных при построении заголовка.
     /// </summary>
@@ -287,6 +294,13 @@
     /// </summary>
     [Parameter] public IKescoGridDataLoader? DataLoader { get; set; }
 
+    /// <summary>
+    /// Режим отображения кнопки меню (⋮) в заголовках колонок.
+    /// <c>Hidden</c> — всегда скрыта, <c>Always</c> — всегда видна,
+    /// <c>Mobile</c> — только на мобильных (≤960px, по умолчанию).
+    /// </summary>
+    [Parameter] public ColumnMenuMode ColumnMenuMode { get; set; } = ColumnMenuMode.Mobile;
+
     /// <summary>SQL-имена колонок текущей группировки.</summary>
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
@@ -374,6 +388,7 @@
     private async Task ToggleTray()
     {
         _trayExpanded = !_trayExpanded;
+        TrayStateChanged?.Invoke();
         if (!_trayExpanded)
         {
             _groupColumns.Clear();
@@ -516,6 +531,7 @@
     private async Task ToggleFilterTray()
     {
         _filterTrayExpanded = !_filterTrayExpanded;
+        TrayStateChanged?.Invoke();
         if (!_filterTrayExpanded)
         {
             _activeFilters.Clear();
@@ -615,6 +631,12 @@
         remove => ColumnsChanged -= value;
     }
 
+    event Action? IKescoGrid.TrayStateChanged
+    {
+        add    => TrayStateChanged += value;
+        remove => TrayStateChanged -= value;
+    }
+
     string IKescoGrid.SelectSql        => SelectSql;
     string[] IKescoGrid.SearchColumns  => SearchColumns;
     string IKescoGrid.DefaultOrder     => DefaultOrder;
@@ -676,4 +698,14 @@
         _columnBySqlName.Remove(sqlName);
         ColumnsChanged?.Invoke();
     }
+
+    ColumnMenuMode IKescoGrid.ColumnMenuMode => ColumnMenuMode;
+
+    bool IKescoGrid.IsGroupingTrayExpanded => _trayExpanded;
+    bool IKescoGrid.IsFilterTrayExpanded   => _filterTrayExpanded;
+
+    Task IKescoGrid.AddGroupAsync(string sqlName) => AddGroupColumn(sqlName);
+
+    Task IKescoGrid.AddFilterAsync(string sqlName)
+        => OpenFilterDialog(sqlName, _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName);
 }

@@ -96,9 +96,9 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Компонент | Документация |
 |---|---|
-| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPageBase\<T>** — базовый класс страниц с гридом. Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`, `OnRowClicked`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoColumn\<T>** — колонка грида с авто-заголовком. Получает Title/SortName/Drag&Drop из `KescoColumnDef` по `ColumnId`. Скрывается при группировке | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoColumn\<T>** — колонка грида с авто-заголовком. Получает Title/SortName/Drag&Drop из `KescoColumnDef` по `ColumnId`. Скрывается при группировке. Кнопка меню ⋮ для мобильных | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnDef** — невидимый регистратор метаданных колонки: `ColumnId` (EditorRequired), `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGroupHeader** — заголовок строки группы с иконкой раскрытия/сворачивания и количеством элементов | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoDragState** — статическое хранилище SQL-имени перетаскиваемой колонки между dragstart и drop | [docs/kesco-grid.md](docs/kesco-grid.md) |
@@ -114,7 +114,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Интерфейс | Назначение |
 |---|---|
-| **IKescoGrid** — контракт KescoGrid: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `IsGrouped`, `ToggleSort`, `GetSortBadge`, `GetColumnMeta`, регистрация колонок | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **IKescoGrid** — контракт KescoGrid: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `ColumnMenuMode`, `IsGrouped`, `ToggleSort`, `GetSortBadge`, `GetColumnMeta`, `AddGroupAsync`, `AddFilterAsync`, регистрация колонок | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **IKescoGridDataLoader** — контракт обратного вызова: `OnQueryChangedAsync(KescoDataQuery)`. Реализуется KescoGridPageBase, передаётся через `DataLoader="this"` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnMeta** — метаданные зарегистрированной колонки: `ColumnId`, `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 

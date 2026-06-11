@@ -25,12 +25,41 @@
                 Sortable="false"
                 Hidden="@_hidden">
     <HeaderTemplate>
-        <div style="display:flex;align-items:center;width:100%;cursor:pointer"
-             draggable="true"
-             @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = _meta?.SqlName; })"
-             @onclick="HandleSortClick">
-            <MudText Style="flex:1;text-align:center">@_meta?.DisplayName</MudText>
-            @if (Grid is not null && _meta is not null) { @Grid.GetSortBadge(_meta.SqlName) }
+        <div style="display:flex;align-items:center;width:100%">
+            <div style="flex:1;display:flex;align-items:center;cursor:pointer"
+                 draggable="true"
+                 @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = _meta?.SqlName; })"
+                 @onclick="HandleSortClick">
+                <MudText Style="flex:1;text-align:center">@_meta?.DisplayName</MudText>
+                @if (Grid is not null && _meta is not null) { @Grid.GetSortBadge(_meta.SqlName) }
+            </div>
+            @if (_menuVisible && Grid is not null && _meta is not null)
+            {
+                <MudMenu Class="@("kesco-column-menu" + (Grid.ColumnMenuMode == ColumnMenuMode.Mobile ? " column-menu-mobile" : ""))"
+                         AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight">
+                    <ActivatorContent Context="x">
+                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
+                                       Size="Size.Small"
+                                       Style="padding:0;width:22px;height:22px;min-width:22px"
+                                       OnClick="@x.ToggleAsync" />
+                    </ActivatorContent>
+                    <ChildContent>
+                        @if (Grid.IsGroupingTrayExpanded && _meta.Groupable)
+                        {
+                            <MudMenuItem OnClick="async () => await Grid.AddGroupAsync(_meta.SqlName)"
+                                         Icon="@Icons.Material.Filled.AccountTree"
+                                         IconColor="Color.Primary">Группировать</MudMenuItem>
+                        }
+                        @if (Grid.IsFilterTrayExpanded && _meta.Filterable)
+                        {
+                            <MudMenuItem OnClick="async () => await Grid.AddFilterAsync(_meta.SqlName)"
+                                         Icon="@Icons.Material.Filled.FilterAlt"
+                                         IconColor="Color.Primary">Фильтровать</MudMenuItem>
+                        }
+                    </ChildContent>
+                </MudMenu>
+            }
         </div>
     </HeaderTemplate>
     <CellTemplate>
@@ -57,6 +86,12 @@
     // ── Вычисляемые значения из метаданных ──────────────────────────────────────
     private KescoColumnMeta? _meta => Grid?.GetColumnMetaById(ColumnId);
     private bool _hidden => _meta is not null && (Grid?.IsGrouped(_meta.SqlName) ?? false);
+    private bool _menuVisible =>
+        Grid is not null
+        && _meta is not null
+        && Grid.ColumnMenuMode != ColumnMenuMode.Hidden
+        && ((Grid.IsGroupingTrayExpanded && _meta.Groupable)
+            || (Grid.IsFilterTrayExpanded && _meta.Filterable));
 
     // ── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -68,18 +103,27 @@
     protected override void OnInitialized()
     {
         if (Grid is not null)
-            Grid.ColumnsChanged += OnColumnsChanged;
+        {
+            Grid.ColumnsChanged  += OnStateChanged;
+            Grid.TrayStateChanged += OnStateChanged;
+        }
     }
 
     /// <summary>Отписывается при уничтожении компонента.</summary>
     public void Dispose()
     {
         if (Grid is not null)
-            Grid.ColumnsChanged -= OnColumnsChanged;
+        {
+            Grid.ColumnsChanged  -= OnStateChanged;
+            Grid.TrayStateChanged -= OnStateChanged;
+        }
     }
 
-    /// <summary>Вызывается гридом при изменении реестра колонок — инициирует перерисовку.</summary>
-    private void OnColumnsChanged()
+    /// <summary>
+    /// Вызывается гридом при изменении реестра колонок или состояния треев —
+    /// инициирует перерисовку заголовка (DisplayName, видимость кнопки ⋮).
+    /// </summary>
+    private void OnStateChanged()
         => InvokeAsync(StateHasChanged);
 
     /// <summary>Обрабатывает клик по заголовку: переключает серверную сортировку.</summary>
