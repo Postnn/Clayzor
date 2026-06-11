@@ -49,13 +49,15 @@
                         {
                             <MudMenuItem OnClick="async () => await Grid.AddGroupAsync(_meta.SqlName)"
                                          Icon="@Icons.Material.Filled.AccountTree"
-                                         IconColor="Color.Primary">Группировать</MudMenuItem>
+                                         IconColor="Color.Primary"
+                                         Style="padding:6px 12px;min-height:36px">Группировать</MudMenuItem>
                         }
                         @if (Grid.IsFilterTrayExpanded && _meta.Filterable)
                         {
                             <MudMenuItem OnClick="async () => await Grid.AddFilterAsync(_meta.SqlName)"
                                          Icon="@Icons.Material.Filled.FilterAlt"
-                                         IconColor="Color.Primary">Фильтровать</MudMenuItem>
+                                         IconColor="Color.Primary"
+                                         Style="padding:6px 12px;min-height:36px">Фильтровать</MudMenuItem>
                         }
                     </ChildContent>
                 </MudMenu>

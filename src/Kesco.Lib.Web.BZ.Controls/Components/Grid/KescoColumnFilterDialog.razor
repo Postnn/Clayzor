@@ -199,11 +199,16 @@
 
     /// <summary>
     /// Обрабатывает нажатие Enter — применяет фильтр если значение валидно.
+    /// Задержка 50ms даёт MudTextField'у обновить связанное поле перед проверкой.
     /// </summary>
-    private void OnKeyDown(KeyboardEventArgs e)
+    private async Task OnKeyDown(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter" && HasValidValue)
-            Apply();
+        if (e.Key == "Enter")
+        {
+            await Task.Delay(50);
+            if (HasValidValue)
+                Apply();
+        }
     }
 
     /// <summary>

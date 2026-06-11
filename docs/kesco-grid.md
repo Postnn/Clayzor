@@ -49,6 +49,8 @@
 | `GetColumnMeta(string sqlName)` | Метаданные колонки по SQL-имени |
 | `GetColumnMetaById(int columnId)` | Метаданные колонки по числовому `ColumnId` |
 | `GetGroupByOrder(string sqlColumn)` | Порядок группировки для SQL-колонки (позиция в трее) |
+| `AddGroupAsync(string sqlName)` | Добавляет колонку в трей группировки (альтернатива drag-and-drop) |
+| `AddFilterAsync(string sqlName)` | Открывает диалог фильтрации для колонки (альтернатива drag-and-drop) |
 
 ## KescoColumnDef
 
@@ -137,6 +139,12 @@ public static class KescoDragState
 | `RegisterColumn(columnId, sqlName, displayName, groupable, filterable, sortName?)` | `void` | Регистрация колонки |
 | `UnregisterColumn(columnId, sqlName)` | `void` | Отмена регистрации |
 | `ColumnsChanged` | `event Action?` | Событие изменения реестра |
+| `TrayStateChanged` | `event Action?` | Событие открытия/закрытия панелей |
+| `ColumnMenuMode` | `ColumnMenuMode` | Режим кнопки ⋮ (Hidden/Always/Mobile) |
+| `IsGroupingTrayExpanded` | `bool` | Открыта ли панель группировки |
+| `IsFilterTrayExpanded` | `bool` | Открыта ли панель фильтрации |
+| `AddGroupAsync(sqlName)` | `Task` | Добавить колонку в трей группировки |
+| `AddFilterAsync(sqlName)` | `Task` | Открыть диалог фильтра для колонки |
 
 ## KescoColumnMeta
 

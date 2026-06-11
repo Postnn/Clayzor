@@ -472,3 +472,13 @@ html, body {
 .kesco-column-menu .mud-svg-icon path:not([fill="none"]) {
     fill: var(--lh-gold) !important;
 }
+
+/* ── KescoGrid cell borders ── */
+.mud-table-cell {
+    border-bottom: 1px solid var(--lh-grey-light) !important;
+    border-right: 1px solid var(--lh-grey-light) !important;
+}
+
+.mud-table-cell:last-child {
+    border-right: none;
+}
