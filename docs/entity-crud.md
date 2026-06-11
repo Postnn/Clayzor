@@ -98,6 +98,7 @@ public class DetailRow<T> : IGridRow where T : Entity
 {
     public T Item { get; set; }
     public string GroupKey { get; set; }
+    public int Depth { get; set; }           // 0 = самый глубокий листовой уровень
 }
 
 public class GroupedPage<T> where T : Entity

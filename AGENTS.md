@@ -96,9 +96,12 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Компонент | Документация |
 |---|---|
-| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoGridPageBase\<T>** — базовый класс страниц с гридом: `LoadFlatData`/`LoadGroupedData`, `ToggleGroup`, `OnAfterRenderAsync`, `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoColumnDef** — невидимый регистратор метаданных колонки: SqlName, DisplayName, Groupable, Filterable | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGridPageBase\<T>** — базовый класс страниц с гридом. Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`, `OnRowClicked`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoColumn\<T>** — колонка грида с авто-заголовком. Получает Title/SortName/Drag&Drop из `KescoColumnDef` по `ColumnId`. Скрывается при группировке | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoColumnDef** — невидимый регистратор метаданных колонки: `ColumnId` (EditorRequired), `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGroupHeader** — заголовок строки группы с иконкой раскрытия/сворачивания и количеством элементов | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoDragState** — статическое хранилище SQL-имени перетаскиваемой колонки между dragstart и drop | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами | [docs/kesco-column-filter-dialog.md](docs/kesco-column-filter-dialog.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
@@ -106,6 +109,14 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **ConfirmDialog** — диалог подтверждения | [docs/confirm-dialog.md](docs/confirm-dialog.md) |
 | **ILookupEntity** — интерфейс справочной сущности (`int Id`, `string Name`) | [docs/entity-crud.md](docs/entity-crud.md) |
 | **KescoTheme** — corporate theme (DarkNavy + Gold accent). Applied in MainLayout | — |
+
+### Интерфейсы
+
+| Интерфейс | Назначение |
+|---|---|
+| **IKescoGrid** — контракт KescoGrid: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `IsGrouped`, `ToggleSort`, `GetSortBadge`, `GetColumnMeta`, регистрация колонок | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **IKescoGridDataLoader** — контракт обратного вызова: `OnQueryChangedAsync(KescoDataQuery)`. Реализуется KescoGridPageBase, передаётся через `DataLoader="this"` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoColumnMeta** — метаданные зарегистрированной колонки: `ColumnId`, `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 
 ### Services
 
@@ -116,7 +127,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 ## Server-side grouping architecture
 
-Группировка выполняется **на стороне SQL Server** двумя отдельными запросами (подход DevExpress Blazor Grid):
+Группировка выполняется **на стороне SQL Server** двумя отдельными запросами (подход DevExpress Blazor Grid). Реализация — `KescoGroupingEngine` (статический класс в `Components/Grid/KescoGroupingEngine.cs`).
 
 1. **Запрос групповых агрегатов** — `GROUP BY` + `COUNT(*)`, возвращает уникальные значения группировки и количество записей
 2. **Запрос детальных строк** — выборка конкретных записей с `ROW_NUMBER()` и фильтром по значениям группы
@@ -124,17 +135,29 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 ### Модель данных
 - `IGridRow` — маркерный интерфейс строки в плоском списке (`Kesco.Lib.Entities/GridRow.cs`)
 - `GroupHeaderRow` — заголовок группы: `FullKey`, `DisplayValue`, `ItemCount`, `Depth`, `IsExpanded`
-- `DetailRow<T>` — обёртка сущности: `Item`, `GroupKey`
+- `DetailRow<T>` — обёртка сущности: `Item`, `GroupKey`, `Depth`
 - `GroupedPage<T>` — результат запроса: `Rows` (плоский список) + `TotalEffectiveRows`
 - `KescoDataQuery.ExpandedGroups` — `HashSet<string>` полных ключей развёрнутых групп (разделитель `\u001F`)
 
 ### Рендеринг
 - **Плоская модель**: заголовки групп и строки детализации передаются как единый `IEnumerable<IGridRow>`
-- Колонки грида используют `TemplateColumn T="IGridRow"` с проверкой типа в `CellTemplate`:
+- Колонки используют компонент `<KescoColumn>` с проверкой типа в `CellTemplate`:
   ```razor
-  @if (context.Item is GroupHeaderRow header) { /* рендер заголовка */ }
-  else if (context.Item is DetailRow<MyEntity> detail) { /* рендер данных */ }
+  <KescoColumn TEntity="IGridRow" ColumnId="2">
+      <CellTemplate>
+          @if (context.Item is GroupHeaderRow header)
+          {
+              <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
+          }
+          else if (context.Item is DetailRow<MyEntity> detail)
+          {
+              <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
+          }
+      </CellTemplate>
+  </KescoColumn>
   ```
+- `KescoGroupHeader` — встроенный компонент для отображения иконки раскрытия/сворачивания и количества элементов
+- `KescoColumn` автоматически получает Title (DisplayName), строит HeaderTemplate с drag&drop и серверной сортировкой, скрывает колонку при группировке
 - **Запрещено** использовать MudBlazor `GroupBy`/`Groupable`/`GroupExpanded`/`GroupTemplate` — группировка управляется сервером
 - `SortMode` на MudDataGrid **не задаётся** — порядок строк определяется серверным SQL
 
@@ -153,28 +176,14 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - При сворачивании группы, если текущая страница становится за пределами `maxPage = ceil(TotalCount / PageSize)`, происходит автоматический возврат на `maxPage`
 
 ### Отображение колонок
-- Колонки, участвующие в группировке, скрываются в гриде через `Hidden` на `TemplateColumn`:
-  ```razor
-  Hidden="@(_dataGrid?.GroupColumns.Contains("SqlColName") ?? false)"
-  ```
-- Иконка раскрытия/сворачивания и название группы отображаются в первой колонке (Код)
+- Колонки, участвующие в группировке, скрываются в гриде автоматически — `KescoColumn` вычисляет `Hidden` через `IsGrouped(SqlName)` из `KescoColumnMeta`
+- Иконка раскрытия/сворачивания и название группы отображаются в первой колонке (Код) через `KescoGroupHeader`
 
-### Групповой WHERE
-- В подзапросах `FROM (SELECT ...) _g` / `FROM (SELECT ...) _src` видны только выходные имена колонок (не табличные алиасы)
-- Для grouped-режима `BuildWhereClause` должен использовать выходные имена колонок: `"НазваниеАнализа"`, `"TestTypeName"` (не `"a.НазваниеАнализа"`, `"t.ТипМедицинскогоАнализа"`)
-- В плоском режиме WHERE напрямую в SELECT, табличные алиасы допустимы: `"a.НазваниеАнализа"`
-
-### `GroupExprMap` — сопоставление SQL-имён колонок
-- В странице определяется словарь, сопоставляющий имена колонок из `GroupColumns` с их выходными именами в подзапросе:
-  ```csharp
-  private static readonly Dictionary<string, string> GroupExprMap = new()
-  {
-      ["TestTypeName"] = "TestTypeName",
-      ["КодМедицинскогоАнализа"] = "КодМедицинскогоАнализа",
-      ["НазваниеАнализа"] = "НазваниеАнализа",
-      ["Порядок"] = "Порядок"
-  };
-  ```
+### Имена колонок в WHERE и GROUP BY
+- `SearchColumns` передаются как выходные имена (например, `"НазваниеАнализа"`, `"TestTypeName"`)
+- SQL-пагинация через `ROW_NUMBER()` оборачивает SELECT в подзапрос `FROM (SELECT ...) _src`, где выходные имена колонок видны напрямую — алиасы таблиц не нужны
+- `GroupColumns` содержат те же выходные имена — они напрямую используются в `GROUP BY`
+- `KescoGridPageBase` читает `SearchColumns`, `SelectSql`, `DefaultOrder` из `Grid` (реализация `IKescoGrid`) — **abstract-свойства не нужны**, вся конфигурация передаётся через параметры `<KescoGrid>`
 
 ### Порядок сортировки в групповых запросах
 - Групповой агрегатный запрос учитывает направление сортировки из `SortColumns`:
@@ -209,22 +218,19 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице (через KescoGridPageBase\<T>)
-Настройки передаются через abstract-свойства базового класса — `LoadFlatData`/`LoadGroupedData` вызываются автоматически:
-```csharp
-protected override string[] FlatSearchColumns    => ["a.НазваниеАнализа", "t.ТипМедицинскогоАнализа"];
-protected override string[] GroupedSearchColumns => ["НазваниеАнализа", "TestTypeName"];
-protected override Dictionary<string, string>? FilterFlatColumnMap => _filterFlatColumnMap;
-// _filterFlatColumnMap: ["TestTypeName"] = "t.ТипМедицинскогоАнализа", ...
+Конфигурация SQL передаётся через параметры `<KescoGrid>`:
+```razor
+<KescoGrid TEntity="IGridRow"
+           DataLoader="this"
+           SelectSql="@SQLQueries.SELECT_МоиЗаписи"
+           SearchColumns="@(new[]{"НазваниеАнализа","TestTypeName"})"
+           DefaultOrder="Порядок, НазваниеАнализа"
+           ... >
 ```
-`KescoGridPageBase<T>` автоматически вызывает `BuildColumnFilterClause(dp, FilterFlatColumnMap)` в плоском режиме
-и `BuildColumnFilterClause(dp)` в группированном.
+`KescoGridPageBase<T>` автоматически читает `SelectSql`, `SearchColumns`, `DefaultOrder` из `IKescoGrid`, строит WHERE через `BuildWhereClause`/`BuildColumnFilterClause` и вызывает `Entity.GetPagedAsync`/`Entity.GetCountAsync`. В плоском и группированном режимах `SearchColumns` одни и те же — используются выходные имена колонок (видимые в подзапросе `ROW_NUMBER()`).
 
 `FilterColumnTypes` вычисляется автоматически через рефлексию по `[Column]`-атрибутам и C#-типам свойств сущности.
 Страница просто передаёт `FilterColumnTypes="@FilterColumnTypes"` в `<KescoGrid>`. Маппинг: `bool` → `Boolean`, числовые типы → `Number`, остальные → `Text`.
-
-### `sqlName` для фильтрации в grouped-режиме
-- В grouped-режиме фильтры применяются внутри подзапроса `FROM (SELECT ...) _g`, поэтому `ColumnFilter.Column` должен содержать выходное имя колонки (например, `"КодМедицинскогоАнализа"`, а не `"a.КодМедицинскогоАнализа"`)
-- В плоском режиме — через `columnNameMap` имена преобразуются в алиасные
 
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**
@@ -244,11 +250,12 @@ protected override Dictionary<string, string>? FilterFlatColumnMap => _filterFla
 - При вызове `Db.ExecuteAsync()` с сырым SQL обязательно передавать `commandType: CommandType.Text` — по умолчанию `ExecuteAsync` использует `CommandType.StoredProcedure`
 - `DapperColumnMapper` делает fallback на имя свойства, если `[Column]`-атрибут не совпал с колонкой результата — это позволяет использовать SQL-алиасы (`SELECT КодТипа AS Id`) даже при наличии `[Column("КодТипа")]` на свойстве `Id`
 - **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере. `ExpandedGroups` управляется страницей и **не перезаписывается** из query. `ColumnFilters` копируется из query целиком (словарь)
+- **KescoGridPageBase**: SQL-конфигурация передаётся через параметры `<KescoGrid>` (`SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`), а не через abstract-свойства. База читает их из `Grid?.SelectSql` и т.д. Страница переопределяет `protected override IKescoGrid? Grid => _dataGrid;` и передаёт `DataLoader="this"`
 - **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). Параметры пагинации передаются как `@__start`/`@__end` через `DynamicParameters`
 - **Обработка ошибок БД**: `DbManager` автоматически перехватывает `SqlException` и вызывает `ISqlErrorHandler.HandleSqlError()`. Страницам **не нужно** вызывать `ErrorService.Report()` вручную — только `try/finally` для `_loading = false`. Баннер `KescoErrorBar` в `MainLayout` показывает ошибку со строкой подключения, SQL и параметрами
-- **Grouping tray**: заголовки колонок должны быть `draggable="true"` с `@ondragstart`,
-  устанавливающим `KescoDragState.DraggedColumn`. При перетаскивании на панель группировки колонка
-  добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
+- **Grouping tray**: заголовки колонок генерируются автоматически через `<KescoColumn>` — drag-and-drop (`draggable="true"` с `@ondragstart`,
+  устанавливающим `KescoDragState.DraggedColumn`) и серверная сортировка (`@onclick` → `Grid.ToggleSort(query.SqlName)`) встроены в компонент.
+  При перетаскивании на панель группировки колонка добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
   Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
   Кнопка группировки появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Groupable="true"`.
   Кнопки тулбара (группировка, фильтрация, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /

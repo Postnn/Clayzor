@@ -79,7 +79,7 @@ public class NewEntity : Entity
 
 ### 4. Регистрация в DapperColumnMapper
 
-В `Kesco.Lib.Entities/MedicalTests/MedicalTest.cs`:
+В `Kesco.Lib.Entities/MedicalTests/MedicalTest.cs` (файл с `DapperColumnMapper`):
 
 ```csharp
 public static void Initialize()
@@ -92,49 +92,7 @@ public static void Initialize()
 }
 ```
 
-### 5. Страница
-
-Создать `Components/Pages/NewEntityPage.razor`:
-
-```razor
-@page "/new-entities"
-@inject DbManager Db
-@inject IDialogService DialogService
-@inject ISnackbar Snackbar
-@inject KescoAppSettings AppSettings
-
-<PageTitle>Новые записи</PageTitle>
-
-<KescoGrid TEntity="NewEntity"
-           @ref="_dataGrid"
-           Title="Новые записи"
-           Items="_items"
-           Loading="_loading"
-           PageSize="@AppSettings.DefaultPageSize"
-           TotalCount="@_query.TotalCount"
-           OnAdd="OpenAddDialog"
-           OnRowClick="OnRowClicked"
-           OnQueryChanged="OnQueryChanged">
-    <PropertyColumn T="NewEntity" TProperty="int" Property="x => x.Id" Sortable="false">
-        <HeaderTemplate>
-            <div @onclick="@(() => _dataGrid?.ToggleSort("КодНовойЗаписи"))" ...>
-                <MudText>Код</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("КодНовойЗаписи") }
-            </div>
-        </HeaderTemplate>
-    </PropertyColumn>
-    <PropertyColumn T="NewEntity" TProperty="string" Property="x => x.Name" Sortable="false">
-        <HeaderTemplate>
-            <div @onclick="@(() => _dataGrid?.ToggleSort("НазваниеНовойЗаписи"))" ...>
-                <MudText>Название</MudText>
-                @if (_dataGrid is not null) { @_dataGrid.GetSortBadge("НазваниеНовойЗаписи") }
-            </div>
-        </HeaderTemplate>
-    </PropertyColumn>
-</KescoGrid>
-```
-
-### 6. CRUD в диалоге
+### 5. Диалог редактирования
 
 ```razor
 @* NewEntityEditDialog.razor *@
@@ -152,5 +110,94 @@ public static void Initialize()
         else
             await model.UpdateAsync(Db);
     }
+
+    private async Task DeleteAsync(NewEntity model)
+    {
+        var confirmed = await DialogService.ShowExAsync<ConfirmDialog>(
+            "Подтверждение",
+            new DialogParameters<ConfirmDialog> { { x => x.Message, "Удалить запись?" } },
+            new DialogOptionsEx { DragMode = MudDialogDragMode.Simple });
+        var result = await confirmed.Result;
+        if (result is not null && !result.Canceled)
+            await model.DeleteAsync(Db);
+    }
 }
 ```
+
+### 6. Страница
+
+Создать `Components/Pages/NewEntityPage.razor`:
+
+```razor
+@page "/new-entities"
+@using Kesco.Lib.Web.Settings
+@using Kesco.Lib.Web.BZ.Controls
+@inherits KescoGridPageBase<NewEntity>
+@inject KescoAppSettings AppSettings
+
+<PageTitle>Новые записи</PageTitle>
+
+<KescoGrid TEntity="IGridRow"
+           @ref="_dataGrid"
+           DataLoader="this"
+           Title="Новые записи"
+           SelectSql="@SQLQueries.SELECT_НоваяТаблица"
+           SearchColumns="@(new[]{"НазваниеНовойЗаписи"})"
+           DefaultOrder="НазваниеНовойЗаписи"
+           EditDialogType="@typeof(NewEntityEditDialog)"
+           Items="_rows"
+           Loading="_loading"
+           PageSize="@AppSettings.DefaultPageSize"
+           FilterColumnTypes="@FilterColumnTypes"
+           TotalCount="@_query.TotalCount"
+           ShowPagination="true"
+           OnAdd="OpenAddDialog"
+           OnRowClick="OnRowClicked">
+
+    <ColumnDefs>
+        <KescoColumnDef ColumnId="1" SqlName="КодНовойЗаписи"      DisplayName="Код"      Groupable="true" Filterable="true" />
+        <KescoColumnDef ColumnId="2" SqlName="НазваниеНовойЗаписи" DisplayName="Название" Groupable="true" Filterable="true" />
+    </ColumnDefs>
+
+    <Columns>
+
+        <KescoColumn TEntity="IGridRow" ColumnId="1">
+            <CellTemplate>
+                @if (context.Item is GroupHeaderRow header)
+                {
+                    <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
+                }
+                else if (context.Item is DetailRow<NewEntity> detail)
+                {
+                    <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
+                }
+            </CellTemplate>
+        </KescoColumn>
+
+        <KescoColumn TEntity="IGridRow" ColumnId="2">
+            <CellTemplate>
+                @if (context.Item is DetailRow<NewEntity> detail)
+                {
+                    <MudText>@detail.Item.Name</MudText>
+                }
+            </CellTemplate>
+        </KescoColumn>
+
+    </Columns>
+
+</KescoGrid>
+
+@code {
+    private KescoGrid<IGridRow> _dataGrid = null!;
+    protected override IKescoGrid? Grid => _dataGrid;
+}
+```
+
+**Важно:** страница передаёт всю SQL-конфигурацию через параметры `<KescoGrid>`:
+- `SelectSql` — базовый SELECT
+- `SearchColumns` — выходные имена колонок для поиска и фильтрации (те же, что видны в подзапросе `ROW_NUMBER()`)
+- `DefaultOrder` — сортировка по умолчанию
+- `EditDialogType` — тип диалога редактирования
+- `DataLoader="this"` — подключает `IKescoGridDataLoader`
+
+Никаких abstract-свойств на странице не требуется.
