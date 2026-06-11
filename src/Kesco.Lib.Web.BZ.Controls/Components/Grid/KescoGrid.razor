@@ -58,22 +58,58 @@
                                    Class="@(_selectMode ? "toolbar-select-btn toolbar-select-btn--active" : "toolbar-select-btn")"
                                    OnClick="ToggleSelectMode" />
                 </MudTooltip>
-            }
-            @if (_selectMode)
-            {
-                <MudMenu Class="@(_selectedCount > 0 ? "toolbar-batch-btn" : "toolbar-batch-btn toolbar-batch-btn--disabled")"
+                <MudMenu Class="toolbar-batch-btn"
                          AnchorOrigin="Origin.BottomRight"
                          TransformOrigin="Origin.TopRight">
                     <ActivatorContent Context="x">
                         <MudTooltip Text="Групповые операции" Placement="Placement.Bottom">
                             <MudIconButton Icon="@Icons.Material.Filled.PlaylistAddCheck"
                                            Size="Size.Small"
-                                           OnClick="@x.ToggleAsync" />
+                                            OnClick="async () => { _showPrintSub = false; _showExcelSub = false; await x.ToggleAsync(null); }" />
                         </MudTooltip>
                     </ActivatorContent>
                     <ChildContent>
-                        <MudMenuItem OnClick="OnPrintSelected" Icon="@Icons.Material.Filled.Print" IconColor="Color.Primary">Печать выбранных (@_selectedCount)</MudMenuItem>
-                        <MudMenuItem OnClick="OnExcelSelected" Icon="@Icons.Material.Filled.GridOn" IconColor="Color.Primary">Выгрузка в Excel (@_selectedCount)</MudMenuItem>
+                        @* ── Печать ── *@
+                        <MudMenuItem AutoClose="false" OnClick="() => _showPrintSub = !_showPrintSub">
+                            <div class="batch-menu-header">
+                                <MudIcon Icon="@Icons.Material.Filled.Print" Size="Size.Small" Color="Color.Primary" Class="mr-2" />
+                                <span>Печать</span>
+                                <MudIcon Icon="@(_showPrintSub ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Style="opacity:0.5" />
+                            </div>
+                        </MudMenuItem>
+                        @if (_showPrintSub)
+                        {
+                            <MudMenuItem OnClick="OnPrintCurrentPage" Style="padding-left:44px">Текущая страница</MudMenuItem>
+                            @if (_selectedCount > 0)
+                            {
+                                <MudMenuItem OnClick="OnPrintSelected" Style="padding-left:44px">Выбранные (@_selectedCount)</MudMenuItem>
+                            }
+                            @if (_selectedCount == 0 || _selectAllChecked)
+                            {
+                                <MudMenuItem OnClick="OnPrintAll" Style="padding-left:44px">Все данные</MudMenuItem>
+                            }
+                        }
+
+                        @* ── Excel ── *@
+                        <MudMenuItem AutoClose="false" OnClick="() => _showExcelSub = !_showExcelSub">
+                            <div class="batch-menu-header">
+                                <MudIcon Icon="@Icons.Material.Filled.GridOn" Size="Size.Small" Color="Color.Primary" Class="mr-2" />
+                                <span>Выгрузка в Excel</span>
+                                <MudIcon Icon="@(_showExcelSub ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" Style="opacity:0.5" />
+                            </div>
+                        </MudMenuItem>
+                        @if (_showExcelSub)
+                        {
+                            <MudMenuItem OnClick="OnExcelCurrentPage" Style="padding-left:44px">Текущая страница</MudMenuItem>
+                            @if (_selectedCount > 0)
+                            {
+                                <MudMenuItem OnClick="OnExcelSelected" Style="padding-left:44px">Выбранные (@_selectedCount)</MudMenuItem>
+                            }
+                            @if (_selectedCount == 0 || _selectAllChecked)
+                            {
+                                <MudMenuItem OnClick="OnExcelAll" Style="padding-left:44px">Все данные</MudMenuItem>
+                            }
+                        }
                     </ChildContent>
                 </MudMenu>
             }
@@ -162,7 +198,8 @@
                  RowsPerPage="@_pageSize"
                  DragDropColumnReordering="@AllowColumnReorder"
                  Breakpoint="Breakpoint.None"
-                 MultiSelection="@_selectMode">
+                 MultiSelection="@_selectMode"
+                 SelectedItemsChanged="OnSelectedItemsChanged">
         <Columns>
             @Columns
         </Columns>
@@ -204,7 +241,17 @@
 
     private bool _selectMode;
     private HashSet<TEntity> _selectedItems = [];
+    private bool _selectAllChecked;
+    private bool _showPrintSub;
+    private bool _showExcelSub;
     private int _selectedCount => _selectedItems.Count;
+
+    private void OnSelectedItemsChanged(HashSet<TEntity> items)
+    {
+        _selectedItems = items;
+        _selectAllChecked = _selectedItems.Count > 0 && Items is not null
+            && _selectedItems.Count == Items.Count();
+    }
 
     private Dictionary<string, ColumnFilter> _activeFilters = [];
     private int _pageNumber = 1;
@@ -337,14 +384,29 @@
     /// <summary>Показывать кнопку выбора записей (чекбоксы).</summary>
     [Parameter] public bool SelectVisible { get; set; }
 
-    /// <summary>Вызывается при нажатии «Печать выбранных» в меню групповых операций.</summary>
+    /// <summary>Вызывается при нажатии «Печать текущей страницы».</summary>
+    [Parameter] public EventCallback OnPrintCurrentPage { get; set; }
+
+    /// <summary>Вызывается при нажатии «Печать всех данных».</summary>
+    [Parameter] public EventCallback OnPrintAll { get; set; }
+
+    /// <summary>Вызывается при нажатии «Печать выбранных».</summary>
     [Parameter] public EventCallback OnPrintSelected { get; set; }
 
-    /// <summary>Вызывается при нажатии «Выгрузка в Excel» в меню групповых операций.</summary>
+    /// <summary>Вызывается при нажатии «Выгрузка в Excel — текущая страница».</summary>
+    [Parameter] public EventCallback OnExcelCurrentPage { get; set; }
+
+    /// <summary>Вызывается при нажатии «Выгрузка в Excel — все данные».</summary>
+    [Parameter] public EventCallback OnExcelAll { get; set; }
+
+    /// <summary>Вызывается при нажатии «Выгрузка в Excel — выбранные».</summary>
     [Parameter] public EventCallback OnExcelSelected { get; set; }
 
     /// <summary>SQL-имена колонок текущей группировки.</summary>
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
+
+    /// <summary>Выбранные в данный момент строки (режим выбора).</summary>
+    public IReadOnlyCollection<TEntity> SelectedItems => _selectedItems;
 
     private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
 

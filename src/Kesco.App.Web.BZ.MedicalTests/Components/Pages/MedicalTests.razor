@@ -21,7 +21,14 @@
            TotalCount="@_query.TotalCount"
            ShowPagination="true"
             ColumnMenuMode="@ColumnMenuMode.Always"
-           OnAdd="OpenAddDialog"
+            SelectVisible="true"
+            OnPrintCurrentPage="PrintCurrentPage"
+            OnPrintAll="PrintAll"
+            OnPrintSelected="PrintSelected"
+            OnExcelCurrentPage="ExcelCurrentPage"
+            OnExcelAll="ExcelAll"
+            OnExcelSelected="ExcelSelected"
+            OnAdd="OpenAddDialog"
            OnRowClick="OnRowClicked">
 
     <ColumnDefs>
@@ -106,4 +113,38 @@
     // Grid в базовом классе заполняется через переопределение свойства.
     private KescoGrid<IGridRow> _dataGrid = null!;
     protected override IKescoGrid? Grid => _dataGrid;
+
+    private async Task PrintCurrentPage()
+    {
+        var ids = _dataGrid.SelectedItems.OfType<DetailRow<MedicalTest>>().Select(d => d.Item.Id).ToList();
+        Snackbar.Add($"Печать текущей страницы — в разработке", Severity.Info);
+    }
+
+    private async Task PrintAll()
+    {
+        Snackbar.Add($"Печать всех данных списка — в разработке", Severity.Info);
+    }
+
+    private async Task PrintSelected()
+    {
+        var ids = _dataGrid.SelectedItems.OfType<DetailRow<MedicalTest>>().Select(d => d.Item.Id).ToList();
+        Snackbar.Add($"Печать {ids.Count} выбранных записей — в разработке", Severity.Info);
+    }
+
+    private async Task ExcelCurrentPage()
+    {
+        var ids = _dataGrid.SelectedItems.OfType<DetailRow<MedicalTest>>().Select(d => d.Item.Id).ToList();
+        Snackbar.Add($"Выгрузка текущей страницы в Excel — в разработке", Severity.Info);
+    }
+
+    private async Task ExcelAll()
+    {
+        Snackbar.Add($"Выгрузка всех данных в Excel — в разработке", Severity.Info);
+    }
+
+    private async Task ExcelSelected()
+    {
+        var ids = _dataGrid.SelectedItems.OfType<DetailRow<MedicalTest>>().Select(d => d.Item.Id).ToList();
+        Snackbar.Add($"Выгрузка {ids.Count} записей в Excel — в разработке", Severity.Info);
+    }
 }

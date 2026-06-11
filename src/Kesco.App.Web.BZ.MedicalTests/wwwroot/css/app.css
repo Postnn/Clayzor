@@ -277,6 +277,17 @@ html, body {
     background: rgba(5, 22, 77, 0.14) !important;
 }
 
+.batch-menu-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 4px;
+}
+
+.batch-menu-header span {
+    flex: 1;
+}
+
 /* ── Grouping Tray (KescoGrid drag‑and‑drop) ── */
 .grouping-tray {
     min-height: 34px;

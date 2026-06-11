@@ -260,8 +260,8 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
   При перетаскивании на панель группировки колонка добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
   Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
   Кнопка группировки появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Groupable="true"`.
-  Кнопки тулбара (группировка, фильтрация, добавить) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
-  `filter-toggle-btn` / `toolbar-add-btn` и тултипами — не `MudButton Variant.Filled`
+  Кнопки тулбара (группировка, фильтрация, добавить, выбрать, групповые операции) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
+  `filter-toggle-btn` / `toolbar-add-btn` / `toolbar-select-btn` / `toolbar-batch-btn` и тултипами — не `MudButton Variant.Filled`
 - **Column registration**: метаданные колонок регистрируются через `<KescoColumnDef SqlName="..." DisplayName="..." Groupable="true" Filterable="true" />`
   внутри `<ColumnDefs>`, а не через параметры `ShowGroupingTray`/`AvailableGroupColumns`/`AvailableFilterColumns`.
   `KescoGrid` реализует `IKescoGrid` и получает регистрацию через каскадный параметр.

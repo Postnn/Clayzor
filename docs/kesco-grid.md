@@ -23,8 +23,12 @@
 | `EditDialogType` | `Type?` | `null` | Тип диалога редактирования/добавления. Должен принимать параметр `Model` типа сущности |
 | `DataLoader` | `IKescoGridDataLoader?` | `null` | Загрузчик данных. Страница передаёт `DataLoader="this"` |
 | `ColumnMenuMode` | `ColumnMenuMode` | `Mobile` | Режим кнопки меню (⋮) в заголовках: `Hidden` — скрыта, `Always` — всегда видна, `Mobile` — только на мобильных (≤960px) |
-| `SelectVisible` | `bool` | `false` | Показать кнопку выбора записей (чекбоксы + групповые операции) |
+| `SelectVisible` | `bool` | `false` | Показать кнопку выбора записей (чекбоксы + меню групповых операций) |
+| `OnPrintCurrentPage` | `EventCallback` | — | Печать текущей страницы |
+| `OnPrintAll` | `EventCallback` | — | Печать всех данных (TotalCount) |
 | `OnPrintSelected` | `EventCallback` | — | Печать выбранных записей |
+| `OnExcelCurrentPage` | `EventCallback` | — | Выгрузка текущей страницы в Excel |
+| `OnExcelAll` | `EventCallback` | — | Выгрузка всех данных в Excel |
 | `OnExcelSelected` | `EventCallback` | — | Выгрузка выбранных в Excel |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
 | `OnRowClick` | `EventCallback<DataGridRowClickEventArgs<TEntity>>` | — | Клик по строке |
@@ -410,6 +414,8 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 | Группировка | `AccountTree` | `grouping-toggle-btn` / `grouping-toggle-btn--active` | Показывает/скрывает панель tray |
 | Фильтрация | `FilterAlt` | `filter-toggle-btn` / `filter-toggle-btn--active` | Показывает/скрывает панель фильтрации |
 | Добавить | `Add` | `toolbar-add-btn` | Вызывает `OnAdd` |
+| Выбрать записи | `CheckBox` | `toolbar-select-btn` / `toolbar-select-btn--active` | Включает/выключает чекбоксы в строках |
+| Групповые операции | `PlaylistAddCheck` | `toolbar-batch-btn` | Меню: Печать / Excel (текущая страница, выбранные, все данные) |
 
 ## Стилизация панелей
 
