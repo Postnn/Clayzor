@@ -23,6 +23,9 @@
 | `EditDialogType` | `Type?` | `null` | Тип диалога редактирования/добавления. Должен принимать параметр `Model` типа сущности |
 | `DataLoader` | `IKescoGridDataLoader?` | `null` | Загрузчик данных. Страница передаёт `DataLoader="this"` |
 | `ColumnMenuMode` | `ColumnMenuMode` | `Mobile` | Режим кнопки меню (⋮) в заголовках: `Hidden` — скрыта, `Always` — всегда видна, `Mobile` — только на мобильных (≤960px) |
+| `SelectVisible` | `bool` | `false` | Показать кнопку выбора записей (чекбоксы + групповые операции) |
+| `OnPrintSelected` | `EventCallback` | — | Печать выбранных записей |
+| `OnExcelSelected` | `EventCallback` | — | Выгрузка выбранных в Excel |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
 | `OnRowClick` | `EventCallback<DataGridRowClickEventArgs<TEntity>>` | — | Клик по строке |
 | `AllowColumnReorder` | `bool` | `true` | Разрешить перетаскивание колонок грида мышью |

@@ -50,6 +50,33 @@
                                    OnClick="@OnAdd" />
                 </MudTooltip>
             }
+            @if (SelectVisible)
+            {
+                <MudTooltip Text="@(_selectMode ? "Скрыть выбор" : "Выбрать записи")" Placement="Placement.Bottom">
+                    <MudIconButton Icon="@Icons.Material.Filled.CheckBox"
+                                   Size="Size.Small"
+                                   Class="@(_selectMode ? "toolbar-select-btn toolbar-select-btn--active" : "toolbar-select-btn")"
+                                   OnClick="ToggleSelectMode" />
+                </MudTooltip>
+            }
+            @if (_selectMode)
+            {
+                <MudMenu Class="@(_selectedCount > 0 ? "toolbar-batch-btn" : "toolbar-batch-btn toolbar-batch-btn--disabled")"
+                         AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight">
+                    <ActivatorContent Context="x">
+                        <MudTooltip Text="Групповые операции" Placement="Placement.Bottom">
+                            <MudIconButton Icon="@Icons.Material.Filled.PlaylistAddCheck"
+                                           Size="Size.Small"
+                                           OnClick="@x.ToggleAsync" />
+                        </MudTooltip>
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem OnClick="OnPrintSelected" Icon="@Icons.Material.Filled.Print" IconColor="Color.Primary">Печать выбранных (@_selectedCount)</MudMenuItem>
+                        <MudMenuItem OnClick="OnExcelSelected" Icon="@Icons.Material.Filled.GridOn" IconColor="Color.Primary">Выгрузка в Excel (@_selectedCount)</MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
+            }
         </MudStack>
     </div>
 
@@ -134,7 +161,8 @@
                  RowClick="@OnRowClick"
                  RowsPerPage="@_pageSize"
                  DragDropColumnReordering="@AllowColumnReorder"
-                 Breakpoint="Breakpoint.None">
+                 Breakpoint="Breakpoint.None"
+                 MultiSelection="@_selectMode">
         <Columns>
             @Columns
         </Columns>
@@ -173,6 +201,10 @@
     /// (реальное выражение для ORDER BY), а не SqlName колонки.
     /// </summary>
     private List<SortColumn> _sortState = [];
+
+    private bool _selectMode;
+    private HashSet<TEntity> _selectedItems = [];
+    private int _selectedCount => _selectedItems.Count;
 
     private Dictionary<string, ColumnFilter> _activeFilters = [];
     private int _pageNumber = 1;
@@ -302,6 +334,15 @@
     /// </summary>
     [Parameter] public ColumnMenuMode ColumnMenuMode { get; set; } = ColumnMenuMode.Mobile;
 
+    /// <summary>Показывать кнопку выбора записей (чекбоксы).</summary>
+    [Parameter] public bool SelectVisible { get; set; }
+
+    /// <summary>Вызывается при нажатии «Печать выбранных» в меню групповых операций.</summary>
+    [Parameter] public EventCallback OnPrintSelected { get; set; }
+
+    /// <summary>Вызывается при нажатии «Выгрузка в Excel» в меню групповых операций.</summary>
+    [Parameter] public EventCallback OnExcelSelected { get; set; }
+
     /// <summary>SQL-имена колонок текущей группировки.</summary>
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
@@ -319,6 +360,14 @@
     {
         if (TotalCount > 0 && _pageNumber > _totalPages)
             _pageNumber = _totalPages;
+    }
+
+    private void ToggleSelectMode()
+    {
+        _selectMode = !_selectMode;
+        if (!_selectMode)
+            _selectedItems.Clear();
+        StateHasChanged();
     }
 
     // ── Public API ───────────────────────────────────────────────────────────────
