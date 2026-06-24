@@ -25,17 +25,16 @@
 | `DataLoader` | `IKescoGridDataLoader?` | `null` | Загрузчик данных. Страница передаёт `DataLoader="this"` |
 | `ColumnMenuMode` | `ColumnMenuMode` | `Mobile` | Режим кнопки меню (⋮) в заголовках: `Hidden` — скрыта, `Always` — всегда видна, `Mobile` — только на мобильных (≤960px) |
 | `SelectVisible` | `bool` | `false` | Показать кнопку выбора записей (чекбоксы + меню групповых операций) |
-| `OnPrintCurrentPage` | `EventCallback` | — | Печать текущей страницы |
-| `OnPrintAll` | `EventCallback` | — | Печать всех данных (TotalCount) |
-| `OnPrintSelected` | `EventCallback` | — | Печать выбранных записей |
-| `OnExcelCurrentPage` | `EventCallback` | — | Выгрузка текущей страницы в Excel |
-| `OnExcelAll` | `EventCallback` | — | Выгрузка всех данных в Excel |
-| `OnExcelSelected` | `EventCallback` | — | Выгрузка выбранных в Excel |
+| `ShowPrint` | `bool` | `false` | Показать группу «Печать» в меню групповых операций |
+| `ShowExcel` | `bool` | `false` | Показать группу «Выгрузка в Excel» в меню групповых операций |
+| `CustomBatchGroups` | `IReadOnlyList<BatchOperationGroup>?` | `null` | Кастомные группы операций (рендерятся после стандартных) |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
 | `OnRowClick` | `EventCallback<DataGridRowClickEventArgs<TEntity>>` | — | Клик по строке |
 | `AllowColumnReorder` | `bool` | `true` | Разрешить перетаскивание колонок грида мышью |
 
 Удалённые параметры (больше не используются):
+- ~~`OnPrintCurrentPage`, `OnPrintAll`, `OnPrintSelected`~~ — заменены на `ShowPrint`
+- ~~`OnExcelCurrentPage`, `OnExcelAll`, `OnExcelSelected`~~ — заменены на `ShowExcel`
 - ~~`Groupable`~~ — группировка выполняется сервером, не MudBlazor
 - ~~`GroupExpanded`~~ — состояние развёрнутости per-group, не глобальное
 - ~~`GroupColumn`~~ — заменён на `GroupColumns` (множественная группировка)
@@ -432,5 +431,72 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 | Иконка (активна) | `.grouping-tray:has(.grouping-chip) .grouping-tray-icon`, `.filter-tray:has(.filter-chip) .filter-tray-icon` | `color: var(--mud-palette-primary)`, `opacity: 1` — когда в трее есть хотя бы один чип |
 | Hover / drag-over | `:has(...:hover)`, `.drag-over` | `background: var(--mud-palette-surface)`, `border-left-color: var(--lh-gold)` |
 | Чип группировки | `.grouping-chip` | `background: var(--lh-navy)`, белый текст, `border-bottom: 2px solid transparent`; hover: фон `#0A1D6B` + золотой border-bottom |
-| Чип фильтрации | `.filter-chip` | **Идентично** `.grouping-chip` (сплошной navy фон, hover с золотым подчёркиванием), но `cursor: default`
-| Чип фильтра | `.filter-chip` | `background: rgba(5, 22, 77, 0.72)`, белый текст, `border-bottom: 2px solid var(--lh-gold)` |
+| Чип фильтрации | `.filter-chip` | **Идентично** `.grouping-chip` (сплошной navy фон, hover с золотым подчёркиванием), но `cursor: default` |
+
+## Групповые операции
+
+Меню групповых операций открывается кнопкой `PlaylistAddCheck` при `SelectVisible="true"`.
+
+### Стандартные операции
+
+Включаются флагами без написания кода на странице:
+
+| Параметр | Тип | По умолчанию | Описание |
+|---|---|---|---|
+| `ShowPrint` | `bool` | `false` | Группа «Печать»: текущая страница, выбранные, все данные |
+| `ShowExcel` | `bool` | `false` | Группа «Выгрузка в Excel»: текущая страница, выбранные, все данные |
+
+```razor
+<KescoGrid ... SelectVisible="true" ShowPrint="true" ShowExcel="true" />
+```
+
+### Кастомные операции
+
+Параметр `CustomBatchGroups` (`IReadOnlyList<BatchOperationGroup>?`) — список кастомных групп, рендерятся после стандартных.
+
+**`BatchOperationGroup`**:
+
+| Свойство | Тип | Описание |
+|---|---|---|
+| `Label` | `string` | Заголовок группы |
+| `Icon` | `string?` | Иконка Material Icons, опционально |
+| `Operations` | `IReadOnlyList<BatchOperation>` | Список операций |
+
+**`BatchOperation`**:
+
+| Свойство | Тип | Описание |
+|---|---|---|
+| `Label` | `string` | Название |
+| `Icon` | `string?` | Иконка, опционально |
+| `RequiresSelection` | `bool` | Показывать только при выбранных строках |
+| `RequiresAll` | `bool` | Показывать когда ничего не выбрано ИЛИ выбраны все |
+| `OnExecute` | `Func<Task>?` | Обработчик (выполняется в приложении) |
+
+```razor
+@code {
+    private static readonly IReadOnlyList<BatchOperationGroup> MyGroups = new[]
+    {
+        new BatchOperationGroup
+        {
+            Label = "Мои операции",
+            Icon = Icons.Material.Filled.Settings,
+            Operations = new[]
+            {
+                new BatchOperation
+                {
+                    Label = "Отправить выбранные",
+                    Icon = Icons.Material.Filled.Send,
+                    RequiresSelection = true,
+                    OnExecute = async () => { /* ... */ }
+                },
+                new BatchOperation
+                {
+                    Label = "Архивировать всё",
+                    RequiresAll = true,
+                    OnExecute = async () => { /* ... */ }
+                }
+            }
+        }
+    };
+}
+```
