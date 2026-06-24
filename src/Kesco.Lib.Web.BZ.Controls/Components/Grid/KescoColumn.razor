@@ -23,7 +23,8 @@
 <TemplateColumn T="TEntity"
                 Title="@_meta?.DisplayName"
                 Sortable="false"
-                Hidden="@_hidden">
+                Hidden="@_hidden"
+                DragAndDropEnabled="true">
     <HeaderTemplate>
         <div style="display:flex;align-items:center;width:100%">
             <div style="flex:1;display:flex;align-items:center;cursor:pointer"
@@ -49,15 +50,13 @@
                         {
                             <MudMenuItem OnClick="async () => await Grid.AddGroupAsync(_meta.SqlName)"
                                          Icon="@Icons.Material.Filled.AccountTree"
-                                         IconColor="Color.Primary"
-                                         Style="padding:6px 12px;min-height:36px">Группировать</MudMenuItem>
+                                         IconColor="Color.Primary">Группировать</MudMenuItem>
                         }
                         @if (Grid.IsFilterTrayExpanded && _meta.Filterable)
                         {
                             <MudMenuItem OnClick="async () => await Grid.AddFilterAsync(_meta.SqlName)"
                                          Icon="@Icons.Material.Filled.FilterAlt"
-                                         IconColor="Color.Primary"
-                                         Style="padding:6px 12px;min-height:36px">Фильтровать</MudMenuItem>
+                                         IconColor="Color.Primary">Фильтровать</MudMenuItem>
                         }
                     </ChildContent>
                 </MudMenu>

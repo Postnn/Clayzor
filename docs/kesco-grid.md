@@ -81,6 +81,7 @@
 - HeaderTemplate с drag-and-drop (устанавливает `KescoDragState.DraggedColumn`) и серверной сортировкой (`Grid.ToggleSort`)
 - Автоматическое скрытие колонки при группировке (`Hidden = IsGrouped(SqlName)`)
 - Кнопка меню `⋮` (мобильные / `ColumnMenuMode`) — альтернативный вход для группировки и фильтрации без drag-and-drop
+- **`DragAndDropEnabled="true"`** на `TemplateColumn` — **обязательно** для работы перетасовки колонок MudBlazor (`DragDropColumnReordering`)
 
 | Параметр | Тип | Обязательный | Описание |
 |---|---|---|---|
