@@ -359,7 +359,8 @@ html, body {
     align-items: center;
     background: var(--lh-navy);
     color: var(--lh-white);
-    padding: 6px 10px;
+    min-height: 38px;
+    padding: 0 10px;
     border-radius: 0;
     font-size: 0.75rem;
     font-weight: 400;
@@ -379,6 +380,28 @@ html, body {
 
 .column-settings-chip:hover .mud-icon-root {
     opacity: 0.8 !important;
+}
+
+/* Выключен: трек — белый полупрозрачный */
+.column-settings-chip .mud-switch-track {
+    background-color: rgba(255, 255, 255, 0.35) !important;
+    opacity: 1 !important;
+}
+
+/* Включён: thumb — золотой */
+.column-settings-chip .mud-switch-base.mud-checked {
+    color: var(--lh-gold) !important;
+}
+
+/* Включён: трек — золотой полупрозрачный */
+.column-settings-chip .mud-switch-base.mud-checked + .mud-switch-track {
+    background-color: var(--lh-gold) !important;
+    opacity: 0.5 !important;
+}
+
+/* Выключен: thumb — белый */
+.column-settings-chip .mud-switch-base:not(.mud-checked) {
+    color: rgba(255, 255, 255, 0.7) !important;
 }
 
 .column-settings-chip:active {

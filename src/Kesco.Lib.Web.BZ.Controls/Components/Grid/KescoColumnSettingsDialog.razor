@@ -29,7 +29,8 @@
                              Size="Size.Small"
                              Style="margin-right:6px;opacity:0.45;flex-shrink:0;cursor:grab" />
                     <span style="flex:1">@item.DisplayName</span>
-                    <div @onpointerdown:stopPropagation="true">
+                    <div @onpointerdown:stopPropagation="true"
+                         style="display:flex;align-items:center;flex-shrink:0">
                         <MudSwitch T="bool"
                                    @bind-Value="item.IsVisible"
                                    Color="Color.Primary" />
