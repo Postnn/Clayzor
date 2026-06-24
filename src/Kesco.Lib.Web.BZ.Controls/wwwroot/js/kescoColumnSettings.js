@@ -118,22 +118,30 @@ window.kescoColumnSettings = (function () {
                 }
                 dragging  = false;
                 sourceIdx = -1;
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup',   onMouseUp);
+                document.removeEventListener('mousemove',  onMove);
+                document.removeEventListener('mouseup',    onEnd);
+                document.removeEventListener('touchmove',  onMove);
+                document.removeEventListener('touchend',   onEnd);
             }
 
             // ── Обработчики ──────────────────────────────────────────────────
 
-            function onMouseMove(e) {
-                if (!dragging) return;
-                moveGhost(e.clientX, e.clientY);
-                // Вставляем placeholder в DOM при первом движении
-                if (!placeholder.parentNode)
-                    container.appendChild(placeholder);
-                movePlaceholder(e.clientY);
+            function onKeyDown(e) {
+                if (e.key === 'Escape' && dragging) cleanup();
             }
 
-            function onMouseUp(e) {
+            // ── Общие обработчики движения и отпускания (мышь + touch) ──────
+
+            function onMove(e) {
+                if (!dragging) return;
+                var pt = e.touches ? e.touches[0] : e;
+                moveGhost(pt.clientX, pt.clientY);
+                if (!placeholder.parentNode)
+                    container.appendChild(placeholder);
+                movePlaceholder(pt.clientY);
+            }
+
+            function onEnd(e) {
                 if (!dragging) return;
                 var targetIdx = getTargetIdx();
                 var src       = sourceIdx;
@@ -141,14 +149,9 @@ window.kescoColumnSettings = (function () {
                 dotnetRef.invokeMethodAsync('OnJsDrop', src, targetIdx);
             }
 
-            function onKeyDown(e) {
-                if (e.key === 'Escape' && dragging) cleanup();
-            }
-
             // ── Инициализация ────────────────────────────────────────────────
 
-            container.addEventListener('mousedown', function (e) {
-                if (e.button !== 0) return;
+            function startDrag(e, clientX, clientY) {
                 var chip = e.target.closest('[data-col-idx]');
                 if (!chip) return;
                 if (e.target.closest('input, button, .mud-switch-base, .mud-button-root')) return;
@@ -158,26 +161,35 @@ window.kescoColumnSettings = (function () {
                 var rect    = chip.getBoundingClientRect();
                 chipW       = rect.width;
                 chipH       = rect.height;
-                grabOffsetX = e.clientX - rect.left;
-                grabOffsetY = e.clientY - rect.top;
+                grabOffsetX = clientX - rect.left;
+                grabOffsetY = clientY - rect.top;
                 sourceIdx   = parseInt(chip.dataset.colIdx, 10);
                 sourceChip  = chip;
 
                 ghost       = createGhost(chip);
                 placeholder = createPlaceholder();
 
-                // Убираем источник — место сразу схлопывается.
-                // Placeholder НЕ вставляем здесь — он появится при первом mousemove
-                // над другим чипом. Пока placeholder не в DOM, список компактный.
                 chip.style.display = 'none';
-                void container.offsetHeight; // форсируем reflow
+                void container.offsetHeight;
 
-                moveGhost(e.clientX, e.clientY);
+                moveGhost(clientX, clientY);
                 dragging = true;
 
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup',   onMouseUp);
+                document.addEventListener('mousemove',  onMove);
+                document.addEventListener('mouseup',    onEnd);
+                document.addEventListener('touchmove',  onMove,  { passive: false });
+                document.addEventListener('touchend',   onEnd);
+            }
+
+            container.addEventListener('mousedown', function (e) {
+                if (e.button !== 0) return;
+                startDrag(e, e.clientX, e.clientY);
             });
+
+            container.addEventListener('touchstart', function (e) {
+                if (e.touches.length !== 1) return;
+                startDrag(e, e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: false });
 
             document.addEventListener('keydown', onKeyDown);
         }
