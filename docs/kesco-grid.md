@@ -422,14 +422,15 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 ## Стилизация панелей
 
-Панели группировки и фильтрации имеют идентичное визуальное оформление. CSS определён в `wwwroot/css/app.css`.
+Панели группировки и фильтрации имеют идентичное визуальное оформление. Все цвета используют MudBlazor-переменные палитры (`--mud-palette-*`) — автоматически адаптируются к светлой/тёмной теме. CSS определён в `wwwroot/css/app.css`.
 
 | Элемент | CSS-класс | Свойства |
 |---|---|---|
-| Панель группировки | `.grouping-tray` | `border-left: 3px solid var(--lh-navy)`, `border-bottom: 2px solid var(--lh-gold)`, фон `var(--lh-offwhite)` |
-| Панель фильтрации | `.filter-tray` | **Идентично** `.grouping-tray` — левая и нижняя границы совпадают |
-| Иконка группировки | `.grouping-tray-icon` | `color: var(--lh-navy)`, `opacity: 0.45` |
-| Иконка фильтрации | `.filter-tray-icon` | **Идентично** `.grouping-tray-icon` |
-| Hover / drag-over | `:has(...:hover)`, `.drag-over` | `border-left-color: var(--lh-gold)` для обеих панелей |
-| Чип группировки | `.grouping-chip` | `background: var(--lh-navy)`, белый текст |
+| Панель группировки | `.grouping-tray` | `border-left: 3px solid var(--mud-palette-primary)`, `border-bottom: 2px solid var(--lh-gold)`, фон `var(--mud-palette-background-gray)`, обводка `var(--mud-palette-lines-default)` |
+| Панель фильтрации | `.filter-tray` | **Идентично** `.grouping-tray` |
+| Иконка (неактивна) | `.grouping-tray-icon`, `.filter-tray-icon` | `color: var(--mud-palette-text-secondary)`, `opacity: 0.45` |
+| Иконка (активна) | `.grouping-tray:has(.grouping-chip) .grouping-tray-icon`, `.filter-tray:has(.filter-chip) .filter-tray-icon` | `color: var(--mud-palette-primary)`, `opacity: 1` — когда в трее есть хотя бы один чип |
+| Hover / drag-over | `:has(...:hover)`, `.drag-over` | `background: var(--mud-palette-surface)`, `border-left-color: var(--lh-gold)` |
+| Чип группировки | `.grouping-chip` | `background: var(--lh-navy)`, белый текст, `border-bottom: 2px solid transparent`; hover: фон `#0A1D6B` + золотой border-bottom |
+| Чип фильтрации | `.filter-chip` | **Идентично** `.grouping-chip` (сплошной navy фон, hover с золотым подчёркиванием), но `cursor: default`
 | Чип фильтра | `.filter-chip` | `background: rgba(5, 22, 77, 0.72)`, белый текст, `border-bottom: 2px solid var(--lh-gold)` |

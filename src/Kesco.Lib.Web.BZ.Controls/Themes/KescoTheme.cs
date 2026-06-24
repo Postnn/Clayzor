@@ -45,6 +45,7 @@ public static class KescoTheme
             // Background & Surface
             Background = OffWhite,
             Surface = White,
+            BackgroundGray = "#F7F8FA",
 
             // Drawer / Sidebar
             DrawerBackground = Navy,
@@ -85,6 +86,7 @@ public static class KescoTheme
             AppbarBackground = "#0B1529",
             Surface = "#1A1F33",
             Background = "#0E1220",
+            BackgroundGray = "#161B2E",
             DrawerBackground = "#0B1529",
             DrawerText = "#A0A8BF",
             TextPrimary = "#E4E7EF",

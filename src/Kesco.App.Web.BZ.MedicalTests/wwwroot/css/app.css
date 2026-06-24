@@ -218,30 +218,30 @@ html, body {
 }
 
 .grouping-toggle-btn:hover {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.06) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 94%, var(--mud-palette-primary) 6%) !important;
 }
 
 .grouping-toggle-btn--active {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.08) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 92%, var(--mud-palette-primary) 8%) !important;
     box-shadow: inset 0 -2px 0 var(--lh-gold);
 }
 
 .grouping-toggle-btn--active:hover {
-    background: rgba(5, 22, 77, 0.12) !important;
+    background: color-mix(in srgb, transparent 88%, var(--mud-palette-primary) 12%) !important;
 }
 
 .toolbar-add-btn {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.08) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 92%, var(--mud-palette-primary) 8%) !important;
     border-radius: 2px !important;
     box-shadow: inset 0 -2px 0 var(--lh-gold);
     transition: background 0.15s;
 }
 
 .toolbar-add-btn:hover {
-    background: rgba(5, 22, 77, 0.14) !important;
+    background: color-mix(in srgb, transparent 86%, var(--mud-palette-primary) 14%) !important;
 }
 
 .toolbar-select-btn {
@@ -251,30 +251,30 @@ html, body {
 }
 
 .toolbar-select-btn:hover {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.06) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 94%, var(--mud-palette-primary) 6%) !important;
 }
 
 .toolbar-select-btn--active {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.08) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 92%, var(--mud-palette-primary) 8%) !important;
     box-shadow: inset 0 -2px 0 var(--lh-gold);
 }
 
 .toolbar-select-btn--active:hover {
-    background: rgba(5, 22, 77, 0.12) !important;
+    background: color-mix(in srgb, transparent 88%, var(--mud-palette-primary) 12%) !important;
 }
 
 .toolbar-batch-btn .mud-icon-button {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.08) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 92%, var(--mud-palette-primary) 8%) !important;
     border-radius: 2px !important;
     box-shadow: inset 0 -2px 0 var(--lh-gold);
     transition: background 0.15s;
 }
 
 .toolbar-batch-btn .mud-icon-button:hover {
-    background: rgba(5, 22, 77, 0.14) !important;
+    background: color-mix(in srgb, transparent 86%, var(--mud-palette-primary) 14%) !important;
 }
 
 .batch-menu-header {
@@ -292,9 +292,9 @@ html, body {
 .grouping-tray {
     min-height: 34px;
     padding: 4px 10px;
-    background: var(--lh-offwhite);
-    border: 1px solid var(--lh-grey-light);
-    border-left: 3px solid var(--lh-navy);
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-left: 3px solid var(--mud-palette-primary);
     border-bottom: 2px solid var(--lh-gold);
     border-radius: 0;
     transition: border-left-color 0.15s, background 0.15s;
@@ -302,20 +302,25 @@ html, body {
 
 .grouping-tray:has(.grouping-chip:hover),
 .grouping-tray.drag-over {
-    background: rgba(5, 22, 77, 0.03);
+    background: var(--mud-palette-surface);
     border-left-color: var(--lh-gold);
 }
 
 .grouping-tray-icon {
-    color: var(--lh-navy) !important;
+    color: var(--mud-palette-text-secondary) !important;
     opacity: 0.45;
     flex-shrink: 0;
     margin-right: 4px;
 }
 
+.grouping-tray:has(.grouping-chip) .grouping-tray-icon {
+    color: var(--mud-palette-primary) !important;
+    opacity: 1;
+}
+
 .grouping-tray-hint {
     font-size: 0.75rem;
-    color: var(--lh-grey-mid);
+    color: var(--mud-palette-text-disabled);
     font-style: italic;
     letter-spacing: 0.02em;
     line-height: 26px;
@@ -402,27 +407,27 @@ html, body {
 }
 
 .filter-toggle-btn:hover {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.06) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 94%, var(--mud-palette-primary) 6%) !important;
 }
 
 .filter-toggle-btn--active {
-    color: var(--lh-navy) !important;
-    background: rgba(5, 22, 77, 0.08) !important;
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 92%, var(--mud-palette-primary) 8%) !important;
     box-shadow: inset 0 -2px 0 var(--lh-gold);
 }
 
 .filter-toggle-btn--active:hover {
-    background: rgba(5, 22, 77, 0.12) !important;
+    background: color-mix(in srgb, transparent 88%, var(--mud-palette-primary) 12%) !important;
 }
 
 /* ── Filter Tray (drag‑and‑drop column filter panel) ── */
 .filter-tray {
     min-height: 34px;
     padding: 4px 10px;
-    background: var(--lh-offwhite);
-    border: 1px solid var(--lh-grey-light);
-    border-left: 3px solid var(--lh-navy);
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-left: 3px solid var(--mud-palette-primary);
     border-bottom: 2px solid var(--lh-gold);
     border-radius: 0;
     transition: border-left-color 0.15s, background 0.15s;
@@ -430,20 +435,25 @@ html, body {
 
 .filter-tray:has(.filter-chip:hover),
 .filter-tray.drag-over {
-    background: rgba(5, 22, 77, 0.03);
+    background: var(--mud-palette-surface);
     border-left-color: var(--lh-gold);
 }
 
 .filter-tray-icon {
-    color: var(--lh-navy) !important;
+    color: var(--mud-palette-text-secondary) !important;
     opacity: 0.45;
     flex-shrink: 0;
     margin-right: 4px;
 }
 
+.filter-tray:has(.filter-chip) .filter-tray-icon {
+    color: var(--mud-palette-primary) !important;
+    opacity: 1;
+}
+
 .filter-tray-hint {
     font-size: 0.75rem;
-    color: var(--lh-grey-mid);
+    color: var(--mud-palette-text-disabled);
     font-style: italic;
     letter-spacing: 0.02em;
     line-height: 26px;
@@ -456,7 +466,7 @@ html, body {
     gap: 0;
     padding: 0 2px 0 8px;
     height: 24px;
-    background: rgba(5, 22, 77, 0.72);
+    background: var(--lh-navy);
     color: var(--lh-white);
     border-radius: 0;
     font-size: 0.75rem;
@@ -466,11 +476,12 @@ html, body {
     cursor: default;
     user-select: none;
     transition: background 0.15s, box-shadow 0.15s;
-    border-bottom: 2px solid var(--lh-gold);
+    border-bottom: 2px solid transparent;
 }
 
 .filter-chip:hover {
-    background: rgba(5, 22, 77, 0.88);
+    background: #0A1D6B;
+    border-bottom-color: var(--lh-gold);
 }
 
 /* ── Group Header Rows (server-side grouping) ── */
