@@ -106,6 +106,7 @@
         if (Grid is not null)
         {
             Grid.RegisterColumnInOrder(ColumnId);
+            Grid.RegisterCellTemplate(ColumnId, CellTemplate!);
             Grid.ColumnsChanged  += OnStateChanged;
             Grid.TrayStateChanged += OnStateChanged;
         }

@@ -520,8 +520,19 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 | `.column-settings-ghost` | Клон, следующий за курсором: `opacity:0.88`, `box-shadow`, золотой border-left |
 | `.column-settings-placeholder` | Маркер позиции вставки: `color-mix(in srgb, var(--lh-gold) 12%, transparent)`, dashed gold border |
 
-### Текущее состояние
+### Применение к гриду
 
-- ✅ **Видимость** — MudSwitch применяет `_hiddenSqlNames` к `KescoColumn.Hidden`. Сгруппированные колонки — переключатель заблокирован.
-- ✅ **Порядок грид→диалог** — диалог показывает колонки в том же порядке, что и грид.
-- ⏳ **Порядок диалог→грид** — изменение порядка в диалоге пока не влияет на порядок в гриде (этап 4).
+| Возможность | Статус |
+|---|---|
+| **Видимость** | ✅ MudSwitch → `_hiddenSqlNames` → `KescoColumn.Hidden`. Сгруппированные — переключатель заблокирован |
+| **Порядок (диалог→грид)** | ✅ Двухфазный рендеринг: сбор CellTemplate → динамические `TemplateColumn` по `_columnOrder`. Apply → `_dataKey++` → перерендер |
+| **Порядок (грид→диалог)** | ✅ `kescoColumnSettings.readOrder(Id)` читает `[data-col-sql]` из DOM перед открытием |
+| **Отмена диалога** | ✅ Порядок восстанавливается из `_columnOrderSnapshot` + `_dataKey++` |
+| **Header drag** | ⚠️ MudBlazor делает **swap** (не insert) двух колонок — ограничение внутреннего `MudDropContainer` |
+
+### Примечания
+
+- `KescoGrid` требует параметр `Id` — DOM-id корневого элемента (используется `readOrder`)
+- На странице может быть несколько `KescoGrid` с разными `Id`
+- `KescoColumn` регистрирует `CellTemplate` через `IKescoGrid.RegisterCellTemplate` (для динамического рендеринга)
+- `@onclick` на динамических колонках использует `void HandleSortClick` (избегает async-лямбда-проблем Razor)

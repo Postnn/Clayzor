@@ -2,6 +2,7 @@
 @implements IKescoGrid
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 @using MudBlazor.Extensions
 @using MudBlazor.Extensions.Options
 
@@ -9,7 +10,7 @@
    и KescoColumn внутри MudDataGrid (построение заголовков) получают одну ссылку на IKescoGrid *@
 <CascadingValue Value="(IKescoGrid)this" IsFixed="true">
 @ColumnDefs
-<MudPaper Elevation="1" Class="pa-4">
+<MudPaper Elevation="1" Class="pa-4" id="@Id">
     <div class="d-flex flex-wrap justify-space-between gap-2 mb-4" style="align-items:center">
         <MudText Typo="Typo.h5">@Title</MudText>
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
@@ -246,7 +247,73 @@
                  MultiSelection="@_selectMode"
                  SelectedItemsChanged="OnSelectedItemsChanged">
         <Columns>
-            @Columns
+            @if (!_columnsReady)
+            {
+                @Columns
+            }
+            else
+            {
+                @foreach (var colId in _columnOrder)
+                {
+                    if (!_columnById.TryGetValue(colId, out var ordMeta)) continue;
+                    if (_hiddenSqlNames.Contains(ordMeta.SqlName)) continue;
+                    if (!_cellTemplates.TryGetValue(colId, out var templateObj)) continue;
+                    var sqlName  = ordMeta.SqlName;
+                    var dispName = ordMeta.DisplayName;
+                    <TemplateColumn @key="colId" T="TEntity"
+                                    Title="@dispName"
+                                    Sortable="false"
+                                    Hidden="@IsGrouped(sqlName)"
+                                    DragAndDropEnabled="true">
+                        <HeaderTemplate>
+                            <div style="display:flex;align-items:center;width:100%">
+                                <div style="flex:1;display:flex;align-items:center;cursor:pointer"
+                                     draggable="true"
+                                     data-col-sql="@sqlName"
+                                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = sqlName; })"
+                                     @onclick="() => HandleSortClick(sqlName)">
+                                    <MudText Style="flex:1;text-align:center">@dispName</MudText>
+                                    @GetSortBadge(sqlName)
+                                </div>
+                                @if (_menuVisible(ordMeta))
+                                {
+                                    var gSqlName = sqlName;
+                                    <MudMenu Class="@("kesco-column-menu" + (ColumnMenuMode == ColumnMenuMode.Mobile ? " column-menu-mobile" : ""))"
+                                             AnchorOrigin="Origin.BottomRight"
+                                             TransformOrigin="Origin.TopRight">
+                                        <ActivatorContent Context="x">
+                                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
+                                                           Size="Size.Small"
+                                                           Style="padding:0;width:22px;height:22px;min-width:22px"
+                                                           OnClick="@x.ToggleAsync" />
+                                        </ActivatorContent>
+                                        <ChildContent>
+                                            @if (_trayExpanded && ordMeta.Groupable)
+                                            {
+                                                <MudMenuItem OnClick="async () => await AddGroupColumn(gSqlName)"
+                                                             Icon="@Icons.Material.Filled.AccountTree"
+                                                             IconColor="Color.Primary">Группировать</MudMenuItem>
+                                            }
+                                            @if (_filterTrayExpanded && ordMeta.Filterable)
+                                            {
+                                                <MudMenuItem OnClick="async () => await ((IKescoGrid)this).AddFilterAsync(gSqlName)"
+                                                             Icon="@Icons.Material.Filled.FilterAlt"
+                                                             IconColor="Color.Primary">Фильтровать</MudMenuItem>
+                                            }
+                                        </ChildContent>
+                                    </MudMenu>
+                                }
+                            </div>
+                        </HeaderTemplate>
+                        <CellTemplate>
+                            @{
+                                var cellTemplate = (RenderFragment<CellContext<TEntity>>)templateObj;
+                            }
+                            @cellTemplate(context)
+                        </CellTemplate>
+                    </TemplateColumn>
+                }
+            }
         </Columns>
     </MudDataGrid>
     @if (ShowPagination)
@@ -335,6 +402,12 @@
     /// <summary>SQL-имена колонок, скрытых пользователем через диалог настройки.</summary>
     private readonly HashSet<string> _hiddenSqlNames = [];
 
+    /// <summary>Флаг завершения первой фазы рендеринга (сбор CellTemplate).</summary>
+    private bool _columnsReady;
+
+    /// <summary>ColumnId → CellTemplate для динамического рендеринга колонок.</summary>
+    private readonly Dictionary<int, object> _cellTemplates = [];
+
     private string _gridHeight
     {
         get
@@ -352,6 +425,9 @@
     // ── Parameters ───────────────────────────────────────────────────────────────
     /// <summary>Заголовок грида.</summary>
     [Parameter] public string Title { get; set; } = "Список";
+
+    /// <summary>DOM-идентификатор корневого элемента грида.</summary>
+    [Parameter] public string Id { get; set; } = "kesco-grid";
 
     /// <summary>Данные для отображения.</summary>
     [Parameter] public IEnumerable<TEntity> Items { get; set; } = [];
@@ -476,6 +552,17 @@
             _pageNumber = _totalPages;
     }
 
+    /// <inheritdoc/>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _columnsReady = true;
+            _dataKey++;
+            StateHasChanged();
+        }
+    }
+
     private void ToggleSelectMode()
     {
         _selectMode = !_selectMode;
@@ -502,8 +589,30 @@
     private async Task ExcelAllInternal()             => Snackbar.Add("Выгрузка всех данных в Excel — в разработке", Severity.Info);
     private async Task ExcelSelectedInternal()        => Snackbar.Add($"Выгрузка {_selectedCount} записей в Excel — в разработке", Severity.Info);
 
+    private bool _menuVisible(KescoColumnMeta meta) =>
+        meta is not null
+        && ColumnMenuMode != ColumnMenuMode.Hidden
+        && ((_trayExpanded && meta.Groupable)
+            || (_filterTrayExpanded && meta.Filterable));
+
+    private void HandleSortClick(string sqlName) => _ = ToggleSort(sqlName);
+
+    private List<int> _columnOrderSnapshot = [];
+
     private async Task OpenColumnSettings()
     {
+        _columnOrderSnapshot = [.._columnOrder];
+
+        // Читаем актуальный порядок из DOM (header drag мог изменить)
+        if (_columnsReady && !string.IsNullOrEmpty(Id))
+        {
+            var sqlNames = await JS.InvokeAsync<string[]>("kescoColumnSettings.readOrder", Id);
+            _columnOrder.Clear();
+            foreach (var sqlName in sqlNames)
+                if (_columnBySqlName.TryGetValue(sqlName, out var m))
+                    _columnOrder.Add(m.ColumnId);
+        }
+
         var items = _columnBySqlName.Values
             .OrderBy(m => _columnOrder.IndexOf(m.ColumnId))
             .Select(m => new ColumnSettingsItem
@@ -527,9 +636,22 @@
         if (result is not null && !result.Canceled && result.Data is List<ColumnSettingsItem> updatedItems)
         {
             _hiddenSqlNames.Clear();
+            _columnOrder.Clear();
             foreach (var item in updatedItems)
+            {
                 if (!item.IsVisible)
                     _hiddenSqlNames.Add(item.SqlName);
+                if (_columnBySqlName.TryGetValue(item.SqlName, out var meta2))
+                    _columnOrder.Add(meta2.ColumnId);
+            }
+            _dataKey++;
+            StateHasChanged();
+        }
+        else
+        {
+            _columnOrder.Clear();
+            _columnOrder.AddRange(_columnOrderSnapshot);
+            _dataKey++;
             StateHasChanged();
         }
     }
@@ -928,6 +1050,9 @@
         if (!_columnOrder.Contains(columnId))
             _columnOrder.Add(columnId);
     }
+
+    void IKescoGrid.RegisterCellTemplate(int columnId, object template)
+        => _cellTemplates[columnId] = template;
 
     bool IKescoGrid.IsColumnHidden(string sqlName) => _hiddenSqlNames.Contains(sqlName);
 }

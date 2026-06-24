@@ -192,6 +192,18 @@ window.kescoColumnSettings = (function () {
             }, { passive: false });
 
             document.addEventListener('keydown', onKeyDown);
+        },
+
+        /**
+         * Читает текущий порядок колонок из DOM (по атрибутам data-col-sql).
+         * @param {string} elementId — DOM-id корневого элемента грида
+         * @returns {string[]} — массив SQL-имён в порядке отображения
+         */
+        readOrder: function (elementId) {
+            var root = document.getElementById(elementId);
+            if (!root) return [];
+            var chips = root.querySelectorAll('[data-col-sql]');
+            return Array.from(chips).map(function (c) { return c.dataset.colSql; });
         }
     };
 
