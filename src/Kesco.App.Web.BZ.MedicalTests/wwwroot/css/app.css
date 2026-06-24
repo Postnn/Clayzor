@@ -416,6 +416,20 @@ html, body {
     color: rgba(255, 255, 255, 0.7) !important;
 }
 
+/* Неактивен (колонка в группировке) */
+.column-settings-chip .mud-switch.mud-disabled .mud-switch-track {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    opacity: 1 !important;
+}
+
+.column-settings-chip .mud-switch.mud-disabled .mud-switch-thumb {
+    background-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.column-settings-chip .mud-switch.mud-disabled .mud-switch-base {
+    color: rgba(255, 255, 255, 0.25) !important;
+}
+
 .column-settings-chip:active {
     cursor: grabbing;
 }

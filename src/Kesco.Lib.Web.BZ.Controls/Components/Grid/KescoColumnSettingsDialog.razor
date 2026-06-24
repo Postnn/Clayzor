@@ -33,6 +33,7 @@
                          style="display:flex;align-items:center;flex-shrink:0">
                         <MudSwitch T="bool"
                                    @bind-Value="item.IsVisible"
+                                   Disabled="@item.IsReadonly"
                                    Color="Color.Primary" />
                     </div>
                 </div>

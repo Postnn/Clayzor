@@ -158,4 +158,17 @@ public interface IKescoGrid
     /// </summary>
     /// <param name="sqlName">SQL-имя колонки.</param>
     Task AddFilterAsync(string sqlName);
+
+    /// <summary>
+    /// Регистрирует колонку в порядке отображения.
+    /// Вызывается из <see cref="KescoColumn{TEntity}"/> при инициализации.
+    /// </summary>
+    /// <param name="columnId">Числовой идентификатор колонки.</param>
+    void RegisterColumnInOrder(int columnId);
+
+    /// <summary>
+    /// Возвращает <c>true</c> если колонка скрыта пользователем через диалог настройки колонок.
+    /// </summary>
+    /// <param name="sqlName">SQL-имя колонки.</param>
+    bool IsColumnHidden(string sqlName);
 }

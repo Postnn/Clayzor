@@ -13,4 +13,7 @@ public class ColumnSettingsItem
 
     /// <summary>Видимость колонки в гриде.</summary>
     public bool IsVisible { get; set; } = true;
+
+    /// <summary>Переключатель заблокирован (колонка в группировке).</summary>
+    public bool IsReadonly { get; set; }
 }

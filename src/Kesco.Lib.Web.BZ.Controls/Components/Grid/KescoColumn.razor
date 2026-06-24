@@ -86,7 +86,7 @@
 
     // ── Вычисляемые значения из метаданных ──────────────────────────────────────
     private KescoColumnMeta? _meta => Grid?.GetColumnMetaById(ColumnId);
-    private bool _hidden => _meta is not null && (Grid?.IsGrouped(_meta.SqlName) ?? false);
+    private bool _hidden => _meta is not null && (Grid?.IsGrouped(_meta.SqlName) == true || Grid?.IsColumnHidden(_meta.SqlName) == true);
     private bool _menuVisible =>
         Grid is not null
         && _meta is not null
@@ -105,6 +105,7 @@
     {
         if (Grid is not null)
         {
+            Grid.RegisterColumnInOrder(ColumnId);
             Grid.ColumnsChanged  += OnStateChanged;
             Grid.TrayStateChanged += OnStateChanged;
         }

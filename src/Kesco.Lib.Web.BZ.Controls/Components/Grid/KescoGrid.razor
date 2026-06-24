@@ -329,6 +329,12 @@
     /// </summary>
     private readonly Dictionary<string, KescoColumnMeta> _columnBySqlName = new();
 
+    /// <summary>Порядок колонок в гриде (список ColumnId).</summary>
+    private readonly List<int> _columnOrder = [];
+
+    /// <summary>SQL-имена колонок, скрытых пользователем через диалог настройки.</summary>
+    private readonly HashSet<string> _hiddenSqlNames = [];
+
     private string _gridHeight
     {
         get
@@ -499,7 +505,14 @@
     private async Task OpenColumnSettings()
     {
         var items = _columnBySqlName.Values
-            .Select(m => new ColumnSettingsItem { SqlName = m.SqlName, DisplayName = m.DisplayName, IsVisible = true })
+            .OrderBy(m => _columnOrder.IndexOf(m.ColumnId))
+            .Select(m => new ColumnSettingsItem
+            {
+                SqlName     = m.SqlName,
+                DisplayName = m.DisplayName,
+                IsVisible   = !_hiddenSqlNames.Contains(m.SqlName),
+                IsReadonly  = IsGrouped(m.SqlName)
+            })
             .ToList();
 
         var parameters = new DialogParameters<KescoColumnSettingsDialog> { { x => x.Items, items } };
@@ -513,7 +526,11 @@
         var result = await dialog.Result;
         if (result is not null && !result.Canceled && result.Data is List<ColumnSettingsItem> updatedItems)
         {
-            // Этапы 3-4: применить visibility и order
+            _hiddenSqlNames.Clear();
+            foreach (var item in updatedItems)
+                if (!item.IsVisible)
+                    _hiddenSqlNames.Add(item.SqlName);
+            StateHasChanged();
         }
     }
 
@@ -905,4 +922,12 @@
 
     Task IKescoGrid.AddFilterAsync(string sqlName)
         => OpenFilterDialog(sqlName, _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName);
+
+    void IKescoGrid.RegisterColumnInOrder(int columnId)
+    {
+        if (!_columnOrder.Contains(columnId))
+            _columnOrder.Add(columnId);
+    }
+
+    bool IKescoGrid.IsColumnHidden(string sqlName) => _hiddenSqlNames.Contains(sqlName);
 }
