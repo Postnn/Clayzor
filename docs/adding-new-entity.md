@@ -149,10 +149,12 @@ public static void Initialize()
            Loading="_loading"
            PageSize="@AppSettings.DefaultPageSize"
            FilterColumnTypes="@FilterColumnTypes"
-           TotalCount="@_query.TotalCount"
-           ShowPagination="true"
-           OnAdd="OpenAddDialog"
-           OnRowClick="OnRowClicked">
+            TotalCount="@_query.TotalCount"
+            PageNumber="@_query.PageNumber"
+            ShowPagination="true"
+            OnAdd="OpenAddDialog"
+            OnRowClick="OnRowClicked">
+
 
     <ColumnDefs>
         <KescoColumnDef ColumnId="1" SqlName="КодНовойЗаписи"      DisplayName="Код"      Groupable="true" Filterable="true" />

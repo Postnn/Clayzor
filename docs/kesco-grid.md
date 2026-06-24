@@ -14,6 +14,7 @@
 | `PageSize` | `int` | `50` | Размер страницы по умолчанию |
 | `ShowPagination` | `bool` | `true` | Показать панель постраничной навигации |
 | `TotalCount` | `int` | `0` | Общее количество записей (передаётся из страницы) |
+| `PageNumber` | `int` | `1` | Текущий номер страницы (передаётся из страницы). **Обязателен** для синхронизации пагинатора при авто-переходах в `ToggleGroup` |
 | `Columns` | `RenderFragment?` | — | Колонки грида — `<KescoColumn>` компоненты |
 | `ColumnDefs` | `RenderFragment?` | — | Метаданные колонок — `<KescoColumnDef>` компоненты для регистрации группируемых/фильтруемых колонок |
 | `FilterColumnTypes` | `IReadOnlyDictionary<string, ColumnType>` | `[]` | Тип данных фильтруемых колонок: SQL-имя → `ColumnType`. Авто-вычисляется в `KescoGridPageBase` через рефлексию |
@@ -340,10 +341,11 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
            Loading="_loading"
            PageSize="@AppSettings.DefaultPageSize"
            FilterColumnTypes="@FilterColumnTypes"
-           TotalCount="@_query.TotalCount"
-           ShowPagination="true"
-           OnAdd="OpenAddDialog"
-           OnRowClick="OnRowClicked">
+            TotalCount="@_query.TotalCount"
+            PageNumber="@_query.PageNumber"
+            ShowPagination="true"
+            OnAdd="OpenAddDialog"
+            OnRowClick="OnRowClicked">
 
     <ColumnDefs>
         <KescoColumnDef ColumnId="1" SqlName="TestTypeName"            DisplayName="Тип"      Groupable="true" Filterable="true" />

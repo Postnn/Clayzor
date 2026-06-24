@@ -338,6 +338,12 @@
     /// <summary>Общее количество записей — используется для пагинации.</summary>
     [Parameter] public int TotalCount { get; set; }
 
+    /// <summary>
+    /// Текущий номер страницы. Передаётся со страницы для синхронизации
+    /// пагинатора при внешних изменениях (например, авто-переход в <c>ToggleGroup</c>).
+    /// </summary>
+    [Parameter] public int PageNumber { get; set; } = 1;
+
     /// <summary>Показывать панель пагинации.</summary>
     [Parameter] public bool ShowPagination { get; set; } = true;
 
@@ -419,6 +425,7 @@
     /// <inheritdoc/>
     protected override void OnParametersSet()
     {
+        _pageNumber = PageNumber;
         if (TotalCount > 0 && _pageNumber > _totalPages)
             _pageNumber = _totalPages;
     }
