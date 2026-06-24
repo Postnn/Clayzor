@@ -24,3 +24,4 @@ window.kescoFocusElement = function (element) {
 
     requestAnimationFrame(tryFocus);
 };
+

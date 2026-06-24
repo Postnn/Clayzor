@@ -354,6 +354,54 @@ html, body {
     cursor: grabbing;
 }
 
+.column-settings-chip {
+    display: flex;
+    align-items: center;
+    background: var(--lh-navy);
+    color: var(--lh-white);
+    padding: 6px 10px;
+    border-radius: 0;
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    cursor: grab;
+    user-select: none;
+    border-left: 3px solid transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    transition: background 0.15s, border-left-color 0.15s, opacity 0.15s;
+}
+
+.column-settings-chip:hover {
+    background: #0A1D6B;
+    border-left-color: var(--lh-gold);
+}
+
+.column-settings-chip:hover .mud-icon-root {
+    opacity: 0.8 !important;
+}
+
+.column-settings-chip:active {
+    cursor: grabbing;
+}
+
+/* Ghost — клон чипа, следует за курсором */
+.column-settings-ghost {
+    opacity: 0.88;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    border-left-color: var(--lh-gold) !important;
+    pointer-events: none;
+}
+
+/* Placeholder — пустое место куда встанет чип */
+.column-settings-placeholder {
+    background: color-mix(in srgb, var(--lh-gold) 12%, transparent);
+    border: 2px dashed var(--lh-gold);
+    border-radius: 0;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
 .grouping-chip.drag-over {
     box-shadow: 2px 0 0 0 var(--lh-gold), -2px 0 0 0 var(--lh-gold);
 }

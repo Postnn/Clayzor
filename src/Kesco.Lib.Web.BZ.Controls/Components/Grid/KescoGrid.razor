@@ -24,6 +24,12 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Style="max-width:250px;min-width:140px" />
+            <MudTooltip Text="Настройка колонок" Placement="Placement.Bottom">
+                <MudIconButton Icon="@Icons.Material.Filled.ViewColumn"
+                               Size="Size.Small"
+                               Class="toolbar-columns-btn"
+                               OnClick="OpenColumnSettings" />
+            </MudTooltip>
             @if (_columnBySqlName.Values.Any(c => c.Groupable))
             {
                 <MudTooltip Text="@(_trayExpanded ? "Отключить группировку" : "Группировать")" Placement="Placement.Bottom">
@@ -489,6 +495,27 @@
     private async Task ExcelCurrentPageInternal()     => Snackbar.Add("Выгрузка текущей страницы в Excel — в разработке", Severity.Info);
     private async Task ExcelAllInternal()             => Snackbar.Add("Выгрузка всех данных в Excel — в разработке", Severity.Info);
     private async Task ExcelSelectedInternal()        => Snackbar.Add($"Выгрузка {_selectedCount} записей в Excel — в разработке", Severity.Info);
+
+    private async Task OpenColumnSettings()
+    {
+        var items = _columnBySqlName.Values
+            .Select(m => new ColumnSettingsItem { SqlName = m.SqlName, DisplayName = m.DisplayName, IsVisible = true })
+            .ToList();
+
+        var parameters = new DialogParameters<KescoColumnSettingsDialog> { { x => x.Items, items } };
+        var options = new DialogOptionsEx
+        {
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true,
+            DragMode = MudDialogDragMode.Simple,
+        };
+        var dialog = await DialogService.ShowExAsync<KescoColumnSettingsDialog>("Настройка колонок", parameters, options);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled && result.Data is List<ColumnSettingsItem> updatedItems)
+        {
+            // Этапы 3-4: применить visibility и order
+        }
+    }
 
     // ── Public API ───────────────────────────────────────────────────────────────
 

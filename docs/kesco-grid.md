@@ -500,3 +500,26 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
     };
 }
 ```
+
+## Диалог настройки колонок
+
+Кнопка `ViewColumn` в тулбаре открывает `KescoColumnSettingsDialog` — диалог управления порядком и видимостью колонок.
+
+### Drag-and-drop
+
+Реализован как jQuery UI Sortable (нативные события `mousedown`/`mousemove`/`mouseup`, **не** HTML5 drag):
+- **Ghost** (`.column-settings-ghost`) — клон чипа на `position:fixed`, следует за курсором
+- **Placeholder** (`.column-settings-placeholder`) — dashed gold border на месте вставки, динамически вставляется в DOM
+- JS-логика в `kescoColumnSettings.js` (RCL), результат передаётся в C# через `[JSInvokable] OnJsDrop(sourceIdx, targetIdx)`
+
+### CSS-классы
+
+| Класс | Описание |
+|---|---|
+| `.column-settings-chip` | Чип: navy фон, белый текст, `border-left: 3px solid transparent`; hover → золотой border-left |
+| `.column-settings-ghost` | Клон, следующий за курсором: `opacity:0.88`, `box-shadow`, золотой border-left |
+| `.column-settings-placeholder` | Маркер позиции вставки: `color-mix(in srgb, var(--lh-gold) 12%, transparent)`, dashed gold border |
+
+### Ограничения
+
+Видимость и порядок колонок пока **не применяются** к гриду — только UI диалога. Применение будет реализовано на следующих этапах.

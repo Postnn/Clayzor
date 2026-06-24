@@ -1,0 +1,119 @@
+@namespace Kesco.Lib.Web.BZ.Controls.Components.Grid
+@using MudBlazor
+@inject IJSRuntime JS
+@implements IDisposable
+
+@*
+    Диалог настройки порядка и видимости колонок грида.
+
+    Drag-and-drop реализован как jQuery UI Sortable:
+    — ghost (клон чипа) следует за курсором через position:fixed
+    — placeholder (пустое место) динамически вставляется в DOM при движении
+    — Blazor получает только финальный результат через [JSInvokable] OnJsDrop
+*@
+
+<MudDialog>
+    <DialogContent>
+        <div @ref="_container"
+             class="d-flex flex-column pt-2"
+             style="gap:4px">
+
+            @for (int i = 0; i < _items.Count; i++)
+            {
+                var idx  = i;
+                var item = _items[i];
+
+                <div class="column-settings-chip d-flex align-items-center"
+                     data-col-idx="@idx">
+                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                             Size="Size.Small"
+                             Style="margin-right:6px;opacity:0.45;flex-shrink:0;cursor:grab" />
+                    <span style="flex:1">@item.DisplayName</span>
+                    <div @onpointerdown:stopPropagation="true">
+                        <MudSwitch T="bool"
+                                   @bind-Value="item.IsVisible"
+                                   Color="Color.Primary" />
+                    </div>
+                </div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Отмена</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Apply">Применить</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>Входной список колонок — не мутируется до нажатия «Применить».</summary>
+    [Parameter] public List<ColumnSettingsItem> Items { get; set; } = [];
+
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    /// <summary>Рабочая копия списка — отображается и изменяется в диалоге.</summary>
+    private List<ColumnSettingsItem> _items = [];
+
+    /// <summary>ElementReference на контейнер списка чипов — передаётся в JS.</summary>
+    private ElementReference _container;
+
+    /// <summary>DotNetObjectReference для обратных вызовов из JS.</summary>
+    private DotNetObjectReference<KescoColumnSettingsDialog>? _dotnetRef;
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        _items     = [..Items];
+        _dotnetRef = DotNetObjectReference.Create(this);
+    }
+
+    /// <summary>При первом рендере инициализирует sortable через JS.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _dotnetRef is not null)
+            await JS.InvokeVoidAsync("kescoColumnSettings.init", _container, _dotnetRef);
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => _dotnetRef?.Dispose();
+
+    // ── Drag-and-drop ────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Вызывается из JS при завершении перетаскивания.
+    /// Переставляет элемент в рабочем списке и обновляет UI.
+    /// </summary>
+    /// <param name="sourceIdx">Исходный индекс перетаскиваемого чипа.</param>
+    /// <param name="targetIdx">Целевая позиция вставки.</param>
+    /// <summary>
+    /// Вызывается из JS при завершении перетаскивания.
+    /// targetIdx — позиция вставки среди видимых чипов (источник не считается).
+    /// </summary>
+    [JSInvokable]
+    public void OnJsDrop(int sourceIdx, int targetIdx)
+    {
+        if (sourceIdx < 0 || sourceIdx >= _items.Count) return;
+        targetIdx = Math.Clamp(targetIdx, 0, _items.Count - 1);
+        if (sourceIdx == targetIdx) return;
+
+        var item = _items[sourceIdx];
+        _items.RemoveAt(sourceIdx);
+
+        // После удаления источника вставляем в скорректированную позицию
+        var insertAt = Math.Clamp(targetIdx, 0, _items.Count);
+        _items.Insert(insertAt, item);
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ── Действия ─────────────────────────────────────────────────────────────────
+
+    /// <summary>Закрывает диалог без сохранения.</summary>
+    private void Cancel() => MudDialog.Cancel();
+
+    /// <summary>Применяет изменения и закрывает диалог.</summary>
+    private void Apply()
+    {
+        Items.Clear();
+        Items.AddRange(_items);
+        MudDialog.Close(DialogResult.Ok(Items));
+    }
+}
