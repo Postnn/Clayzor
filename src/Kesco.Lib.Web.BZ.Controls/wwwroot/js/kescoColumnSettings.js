@@ -70,19 +70,21 @@ window.kescoColumnSettings = (function () {
              * Placeholder вставляется insertBefore — Blazor его не знает, конфликта нет.
              */
             function movePlaceholder(clientY) {
+                if (!container || !placeholder) return;
                 var chips = getChips();
                 for (var i = 0; i < chips.length; i++) {
                     var chip = chips[i];
                     var rect = chip.getBoundingClientRect();
                     var mid  = rect.top + rect.height / 2;
                     if (clientY < mid - HYST) {
+                        if (!chip.parentNode) return;
                         if (placeholder.nextSibling !== chip)
                             container.insertBefore(placeholder, chip);
                         return;
                     }
                 }
                 // Курсор ниже всех — в конец контейнера
-                if (container.lastChild !== placeholder)
+                if (container && container.lastChild !== placeholder)
                     container.appendChild(placeholder);
             }
 
