@@ -244,6 +244,18 @@ html, body {
     background: color-mix(in srgb, transparent 86%, var(--mud-palette-primary) 14%) !important;
 }
 
+.toolbar-columns-btn {
+    color: var(--mud-palette-primary) !important;
+    background: color-mix(in srgb, transparent 92%, var(--mud-palette-primary) 8%) !important;
+    border-radius: 2px !important;
+    box-shadow: inset 0 -2px 0 var(--lh-gold);
+    transition: background 0.15s;
+}
+
+.toolbar-columns-btn:hover {
+    background: color-mix(in srgb, transparent 86%, var(--mud-palette-primary) 14%) !important;
+}
+
 .toolbar-select-btn {
     color: var(--lh-grey-mid) !important;
     border-radius: 2px !important;
