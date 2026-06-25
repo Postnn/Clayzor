@@ -173,6 +173,9 @@
                      @ondragover="OnTrayDragOver"
                      @ondragover:preventDefault="true"
                      @ondrop="@(e => OnTrayDrop(e, idx))">
+                    <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                             Size="Size.Small"
+                             Style="margin-right:6px;opacity:0.45;flex-shrink:0;cursor:grab" />
                     <span class="chip-label chip-label-clickable" @onclick="async () => await ToggleSort(col)" @onclick:stopPropagation="true">@displayName</span>
                     @GetSortBadge(col)
                     <MudIconButton Icon="@Icons.Material.Filled.Close"
