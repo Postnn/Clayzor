@@ -26,47 +26,37 @@
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
                           Style="max-width:250px;min-width:140px" />
-            <MudTooltip Text="Настройка колонок" Placement="Placement.Bottom">
-                <MudIconButton Icon="@Icons.Material.Filled.ViewColumn"
-                               Size="Size.Small"
-                               Class="toolbar-columns-btn"
-                               OnClick="OpenColumnSettings" />
-            </MudTooltip>
+            <KescoButton Text="Настройка колонок"
+                         Icon="@Icons.Material.Filled.ViewColumn"
+                         Class="toolbar-columns-btn"
+                         OnClick="OpenColumnSettings" />
             @if (_columnBySqlName.Values.Any(c => c.Groupable))
             {
-                <MudTooltip Text="@(_trayExpanded ? "Отключить группировку" : "Группировать")" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Filled.AccountTree"
-                                   Size="Size.Small"
-                                   Class="@(_trayExpanded ? "grouping-toggle-btn grouping-toggle-btn--active" : "grouping-toggle-btn")"
-                                   OnClick="@ToggleTray" />
-                </MudTooltip>
+                <KescoButton Text="@(_trayExpanded ? "Отключить группировку" : "Группировать")"
+                             Icon="@Icons.Material.Filled.AccountTree"
+                             Class="@(_trayExpanded ? "grouping-toggle-btn grouping-toggle-btn--active" : "grouping-toggle-btn")"
+                             OnClick="@ToggleTray" />
             }
             @if (_columnBySqlName.Values.Any(c => c.Filterable))
             {
-                <MudTooltip Text="@(_filterTrayExpanded ? "Скрыть фильтры" : "Фильтровать")" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Filled.FilterAlt"
-                                   Size="Size.Small"
-                                   Class="@(_filterTrayExpanded ? "filter-toggle-btn filter-toggle-btn--active" : "filter-toggle-btn")"
-                                   OnClick="@ToggleFilterTray" />
-                </MudTooltip>
+                <KescoButton Text="@(_filterTrayExpanded ? "Скрыть фильтры" : "Фильтровать")"
+                             Icon="@Icons.Material.Filled.FilterAlt"
+                             Class="@(_filterTrayExpanded ? "filter-toggle-btn filter-toggle-btn--active" : "filter-toggle-btn")"
+                             OnClick="@ToggleFilterTray" />
             }
             @if (ShowAddButton)
             {
-                <MudTooltip Text="Добавить" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Filled.Add"
-                                   Size="Size.Small"
-                                   Class="toolbar-add-btn"
-                                   OnClick="@OnAdd" />
-                </MudTooltip>
+                <KescoButton Text="Добавить"
+                             Icon="@Icons.Material.Filled.Add"
+                             Class="toolbar-add-btn"
+                             OnClick="@OnAdd" />
             }
             @if (SelectVisible)
             {
-                <MudTooltip Text="@(_selectMode ? "Скрыть выбор" : "Выбрать записи")" Placement="Placement.Bottom">
-                    <MudIconButton Icon="@Icons.Material.Filled.CheckBox"
-                                   Size="Size.Small"
-                                   Class="@(_selectMode ? "toolbar-select-btn toolbar-select-btn--active" : "toolbar-select-btn")"
-                                   OnClick="ToggleSelectMode" />
-                </MudTooltip>
+                <KescoButton Text="@(_selectMode ? "Скрыть выбор" : "Выбрать записи")"
+                             Icon="@Icons.Material.Filled.CheckBox"
+                             Class="@(_selectMode ? "toolbar-select-btn toolbar-select-btn--active" : "toolbar-select-btn")"
+                             OnClick="ToggleSelectMode" />
                 <MudMenu Class="toolbar-batch-btn"
                          AnchorOrigin="Origin.BottomRight"
                          TransformOrigin="Origin.TopRight">
@@ -672,6 +662,18 @@
             })
             .ToList();
 
+        for (int i = 0; i < _sortState.Count; i++)
+        {
+            var sc = _sortState[i];
+            var match = items.FirstOrDefault(it =>
+                _columnBySqlName.TryGetValue(it.SqlName, out var m) && m.SortName == sc.Column);
+            if (match is not null)
+            {
+                match.SortPriority = i + 1;
+                match.IsSortDesc   = sc.Desc;
+            }
+        }
+
         var parameters = new DialogParameters<KescoColumnSettingsDialog> { { x => x.Items, items } };
         var options = new DialogOptionsEx
         {
@@ -692,8 +694,16 @@
                 if (_columnBySqlName.TryGetValue(item.SqlName, out var meta2))
                     _columnOrder.Add(meta2.ColumnId);
             }
-            _dataKey++;
-            StateHasChanged();
+
+            _sortState.Clear();
+            foreach (var item in updatedItems.Where(i => i.SortPriority > 0).OrderBy(i => i.SortPriority))
+            {
+                var sortName = _columnBySqlName.TryGetValue(item.SqlName, out var meta3) ? meta3.SortName : item.SqlName;
+                _sortState.Add(new SortColumn(sortName, item.IsSortDesc));
+            }
+
+            _pageNumber = 1;
+            await NotifyQueryChanged();
         }
         else
         {
