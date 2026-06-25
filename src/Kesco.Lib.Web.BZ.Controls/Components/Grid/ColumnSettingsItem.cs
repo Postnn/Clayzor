@@ -16,4 +16,16 @@ public class ColumnSettingsItem
 
     /// <summary>Переключатель заблокирован (колонка в группировке).</summary>
     public bool IsReadonly { get; set; }
+
+    /// <summary>
+    /// Приоритет сортировки: 0 — не сортируется, 1 — высший, 2 — второй.
+    /// Максимум 2 колонки в сортировке.
+    /// </summary>
+    public int SortPriority { get; set; }
+
+    /// <summary>
+    /// Направление сортировки: <c>false</c> — по возрастанию, <c>true</c> — по убыванию.
+    /// Имеет значение только при <see cref="SortPriority"/> > 0.
+    /// </summary>
+    public bool IsSortDesc { get; set; }
 }

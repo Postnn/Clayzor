@@ -27,7 +27,11 @@ window.kescoColumnSettings = (function () {
             var grabOffsetY = 0;
             var chipH       = 0;
             var chipW       = 0;
-            var HYST        = 8;      // мёртвая зона (px) у центра чипа
+            var HYST           = 8;      // мёртвая зона (px) у центра чипа
+            var scrollInterval = null;   // интервал авто-прокрутки
+            var scrollParent   = null;   // ближайший скроллируемый предок контейнера
+            var SCROLL_ZONE    = 40;     // зона авто-прокрутки (px) у краёв контейнера
+            var MAX_SCROLL     = 15;     // макс. скорость авто-прокрутки (px/фрейм)
 
             // ── helpers ──────────────────────────────────────────────────────
 
@@ -89,6 +93,48 @@ window.kescoColumnSettings = (function () {
             }
 
             /**
+             * Находит ближайшего предка с прокруткой.
+             */
+            function getScrollParent(node) {
+                while (node && node !== document.body) {
+                    if (node.scrollHeight > node.clientHeight) return node;
+                    node = node.parentElement;
+                }
+                return null;
+            }
+
+            /**
+             * Авто-прокрутка контейнера при приближении курсора к верхнему/нижнему краю.
+             * Скорость растёт по мере приближения к краю.
+             */
+            function autoScroll(clientY) {
+                if (!scrollParent) return;
+
+                if (scrollInterval) {
+                    clearInterval(scrollInterval);
+                    scrollInterval = null;
+                }
+
+                var rect = scrollParent.getBoundingClientRect();
+                var distFromTop = clientY - rect.top;
+                var distFromBottom = rect.bottom - clientY;
+
+                if (distFromTop > 0 && distFromTop < SCROLL_ZONE) {
+                    var speed = MAX_SCROLL * (1 - distFromTop / SCROLL_ZONE);
+                    scrollInterval = setInterval(function () {
+                        scrollParent.scrollTop = Math.max(0, scrollParent.scrollTop - speed);
+                    }, 16);
+                } else if (distFromBottom > 0 && distFromBottom < SCROLL_ZONE) {
+                    var speed = MAX_SCROLL * (1 - distFromBottom / SCROLL_ZONE);
+                    scrollInterval = setInterval(function () {
+                        scrollParent.scrollTop = Math.min(
+                            scrollParent.scrollHeight - scrollParent.clientHeight,
+                            scrollParent.scrollTop + speed);
+                    }, 16);
+                }
+            }
+
+            /**
              * Вычисляет targetIdx для Blazor.
              * Считаем количество чипов (data-col-idx) перед placeholder,
              * не считая сам источник (он скрыт но присутствует в DOM).
@@ -108,6 +154,8 @@ window.kescoColumnSettings = (function () {
             }
 
             function cleanup() {
+                if (scrollInterval) { clearInterval(scrollInterval); scrollInterval = null; }
+                scrollParent = null;
                 if (ghost) { ghost.remove(); ghost = null; }
                 if (placeholder && placeholder.parentNode)
                     placeholder.parentNode.removeChild(placeholder);
@@ -139,6 +187,7 @@ window.kescoColumnSettings = (function () {
                 if (!placeholder.parentNode)
                     container.appendChild(placeholder);
                 movePlaceholder(pt.clientY);
+                autoScroll(pt.clientY);
             }
 
             function onEnd(e) {
@@ -154,7 +203,7 @@ window.kescoColumnSettings = (function () {
             function startDrag(e, clientX, clientY) {
                 var chip = e.target.closest('[data-col-idx]');
                 if (!chip) return;
-                if (e.target.closest('input, button, .mud-switch-base, .mud-button-root')) return;
+                if (e.target.closest('input, button, .mud-switch-base, .mud-button-root, .chip-label-clickable, .sort-toggle-area')) return;
 
                 e.preventDefault();
 
@@ -165,6 +214,8 @@ window.kescoColumnSettings = (function () {
                 grabOffsetY = clientY - rect.top;
                 sourceIdx   = parseInt(chip.dataset.colIdx, 10);
                 sourceChip  = chip;
+
+                scrollParent = getScrollParent(container);
 
                 ghost       = createGhost(chip);
                 placeholder = createPlaceholder();
