@@ -3,8 +3,6 @@
    Deep navy, gold accents, clean whites, sharp edges
    ═══════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 :root {
     --lh-navy: #05164D;
     --lh-navy-light: #0A1D3D;
@@ -15,12 +13,26 @@
     --lh-grey-light: #EBEDF0;
     --lh-grey-mid: #9B9B9B;
     --lh-grey-dark: #4A4A4A;
+
+    --kesco-font-family: Verdana, Arial, sans-serif;
+    --kesco-font-size: 0.75rem; /* 12pt */
 }
 
-html, body {
-    font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+html {
+    font-family: var(--kesco-font-family);
+}
+
+body {
+    font-family: var(--kesco-font-family);
+    font-size: var(--kesco-font-size);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+
+.mud-input-control input,
+.mud-input-control textarea,
+.mud-input-control .mud-input-slot {
+    font-size: var(--kesco-font-size);
 }
 
 #blazor-error-ui {

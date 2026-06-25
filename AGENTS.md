@@ -175,7 +175,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoMenu** — обёртка `MudMenu` с авто-построением кнопки-активатора (опциональный тултип, сброс тултипа после клика). Заменяет `<MudMenu><ActivatorContent><MudTooltip><MudIconButton/></MudTooltip></ActivatorContent></MudMenu>` | — |
 | **ConfirmDialog** — диалог подтверждения | [docs/confirm-dialog.md](docs/confirm-dialog.md) |
 | **ILookupEntity** — интерфейс справочной сущности (`int Id`, `string Name`) | [docs/entity-crud.md](docs/entity-crud.md) |
-| **KescoTheme** — corporate theme (DarkNavy + Gold accent). Applied in MainLayout | — |
+| **KescoTheme** — corporate theme (DarkNavy + Gold accent). Typography via CSS variables `--kesco-font-family` (Verdana) and `--kesco-font-size` (12pt). Applied in MainLayout | — |
 
 ### Интерфейсы
 
@@ -299,6 +299,14 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 `FilterColumnTypes` вычисляется автоматически через рефлексию по `[Column]`-атрибутам и C#-типам свойств сущности.
 Страница просто передаёт `FilterColumnTypes="@FilterColumnTypes"` в `<KescoGrid>`. Маппинг: `bool` → `Boolean`, числовые типы → `Number`, остальные → `Text`.
+
+## Typography & Fonts
+
+- Font face: **Verdana** + fallback `Arial, sans-serif` — defined via CSS variable `--kesco-font-family`
+- Font size: **12pt** (`0.75rem`) — defined via CSS variable `--kesco-font-size`
+- MudBlazor typography (`KescoTheme.cs`) references these CSS variables: `FontFamily = ["var(--kesco-font-family)"]`, `FontSize = "var(--kesco-font-size)"`
+- MudBlazor input controls use `font-size: var(--kesco-font-size)` (CSS rule in `app.css`)
+- No external font CDN dependencies (Google Fonts Inter removed)
 
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**

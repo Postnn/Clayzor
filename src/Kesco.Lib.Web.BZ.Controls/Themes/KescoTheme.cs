@@ -105,8 +105,8 @@ public static class KescoTheme
         {
             Default = new DefaultTypography
             {
-                FontFamily = ["Segoe UI", "Helvetica Neue", "Arial", "sans-serif"],
-                FontSize = "0.875rem",
+                FontFamily = ["var(--kesco-font-family)"],
+                FontSize = "var(--kesco-font-size)",
                 FontWeight = "400",
                 LineHeight = "1.5",
                 LetterSpacing = "0.01em",
@@ -132,12 +132,12 @@ public static class KescoTheme
             },
             Body1 = new Body1Typography
             {
-                FontSize = "0.9rem",
+                FontSize = "var(--kesco-font-size)",
                 LineHeight = "1.6",
             },
             Body2 = new Body2Typography
             {
-                FontSize = "0.8125rem",
+                FontSize = "var(--kesco-font-size)",
                 LineHeight = "1.5",
             },
             Button = new ButtonTypography
