@@ -3,7 +3,9 @@ using System.Reflection;
 using Dapper;
 using Kesco.Lib.DALC;
 using Kesco.Lib.Entities;
+using Kesco.Lib.Web.BZ.Controls.Services;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MudBlazor;
 using MudBlazor.Extensions;
 using MudBlazor.Extensions.Options;
@@ -22,6 +24,12 @@ public interface IKescoGridDataLoader
     /// поиска, сортировки, группировки, фильтрации, пагинации.
     /// </summary>
     Task OnQueryChangedAsync(KescoDataQuery query);
+
+    /// <summary>
+    /// Вызывается гридом при выборе пункта меню «Выгрузка в Excel».
+    /// </summary>
+    /// <param name="request">Параметры экспорта: режим, заголовок, список видимых колонок.</param>
+    Task ExcelExportAsync(ExcelExportRequest request);
 }
 
 /// <summary>
@@ -52,6 +60,9 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
 
     /// <summary>Сервис диалоговых окон — инжектируется автоматически.</summary>
     [Inject] protected IDialogService DialogService { get; set; } = null!;
+
+    /// <summary>JS interop — для скачивания файлов и других операций.</summary>
+    [Inject] protected IJSRuntime JS { get; set; } = null!;
 
     // ── Ссылка на грид — устанавливается через @ref="_dataGrid" ─────────────────
 
@@ -165,6 +176,124 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         _query.PageSize      = query.PageSize;
         _query.ColumnFilters = query.ColumnFilters;
         await LoadData();
+    }
+
+    async Task IKescoGridDataLoader.ExcelExportAsync(ExcelExportRequest request)
+    {
+        try
+        {
+            var columns = request.VisibleColumns;
+            if (columns.Count == 0) return;
+
+            List<IGridRow> rowsToExport = request.Mode switch
+            {
+                ExcelExportMode.CurrentPage => await BuildExportRows(),
+                ExcelExportMode.Selected   => _rows, // TODO: отфильтровать по SelectedItems
+                ExcelExportMode.All        => _rows, // TODO: загрузить все данные без пагинации
+                _ => _rows
+            };
+
+            if (rowsToExport.Count == 0)
+            {
+                Snackbar.Add("Нет данных для выгрузки", Severity.Warning);
+                return;
+            }
+
+            var bytes = KescoGridExcelGenerator.ExportToExcel(
+                request.Title, columns, rowsToExport, typeof(T), _query.ExpandedGroups,
+                request.FilterDescription, request.GroupDescription);
+
+            var base64   = Convert.ToBase64String(bytes);
+            var fileName = $"{SanitizeFileName(request.Title)}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+
+            await JS.InvokeVoidAsync("kescoGridExcel.downloadFile", fileName, base64);
+            Snackbar.Add($"Файл «{fileName}» выгружен", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка выгрузки: {ex.Message}", Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Строит список строк для экспорта. Если активна группировка — для каждой
+    /// развёрнутой группы загружает ВСЕ детальные строки (игнорируя пагинацию),
+    /// а не только те, что уместились на текущей странице.
+    /// На грид это не влияет — данные загружаются отдельным запросом.
+    /// </summary>
+    private async Task<List<IGridRow>> BuildExportRows()
+    {
+        if (!_query.GroupEnabled || _query.GroupColumns.Count == 0)
+            return _rows;
+
+        var result      = new List<IGridRow>();
+        var expandedSet = _query.ExpandedGroups;
+
+        var selectSql     = Grid?.SelectSql     ?? "";
+        var defaultOrder  = Grid?.DefaultOrder  ?? "";
+        var searchColumns = Grid?.SearchColumns ?? [];
+
+        var searchWhere    = _query.BuildWhereClause(searchColumns);
+        var dp             = new DynamicParameters();
+        dp.Add("search", $"%{_query.SearchText}%");
+        var colFilterWhere = _query.BuildColumnFilterClause(dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var detailOrder    = KescoGroupingEngine.BuildDetailOrder(
+            _query.BuildOrderBy(defaultOrder), _query.GroupColumns, defaultOrder);
+
+        var groupCols = _query.GroupColumns;
+
+        foreach (var row in _rows)
+        {
+            if (row is GroupHeaderRow header)
+            {
+                result.Add(header);
+
+                // Детальные строки загружаются только для конечных групп
+                // (количество ключей == количество колонок группировки).
+                // Промежуточные группы выводятся только как заголовки.
+                if (header.GroupKeys.Count == groupCols.Count)
+                {
+                    var detailParams = new DynamicParameters();
+                    detailParams.AddDynamicParams(dp);
+
+                    for (int i = 0; i < header.GroupKeys.Count && i < groupCols.Count; i++)
+                    {
+                        detailParams.Add($"dk{i}", header.GroupKeys[i]);
+                    }
+
+                    var keyParts = new List<string>();
+                    for (int i = 0; i < header.GroupKeys.Count && i < groupCols.Count; i++)
+                        keyParts.Add($"{groupCols[i]} = @dk{i}");
+
+                    var detailWhere = KescoDataQuery.CombineWhere(where,
+                        string.Join(" AND ", keyParts));
+
+                    // Чистый SQL без ROW_NUMBER() / BETWEEN — без пагинационной обёртки
+                    var sql = $"SELECT * FROM ({selectSql}) _src";
+                    if (!string.IsNullOrWhiteSpace(detailWhere))
+                        sql += $" WHERE {detailWhere}";
+                    if (!string.IsNullOrWhiteSpace(detailOrder))
+                        sql += $" ORDER BY {detailOrder}";
+
+                    var items = await Db.QueryAsync<T>(sql, detailParams);
+                    result.AddRange(items.Select(item => new DetailRow<T>
+                    {
+                        Item  = item,
+                        Depth = header.Depth
+                    }));
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries))
+            .TrimEnd('.');
     }
 
     // ── Инфраструктура (не переопределяются на странице) ────────────────────────

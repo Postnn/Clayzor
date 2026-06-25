@@ -173,6 +173,11 @@ public interface IKescoGrid
     bool IsColumnHidden(string sqlName);
 
     /// <summary>
+    /// Возвращает метаданные видимых колонок в порядке отображения (без скрытых).
+    /// </summary>
+    IReadOnlyList<KescoColumnMeta> GetVisibleColumns();
+
+    /// <summary>
     /// Регистрирует CellTemplate колонки для динамического рендеринга.
     /// Вызывается из <see cref="KescoColumn{TEntity}"/> при инициализации.
     /// </summary>

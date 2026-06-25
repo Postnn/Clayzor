@@ -35,13 +35,24 @@ public class GroupHeaderRow : IGridRow
 }
 
 /// <summary>
+/// Негенерик-интерфейс для доступа к сущности строки детализации без знания типа T.
+/// Используется при экспорте данных, где тип сущности известен только во время выполнения.
+/// </summary>
+public interface IDetailRow : IGridRow
+{
+    object? Item { get; }
+}
+
+/// <summary>
 /// Строка детализации — оборачивает сущность T.
 /// </summary>
 /// <typeparam name="T">Тип сущности (наследник Entity).</typeparam>
-public class DetailRow<T> : IGridRow where T : Entity
+public class DetailRow<T> : IDetailRow, IGridRow where T : Entity
 {
     /// <summary>Сущность — строка данных.</summary>
     public T Item { get; set; } = default!;
+
+    object? IDetailRow.Item => Item;
 
     /// <summary>Полный ключ группы, к которой принадлежит строка.</summary>
     public string GroupKey { get; set; } = "";

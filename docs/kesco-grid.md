@@ -26,7 +26,7 @@
 | `ColumnMenuMode` | `ColumnMenuMode` | `Mobile` | Режим кнопки меню (⋮) в заголовках: `Hidden` — скрыта, `Always` — всегда видна, `Mobile` — только на мобильных (≤960px) |
 | `SelectVisible` | `bool` | `false` | Показать кнопку выбора записей (чекбоксы + меню групповых операций) |
 | `ShowPrint` | `bool` | `false` | Показать группу «Печать» в меню групповых операций (текущая страница реализована) |
-| `ShowExcel` | `bool` | `false` | Показать группу «Выгрузка в Excel» в меню групповых операций |
+| `ShowExcel` | `bool` | `false` | Показать группу «Выгрузка в Excel» в меню групповых операций. При экспорте рядом с заголовком показывается спиннер |
 | `CustomBatchGroups` | `IReadOnlyList<BatchOperationGroup>?` | `null` | Кастомные группы операций (рендерятся после стандартных) |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
 | `OnRowClick` | `EventCallback<DataGridRowClickEventArgs<TEntity>>` | — | Клик по строке |
@@ -408,6 +408,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - **Кнопка «Обновить»** — сбрасывает страницу на 1, перезагружает данные
 - **Переход по страницам** — кнопки `|<`, `<`, `>`, `>|`. Не сбрасывают фильтры
 - **Защита выхода за границы** — при уменьшении `TotalCount` номер страницы автоматически обрезается до максимального
+- **Экспорт в Excel** — на время выгрузки рядом с заголовком грида показывается `MudProgressCircular` (Size.Small, Indeterminate). Флаг `_isExporting` устанавливается в `true` перед вызовом `DataLoader.ExcelExportAsync()` и сбрасывается в `false` в `finally`-блоке. После завершения появляется снекбар с именем файла или ошибкой
 
 ## Кнопки тулбара
 
@@ -446,11 +447,23 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 | Параметр | Тип | По умолчанию | Описание |
 |---|---|---|---|
 | `ShowPrint` | `bool` | `false` | Группа «Печать»: текущая страница (реализована), выбранные (заглушка), все данные (заглушка) |
-| `ShowExcel` | `bool` | `false` | Группа «Выгрузка в Excel»: текущая страница, выбранные, все данные |
+| `ShowExcel` | `bool` | `false` | Группа «Выгрузка в Excel»: текущая страница, выбранные, все данные. На время экспорта рядом с заголовком грида показывается `MudProgressCircular` |
 
 ```razor
 <KescoGrid ... SelectVisible="true" ShowPrint="true" ShowExcel="true" />
 ```
+
+#### Экспорт в Excel
+
+Реализован через два компонента:
+- **`KescoGridExcelGenerator`** (сервер) — генерирует .xlsx через ClosedXML в цветах Kesco (navy `#05164D`, gold `#FFAD00`), шрифт Verdana. Поддерживает: заголовок, описание фильтров/группировки, групповые строки с Excel Outline (сворачиваемые группы), авто-ширину колонок
+- **`kescoGridExcel.js`** (клиент) — скачивает файл через Blob URL из base64-контента
+
+Поток: `ExcelCurrentPageInternal()` / `ExcelAllInternal()` / `ExcelSelectedInternal()` → `DataLoader.ExcelExportAsync(ExcelExportRequest)` → `KescoGridExcelGenerator.ExportToExcel(...)` → base64 → `kescoGridExcel.downloadFile()` → снекбар.
+
+**Индикатор загрузки**: флаг `_isExporting` в `KescoGrid.razor` устанавливается в `true` перед вызовом `DataLoader.ExcelExportAsync()` и сбрасывается в `false` в `finally`-блоке. Пока `_isExporting = true`, рядом с заголовком грида (`MudText Typo="Typo.h5"`) показывается `MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small"`.
+
+Режимы `Selected` и `All` — TODO (пока выгружают текущую страницу).
 
 ### Кастомные операции
 

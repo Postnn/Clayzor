@@ -11,9 +11,15 @@
    и KescoColumn внутри MudDataGrid (построение заголовков) получают одну ссылку на IKescoGrid *@
 <CascadingValue Value="(IKescoGrid)this" IsFixed="true">
 @ColumnDefs
-<MudPaper Elevation="1" Class="pa-4" id="@Id">
+<MudPaper Elevation="1" Class="pa-4" Style="position:relative" id="@Id">
     <div class="d-flex flex-wrap justify-space-between gap-2 mb-4" style="align-items:center">
-        <MudText Typo="Typo.h5">@Title</MudText>
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h5">@Title</MudText>
+            @if (_isExporting)
+            {
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
+            }
+        </MudStack>
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
             <MudTextField T="string"
                           Value="@_searchText"
@@ -333,6 +339,7 @@
     private bool _selectAllChecked;
     private Dictionary<string, bool> _openSubGroups = [];
     private int _selectedCount => _selectedItems.Count;
+    private bool _isExporting;
 
     private void OnSelectedItemsChanged(HashSet<TEntity> items)
     {
@@ -621,9 +628,99 @@
     private async Task PrintCurrentPageInternal()    => await JS.InvokeVoidAsync("kescoGridPrint.printCurrentPage", Id);
     private async Task PrintAllInternal()             => Snackbar.Add("Печать всех данных — в разработке", Severity.Info);
     private async Task PrintSelectedInternal()        => Snackbar.Add($"Печать {_selectedCount} выбранных — в разработке", Severity.Info);
-    private async Task ExcelCurrentPageInternal()     => Snackbar.Add("Выгрузка текущей страницы в Excel — в разработке", Severity.Info);
-    private async Task ExcelAllInternal()             => Snackbar.Add("Выгрузка всех данных в Excel — в разработке", Severity.Info);
-    private async Task ExcelSelectedInternal()        => Snackbar.Add($"Выгрузка {_selectedCount} записей в Excel — в разработке", Severity.Info);
+    private string? BuildFilterDescription()
+    {
+        if (_activeFilters.Count == 0) return null;
+        var parts = new List<string>();
+        foreach (var kv in _activeFilters)
+        {
+            var sqlName     = kv.Key;
+            var filter      = kv.Value;
+            var displayName = _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName;
+            parts.Add(KescoColumnFilterDialog.GetFilterDescription(filter, displayName));
+        }
+        return $"Фильтр: {string.Join("; ", parts)}";
+    }
+
+    private string? BuildGroupDescription()
+    {
+        if (_groupColumns.Count == 0) return null;
+        var names = _groupColumns
+            .Select(c => _columnBySqlName.TryGetValue(c, out var m) ? m.DisplayName : c);
+        return $"Группировка: {string.Join(" → ", names)}";
+    }
+
+    private async Task ExcelCurrentPageInternal()
+    {
+        if (DataLoader is null) return;
+        _isExporting = true;
+        StateHasChanged();
+        try
+        {
+            var columns = ((IKescoGrid)this).GetVisibleColumns();
+            await DataLoader.ExcelExportAsync(new ExcelExportRequest
+            {
+                Mode = ExcelExportMode.CurrentPage,
+                Title = Title,
+                VisibleColumns = columns,
+                FilterDescription = BuildFilterDescription(),
+                GroupDescription = BuildGroupDescription(),
+            });
+        }
+        finally
+        {
+            _isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExcelAllInternal()
+    {
+        if (DataLoader is null) return;
+        _isExporting = true;
+        StateHasChanged();
+        try
+        {
+            var columns = ((IKescoGrid)this).GetVisibleColumns();
+            await DataLoader.ExcelExportAsync(new ExcelExportRequest
+            {
+                Mode = ExcelExportMode.All,
+                Title = Title,
+                VisibleColumns = columns,
+                FilterDescription = BuildFilterDescription(),
+                GroupDescription = BuildGroupDescription(),
+            });
+        }
+        finally
+        {
+            _isExporting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExcelSelectedInternal()
+    {
+        if (DataLoader is null || _selectedCount == 0) return;
+        _isExporting = true;
+        StateHasChanged();
+        try
+        {
+            var columns = ((IKescoGrid)this).GetVisibleColumns();
+            await DataLoader.ExcelExportAsync(new ExcelExportRequest
+            {
+                Mode = ExcelExportMode.Selected,
+                Title = Title,
+                VisibleColumns = columns,
+                FilterDescription = BuildFilterDescription(),
+                GroupDescription = BuildGroupDescription(),
+            });
+        }
+        finally
+        {
+            _isExporting = false;
+            StateHasChanged();
+        }
+    }
 
     private bool _menuVisible(KescoColumnMeta meta) =>
         meta is not null
@@ -1101,4 +1198,12 @@
         => _cellTemplates[columnId] = template;
 
     bool IKescoGrid.IsColumnHidden(string sqlName) => _hiddenSqlNames.Contains(sqlName);
+
+    IReadOnlyList<KescoColumnMeta> IKescoGrid.GetVisibleColumns()
+        => _columnOrder
+            .Select(id => _columnById.GetValueOrDefault(id))
+            .Where(meta => meta is not null
+                && !_hiddenSqlNames.Contains(meta.SqlName)
+                && !IsGrouped(meta.SqlName))
+            .ToList()!;
 }
