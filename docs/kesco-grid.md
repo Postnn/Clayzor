@@ -78,10 +78,12 @@
 
 **Авто-возможности:**
 - Title из `KescoColumnDef.DisplayName`
-- HeaderTemplate с drag-and-drop (устанавливает `KescoDragState.DraggedColumn`) и серверной сортировкой (`Grid.ToggleSort`)
+- HeaderTemplate с серверной сортировкой (`Grid.ToggleSort`)
+- Заголовок содержит `data-col-sql` для кастомного insert-drag (через `kescoGridColumnDrag.js`)
+- `KescoDragState.DraggedColumn` устанавливается через JS→C# `SetDraggedColumn` при dragstart — tray-drop продолжает работать
 - Автоматическое скрытие колонки при группировке (`Hidden = IsGrouped(SqlName)`)
 - Кнопка меню `⋮` (мобильные / `ColumnMenuMode`) — альтернативный вход для группировки и фильтрации без drag-and-drop
-- **`DragAndDropEnabled="true"`** на `TemplateColumn` — **обязательно** для работы перетасовки колонок MudBlazor (`DragDropColumnReordering`)
+- **`DragAndDropEnabled="false"`** — MudBlazor `DragDropColumnReordering` **не используется**. Перемещение колонок реализовано кастомным JS с insert-семантикой (вставка перед/после)
 
 | Параметр | Тип | Обязательный | Описание |
 |---|---|---|---|
@@ -526,13 +528,41 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 |---|---|
 | **Видимость** | ✅ MudSwitch → `_hiddenSqlNames` → `KescoColumn.Hidden`. Сгруппированные — переключатель заблокирован |
 | **Порядок (диалог→грид)** | ✅ Двухфазный рендеринг: сбор CellTemplate → динамические `TemplateColumn` по `_columnOrder`. Apply → `_dataKey++` → перерендер |
-| **Порядок (грид→диалог)** | ✅ `kescoColumnSettings.readOrder(Id)` читает `[data-col-sql]` из DOM перед открытием |
+| **Порядок (грид→диалог)** | ✅ `_columnOrder` всегда синхронизирован с DOM (обновляется через `OnColumnDrop`), дополнительное чтение DOM не требуется |
 | **Отмена диалога** | ✅ Порядок восстанавливается из `_columnOrderSnapshot` + `_dataKey++` |
-| **Header drag** | ⚠️ MudBlazor делает **swap** (не insert) двух колонок — ограничение внутреннего `MudDropContainer` |
+| **Header drag** | ✅ Кастомный JS (`kescoGridColumnDrag.js`) с **insert**-семантикой (вставка перед/после целевой колонки), заменяет MudBlazor `DragDropColumnReordering` |
 
 ### Примечания
 
-- `KescoGrid` требует параметр `Id` — DOM-id корневого элемента (используется `readOrder`)
+- `KescoGrid` требует параметр `Id` — DOM-id корневого элемента (используется `kescoGridColumnDrag.init`)
 - На странице может быть несколько `KescoGrid` с разными `Id`
 - `KescoColumn` регистрирует `CellTemplate` через `IKescoGrid.RegisterCellTemplate` (для динамического рендеринга)
 - `@onclick` на динамических колонках использует `void HandleSortClick` (избегает async-лямбда-проблем Razor)
+
+## Кастомный drag-and-drop колонок (kescoGridColumnDrag.js)
+
+Перемещение колонок в заголовке грида реализовано через кастомный JS (`kescoGridColumnDrag.js`) с **insert**-семантикой — перетаскиваемая колонка вставляется перед/после целевой, в отличие от MudBlazor `DragDropColumnReordering`, который делал swap.
+
+### Принцип работы
+
+1. **`kescoGridColumnDrag.init(gridId, dotnetRef)`** — вызывается из `OnAfterRenderAsync` KescoGrid при каждом перерендере динамических колонок. Безопасен для многократного вызова (dispose предыдущего).
+2. **`dragstart`** (capture:true) — определяет `srcSqlName` по `data-col-sql`, устанавливает `effectAllowed='move'`, вызывает C# `SetDraggedColumn(sql)` → устанавливает `KescoDragState.DraggedColumn` для tray-drop.
+3. **`dragover`** (capture:true) — показывает индикатор вставки (`.kesco-grid-drop-indicator`) на целевой колонке: слева от центра = вставить перед, справа = после.
+4. **`drop`** — вызывает C# `OnColumnDrop(srcSql, targetSql, insertBefore)` → обновляет `_columnOrder` через insert (удаление источника + вставка на целевую позицию) → `_dataKey++` → перерендер.
+5. **`dragend`** — очистка, вызов `SetDraggedColumn(null)`.
+6. **`kescoGridColumnDrag.dispose(gridId)`** — в `DisposeAsync` KescoGrid для очистки обработчиков.
+
+### Требования
+
+- Заголовки колонок должны содержать `data-col-sql` с SQL-именем
+- `DragAndDropEnabled="false"` на всех `TemplateColumn` — MudBlazor не участвует в drag-and-drop колонок
+- `KescoGrid` должен иметь уникальный `Id` (используется для поиска корневого элемента)
+- `App.razor` должен подключать JS: `<script src="_content/Kesco.Lib.Web.BZ.Controls/js/kescoGridColumnDrag.js"></script>`
+- CSS-индикатор (`.kesco-grid-drop-indicator`) определён в `app.css`
+
+### KescoGrid → JS-методы
+
+| JSInvokable | Направление | Описание |
+|---|---|---|
+| `SetDraggedColumn(string?)` | JS → C# | Устанавливает/сбрасывает `KescoDragState.DraggedColumn` |
+| `OnColumnDrop(src, target, insertBefore)` | JS → C# | Применяет insert-перемещение в `_columnOrder` |

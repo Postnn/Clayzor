@@ -1,3 +1,69 @@
+# CLAUDE.md
+
+Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+
+**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+
+## 1. Think Before Coding
+
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
+
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them - don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+## 2. Simplicity First
+
+**Minimum code that solves the problem. Nothing speculative.**
+
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+
+Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+## 3. Surgical Changes
+
+**Touch only what you must. Clean up only your own mess.**
+
+When editing existing code:
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it - don't delete it.
+
+When your changes create orphans:
+- Remove imports/variables/functions that YOUR changes made unused.
+- Don't remove pre-existing dead code unless asked.
+
+The test: Every changed line should trace directly to the user's request.
+
+## 4. Goal-Driven Execution
+
+**Define success criteria. Loop until verified.**
+
+Transform tasks into verifiable goals:
+- "Add validation" → "Write tests for invalid inputs, then make them pass"
+- "Fix the bug" → "Write a test that reproduces it, then make it pass"
+- "Refactor X" → "Ensure tests pass before and after"
+
+For multi-step tasks, state a brief plan:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+
+---
+
+**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
 # KescoBZ — Медицинские исследования
 
 ## Agent instructions
@@ -257,8 +323,8 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - **KescoGridPageBase**: SQL-конфигурация передаётся через параметры `<KescoGrid>` (`SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`), а не через abstract-свойства. База читает их из `Grid?.SelectSql` и т.д. Страница переопределяет `protected override IKescoGrid? Grid => _dataGrid;` и передаёт `DataLoader="this"`
 - **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). Параметры пагинации передаются как `@__start`/`@__end` через `DynamicParameters`
 - **Обработка ошибок БД**: `DbManager` автоматически перехватывает `SqlException` и вызывает `ISqlErrorHandler.HandleSqlError()`. Страницам **не нужно** вызывать `ErrorService.Report()` вручную — только `try/finally` для `_loading = false`. Баннер `KescoErrorBar` в `MainLayout` показывает ошибку со строкой подключения, SQL и параметрами
-- **Grouping tray**: заголовки колонок генерируются автоматически через `<KescoColumn>` — drag-and-drop (`draggable="true"` с `@ondragstart`,
-  устанавливающим `KescoDragState.DraggedColumn`) и серверная сортировка (`@onclick` → `Grid.ToggleSort(query.SqlName)`) встроены в компонент.
+- **Grouping tray**: заголовки колонок генерируются автоматически через `<KescoColumn>` — drag-and-drop (`draggable="true"` с `data-col-sql`,
+  `KescoDragState.DraggedColumn` устанавливается через JS→C# `SetDraggedColumn`) и серверная сортировка (`@onclick` → `Grid.ToggleSort(query.SqlName)`) встроены в компонент.
   При перетаскивании на панель группировки колонка добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
   Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
   Кнопка группировки появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Groupable="true"`.
@@ -267,12 +333,12 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - **Column registration**: метаданные колонок регистрируются через `<KescoColumnDef SqlName="..." DisplayName="..." Groupable="true" Filterable="true" />`
   внутри `<ColumnDefs>`, а не через параметры `ShowGroupingTray`/`AvailableGroupColumns`/`AvailableFilterColumns`.
   `KescoGrid` реализует `IKescoGrid` и получает регистрацию через каскадный параметр.
-- **Column reorder**: `KescoColumn` **обязан** устанавливать `DragAndDropEnabled="true"` на своём `TemplateColumn`. Без этого флага MudBlazor `MudDropContainer` не распознаёт колонку как участника `DragDropColumnReordering` — заголовок перетаскивается, но не встаёт на новое место (dragstart срабатывает от вложенного `draggable="true"` div, а не от `MudDynamicDropItem`).
+- **Column reorder**: перетаскивание колонок в заголовке реализовано кастомным JS (`kescoGridColumnDrag.js`) с **insert**-семантикой (вставка перед/после). Заменяет MudBlazor `DragDropColumnReordering`. `KescoColumn` и динамические колонки KescoGrid устанавливают `DragAndDropEnabled="false"`. Заголовки содержат `data-col-sql` атрибут. JS инициализируется через `kescoGridColumnDrag.init(gridId, dotnetRef)` в `OnAfterRenderAsync`. `SetDraggedColumn` вызывается из JS на dragstart — устанавливает `KescoDragState.DraggedColumn` для tray-drop. `OnColumnDrop` применяет insert-перемещение в `_columnOrder` с последующим `_dataKey++`. Cleanup — `kescoGridColumnDrag.dispose(gridId)` в `DisposeAsync`.
 - **Grouping tray toggle**: кнопка `AccountTree` включает/выключает трей. При выключении (`_trayExpanded = false`) очищает `_groupColumns` и перезагружает данные в плоском режиме — колонки возвращаются в грид. Кнопка появляется только при наличии хотя бы одного `KescoColumnDef` с `Groupable="true"`
 - **Filter tray toggle**: кнопка `FilterAlt` включает/выключает трей фильтрации. При выключении (`_filterTrayExpanded = false`) очищает `_activeFilters` и перезагружает данные без фильтров. Оба трея (группировка + фильтрация) могут быть открыты одновременно — высота грида уменьшается соответственно
 - **Tray borders & icons**: панели группировки (`.grouping-tray`) и фильтрации (`.filter-tray`) имеют идентичное оформление. Фон, границы и иконки используют MudBlazor-переменные (`--mud-palette-*`) для авто-адаптации к светлой/тёмной теме. `border-left: 3px solid var(--mud-palette-primary)`, `border-bottom: 2px solid var(--lh-gold)`, фон `var(--mud-palette-background-gray)`. Иконки: по умолчанию `var(--mud-palette-text-secondary)` + opacity 0.45; при наличии чипов в трее (`:has(.xxx-chip)`) — `var(--mud-palette-primary)` + opacity 1. При наведении/перетаскивании `border-left-color` меняется на `var(--lh-gold)`. CSS определён в `wwwroot/css/app.css`
 - **Batch operations**: стандартные операции включаются флагами `ShowPrint` / `ShowExcel` без написания кода на странице. Кастомные — через `CustomBatchGroups` (модели `BatchOperationGroup` / `BatchOperation`, обработчики `Func<Task>? OnExecute` реализуются в приложении). Меню открывается кнопкой `PlaylistAddCheck` при `SelectVisible="true"`
-- **Column settings**: кнопка `ViewColumn` в тулбаре открывает `KescoColumnSettingsDialog` — диалог настройки порядка и видимости колонок. Drag-and-drop реализован как jQuery UI Sortable: ghost (клон чипа) на `position:fixed` следует за курсором, placeholder динамически вставляется в DOM. JS в `kescoColumnSettings.js` (RCL), обрабатывает `mousedown`/`mousemove`/`mouseup`, результат передаёт в C# через `[JSInvokable] OnJsDrop`. Стили чипов — `.column-settings-chip` (navy, gold accent hover), ghost — `.column-settings-ghost`, placeholder — `.column-settings-placeholder`. Видимость колонок применяется к гриду (через `_hiddenSqlNames` + `KescoColumn.Hidden`). Переключатель заблокирован для сгруппированных колонок. Порядок колонок из диалога применяется к гриду через двухфазный рендеринг (сбор CellTemplate → динамические TemplateColumns по `_columnOrder`). `readOrder` читает актуальный DOM-порядок перед открытием диалога. При отмене диалога порядок восстанавливается из snapshot. Параметр `Id` задаёт DOM-id корневого элемента грида (используется `readOrder`). MudBlazor header drag делает swap (не insert) — ограничение внутреннего MudDropContainer.
+- **Column settings**: кнопка `ViewColumn` в тулбаре открывает `KescoColumnSettingsDialog` — диалог настройки порядка и видимости колонок. Drag-and-drop реализован как jQuery UI Sortable: ghost (клон чипа) на `position:fixed` следует за курсором, placeholder динамически вставляется в DOM. JS в `kescoColumnSettings.js` (RCL), обрабатывает `mousedown`/`mousemove`/`mouseup`, результат передаёт в C# через `[JSInvokable] OnJsDrop`. Стили чипов — `.column-settings-chip` (navy, gold accent hover), ghost — `.column-settings-ghost`, placeholder — `.column-settings-placeholder`. Видимость колонок применяется к гриду (через `_hiddenSqlNames` + `KescoColumn.Hidden`). Переключатель заблокирован для сгруппированных колонок. Порядок колонок из диалога применяется к гриду через двухфазный рендеринг (сбор CellTemplate → динамические TemplateColumns по `_columnOrder`). `_columnOrder` всегда синхронизирован с DOM (обновляется через `OnColumnDrop` из кастомного JS), дополнительное чтение DOM не требуется. При отмене диалога порядок восстанавливается из snapshot. Параметр `Id` задаёт DOM-id корневого элемента грида (используется `kescoGridColumnDrag.init`).
 - **Grid height**: вычисляется динамически через `_gridHeight`: `calc(100vh - 280px)` без треев, `calc(100vh - 330px)` с одним треем, `calc(100vh - 380px)` с двумя. Заголовок грида фиксирован (`FixedHeader="true"`)
 - **Responsive layout**: тулбар и пагинация обёрнуты в `<div>` с `flex-wrap` — элементы переносятся на узких экранах. Внутренние группы используют `MudStack` для вертикального центрирования
 - **Mobile menu**: колонки грида имеют кнопку `⋮` для доступа к группировке и фильтрации без drag-and-drop. Режим управляется параметром `ColumnMenuMode` (по умолчанию `Mobile` — только ≤960px). Пункты меню показываются только когда соответствующая панель (группировка/фильтрация) активирована

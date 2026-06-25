@@ -634,3 +634,15 @@ html, body {
 .mud-table-cell:last-child {
     border-right: none;
 }
+
+/* ── Индикатор вставки колонки (insert drag) ── */
+.kesco-grid-drop-indicator {
+    position: fixed;
+    width: 3px;
+    pointer-events: none;
+    z-index: 9999;
+    background: var(--lh-gold);
+    border-radius: 2px;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--lh-gold) 60%, transparent);
+    display: none;
+}

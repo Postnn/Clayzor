@@ -1,5 +1,6 @@
 @typeparam TEntity where TEntity : class
 @implements IKescoGrid
+@implements IAsyncDisposable
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -243,7 +244,6 @@
                  Loading="@Loading"
                  RowClick="@OnRowClick"
                  RowsPerPage="@_pageSize"
-                 DragDropColumnReordering="@AllowColumnReorder"
                  MultiSelection="@_selectMode"
                  SelectedItemsChanged="OnSelectedItemsChanged">
         <Columns>
@@ -264,14 +264,13 @@
                                     Title="@dispName"
                                     Sortable="false"
                                     Hidden="@IsGrouped(sqlName)"
-                                    DragAndDropEnabled="true">
+                                    DragAndDropEnabled="false">
                         <HeaderTemplate>
                             <div style="display:flex;align-items:center;width:100%">
-                                <div style="flex:1;display:flex;align-items:center;cursor:pointer"
-                                     draggable="true"
-                                     data-col-sql="@sqlName"
-                                     @ondragstart="@(e => { e.DataTransfer.EffectAllowed = "move"; KescoDragState.DraggedColumn = sqlName; })"
-                                     @onclick="() => HandleSortClick(sqlName)">
+                                 <div style="flex:1;display:flex;align-items:center;cursor:grab"
+                                      draggable="true"
+                                      data-col-sql="@sqlName"
+                                      @onclick="() => HandleSortClick(sqlName)">
                                     <MudText Style="flex:1;text-align:center">@dispName</MudText>
                                     @GetSortBadge(sqlName)
                                 </div>
@@ -404,6 +403,9 @@
 
     /// <summary>Флаг завершения первой фазы рендеринга (сбор CellTemplate).</summary>
     private bool _columnsReady;
+
+    /// <summary>DotNetObjectReference для передачи в JS (insert-drag заголовков).</summary>
+    private DotNetObjectReference<KescoGrid<TEntity>>? _dotnetRef;
 
     /// <summary>ColumnId → CellTemplate для динамического рендеринга колонок.</summary>
     private readonly Dictionary<int, object> _cellTemplates = [];
@@ -561,6 +563,62 @@
             _dataKey++;
             StateHasChanged();
         }
+        else if (_columnsReady && !string.IsNullOrEmpty(Id))
+        {
+            // Реинициализируем drag после каждого ре-рендера динамических колонок.
+            // kescoGridColumnDrag.init() безопасно вызывается многократно — внутри dispose предыдущего.
+            _dotnetRef ??= DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("kescoGridColumnDrag.init", Id, _dotnetRef);
+        }
+    }
+
+    /// <summary>
+    /// Вызывается из JS после завершения drag-and-drop заголовка колонки.
+    /// Обновляет <see cref="_columnOrder"/> через insert (не swap).
+    /// </summary>
+    /// <param name="srcSql">SQL-имя перетаскиваемой колонки.</param>
+    /// <param name="targetSql">SQL-имя целевой колонки (относительно которой вставляем).</param>
+    /// <param name="insertBefore"><c>true</c> — вставить перед <paramref name="targetSql"/>, <c>false</c> — после.</param>
+    /// <summary>
+    /// Вызывается из JS при начале drag заголовка колонки.
+    /// Устанавливает <see cref="KescoDragState.DraggedColumn"/> для tray-drop обработчиков.
+    /// </summary>
+    [JSInvokable]
+    public void SetDraggedColumn(string? sqlName)
+        => KescoDragState.DraggedColumn = sqlName;
+
+    [JSInvokable]
+    public void OnColumnDrop(string srcSql, string targetSql, bool insertBefore)
+    {
+        if (!_columnBySqlName.TryGetValue(srcSql, out var srcMeta)) return;
+        if (!_columnBySqlName.TryGetValue(targetSql, out var tgtMeta)) return;
+
+        var srcId = srcMeta.ColumnId;
+        var tgtId = tgtMeta.ColumnId;
+
+        var srcIdx = _columnOrder.IndexOf(srcId);
+        var tgtIdx = _columnOrder.IndexOf(tgtId);
+        if (srcIdx < 0 || tgtIdx < 0 || srcIdx == tgtIdx) return;
+
+        _columnOrder.RemoveAt(srcIdx);
+        // После удаления источника пересчитываем целевой индекс
+        tgtIdx = _columnOrder.IndexOf(tgtId);
+        var insertAt = insertBefore ? tgtIdx : tgtIdx + 1;
+        insertAt = Math.Clamp(insertAt, 0, _columnOrder.Count);
+        _columnOrder.Insert(insertAt, srcId);
+
+        _dataKey++;
+        InvokeAsync(StateHasChanged);
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask DisposeAsync()
+    {
+        if (!string.IsNullOrEmpty(Id))
+        {
+            try { await JS.InvokeVoidAsync("kescoGridColumnDrag.dispose", Id); } catch { }
+        }
+        _dotnetRef?.Dispose();
     }
 
     private void ToggleSelectMode()
@@ -602,16 +660,6 @@
     private async Task OpenColumnSettings()
     {
         _columnOrderSnapshot = [.._columnOrder];
-
-        // Читаем актуальный порядок из DOM (header drag мог изменить)
-        if (_columnsReady && !string.IsNullOrEmpty(Id))
-        {
-            var sqlNames = await JS.InvokeAsync<string[]>("kescoColumnSettings.readOrder", Id);
-            _columnOrder.Clear();
-            foreach (var sqlName in sqlNames)
-                if (_columnBySqlName.TryGetValue(sqlName, out var m))
-                    _columnOrder.Add(m.ColumnId);
-        }
 
         var items = _columnBySqlName.Values
             .OrderBy(m => _columnOrder.IndexOf(m.ColumnId))
