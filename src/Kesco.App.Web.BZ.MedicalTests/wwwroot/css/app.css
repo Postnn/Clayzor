@@ -658,3 +658,180 @@ body {
     box-shadow: 0 0 6px color-mix(in srgb, var(--lh-gold) 60%, transparent);
     display: none;
 }
+
+/* ═══════════════════════════════════════════════════
+   Print styles — KescoGrid current page
+   Временный класс .kesco-grid-printing добавляется JS
+   на целевой грид перед window.print().
+   Только грид с этим классом отображается при печати.
+   ═══════════════════════════════════════════════════ */
+@media print {
+    /* ── Скрыть layout chrome ── */
+    .mud-appbar,
+    .mud-drawer,
+    .mud-drawer-responsive,
+    .mud-overlay,
+    .mud-popover,
+    .mud-snackbar {
+        display: none !important;
+    }
+
+    /* ── Показать только печатаемый грид ── */
+    .mud-main-content > *:not(.kesco-grid-printing) {
+        display: none !important;
+    }
+
+    .mud-main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    body {
+        background: #fff !important;
+    }
+
+    /* ── Скрыть тулбар: кнопки, поиск ── */
+    .kesco-grid-printing .kesco-grid-search,
+    .kesco-grid-printing .toolbar-columns-btn,
+    .kesco-grid-printing .toolbar-add-btn,
+    .kesco-grid-printing .toolbar-select-btn,
+    .kesco-grid-printing .toolbar-batch-btn,
+    .kesco-grid-printing .grouping-toggle-btn,
+    .kesco-grid-printing .filter-toggle-btn {
+        display: none !important;
+    }
+
+    /* ── Скрыть пагинатор ── */
+    .kesco-grid-printing .kesco-grid-paginator {
+        display: none !important;
+    }
+
+    /* ── Скрыть колонку с чекбоксами (multiselection) ── */
+    .kesco-grid-printing .mud-table-head .mud-table-cell:has(.mud-checkbox),
+    .kesco-grid-printing .mud-table-body .mud-table-cell:has(.mud-checkbox) {
+        display: none !important;
+    }
+
+    /* ── Скрыть кнопки закрытия на чипах треев ── */
+    .kesco-grid-printing .chip-remove-btn {
+        display: none !important;
+    }
+
+    /* ── Треи: скрыть пустые, показать активные ── */
+    .kesco-grid-printing .grouping-tray { display: none !important; }
+    .kesco-grid-printing .filter-tray     { display: none !important; }
+
+    .kesco-grid-printing .grouping-tray--active,
+    .kesco-grid-printing .filter-tray--active {
+        display: flex !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* ── Чипы в активных треях — Ч/Б ── */
+    .kesco-grid-printing .grouping-chip,
+    .kesco-grid-printing .filter-chip {
+        background: #fff !important;
+        border: 1px solid #999 !important;
+        color: #000 !important;
+        border-radius: 2px !important;
+        padding: 2px 8px !important;
+    }
+
+    .kesco-grid-printing .grouping-tray-icon,
+    .kesco-grid-printing .filter-tray-icon {
+        color: #000 !important;
+    }
+
+    .kesco-grid-printing .chip-label {
+        color: #000 !important;
+    }
+
+    /* ── Заголовок грида ── */
+    .kesco-grid-printing .mud-typography-h5 {
+        display: block !important;
+        font-size: 16pt !important;
+        font-weight: bold !important;
+        color: #000 !important;
+        margin-bottom: 12px !important;
+    }
+
+    /* ── MudPaper — убрать оформление карточки ── */
+    .kesco-grid-printing.mud-paper {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 8px !important;
+    }
+
+    /* ── Контейнер таблицы — убрать скролл ── */
+    .kesco-grid-printing .mud-table-container {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+    }
+
+    /* ── Таблица — базовые стили ── */
+    .kesco-grid-printing .mud-table {
+        background: #fff !important;
+        width: 100% !important;
+    }
+
+    /* ── Хедер таблицы — тёмный для Ч/Б контраста ── */
+    .kesco-grid-printing .mud-table-head .mud-table-cell {
+        background: #222 !important;
+        color: #fff !important;
+        font-weight: bold !important;
+        border-bottom: 2px solid #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* ── Ячейки данных ── */
+    .kesco-grid-printing .mud-table-body .mud-table-cell {
+        border-bottom: 1px solid #ccc !important;
+        border-right: 1px solid #eee !important;
+        color: #000 !important;
+        background: #fff !important;
+    }
+
+    /* ── Убрать hover/striped эффекты ── */
+    .kesco-grid-printing .mud-table-body .mud-table-row:hover {
+        background: transparent !important;
+    }
+
+    .kesco-grid-printing .mud-table-body .mud-table-row:hover .mud-table-cell {
+        background: #fff !important;
+    }
+
+    .kesco-grid-printing .mud-table-striped .mud-table-row:nth-child(even) .mud-table-cell {
+        background: #fff !important;
+    }
+
+    /* ── Group header rows — Ч/Б ── */
+    .kesco-grid-printing .mud-table-row:has(.group-header-cell) {
+        background: #fff !important;
+        border-top: 2px solid #000 !important;
+    }
+
+    .kesco-grid-printing .group-header-cell {
+        color: #000 !important;
+        font-weight: bold !important;
+    }
+
+    /* ── Thead повторяется на каждой странице ── */
+    .kesco-grid-printing .mud-table-head {
+        display: table-header-group;
+    }
+
+    /* ── Не разрывать строки ── */
+    .kesco-grid-printing .mud-table-row {
+        page-break-inside: avoid;
+    }
+
+    /* ── Параметры страницы ── */
+    @page {
+        size: landscape;
+        margin: 15mm;
+    }
+}

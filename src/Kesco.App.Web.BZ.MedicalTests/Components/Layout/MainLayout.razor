@@ -5,7 +5,7 @@
 @inject KescoAppSettings AppSettings
 @inject IHttpContextAccessor HttpContextAccessor
 
-<MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" />
+<MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" ObserveSystemDarkModeChange="false" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />

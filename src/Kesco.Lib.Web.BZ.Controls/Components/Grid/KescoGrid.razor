@@ -25,6 +25,7 @@
                           DebounceInterval="300"
                           Variant="Variant.Outlined"
                           Margin="Margin.Dense"
+                          Class="kesco-grid-search"
                           Style="max-width:250px;min-width:140px" />
             <KescoButton Text="Настройка колонок"
                          Icon="@Icons.Material.Filled.ViewColumn"
@@ -148,7 +149,7 @@
 
     @if (_trayExpanded)
     {
-        <div class="grouping-tray d-flex align-items-center flex-wrap gap-2 mb-2"
+        <div class="grouping-tray @(_groupColumns.Count > 0 ? "grouping-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnTrayDragOver"
              @ondragover:preventDefault="true"
              @ondrop="@(e => OnTrayDrop(e, -1))">
@@ -186,7 +187,7 @@
 
     @if (_filterTrayExpanded)
     {
-        <div class="filter-tray d-flex align-items-center flex-wrap gap-2 mb-2"
+        <div class="filter-tray @(_activeFilters.Count > 0 ? "filter-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnFilterTrayDragOver"
              @ondragover:preventDefault="true"
              @ondrop="OnFilterTrayDrop">
@@ -294,7 +295,7 @@
     </MudDataGrid>
     @if (ShowPagination)
     {
-        <div class="d-flex flex-wrap justify-space-between gap-2 mt-3" style="align-items:center">
+        <div class="d-flex flex-wrap justify-space-between gap-2 mt-3 kesco-grid-paginator" style="align-items:center">
             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                 <MudText>Строк на странице:</MudText>
                 <MudNumericField T="int" Value="_pageSize" ValueChanged="OnPageSizeChangedAsync" Min="1" Max="999" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width:80px" />
@@ -617,7 +618,7 @@
     private bool IsSubGroupOpen(string label)
         => _openSubGroups.TryGetValue(label, out var isOpen) && isOpen;
 
-    private async Task PrintCurrentPageInternal()    => Snackbar.Add("Печать текущей страницы — в разработке", Severity.Info);
+    private async Task PrintCurrentPageInternal()    => await JS.InvokeVoidAsync("kescoGridPrint.printCurrentPage", Id);
     private async Task PrintAllInternal()             => Snackbar.Add("Печать всех данных — в разработке", Severity.Info);
     private async Task PrintSelectedInternal()        => Snackbar.Add($"Печать {_selectedCount} выбранных — в разработке", Severity.Info);
     private async Task ExcelCurrentPageInternal()     => Snackbar.Add("Выгрузка текущей страницы в Excel — в разработке", Severity.Info);
