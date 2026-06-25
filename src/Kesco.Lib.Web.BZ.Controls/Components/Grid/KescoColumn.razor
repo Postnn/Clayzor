@@ -36,30 +36,22 @@
             </div>
             @if (_menuVisible && Grid is not null && _meta is not null)
             {
-                <MudMenu Class="@("kesco-column-menu" + (Grid.ColumnMenuMode == ColumnMenuMode.Mobile ? " column-menu-mobile" : ""))"
-                         AnchorOrigin="Origin.BottomRight"
-                         TransformOrigin="Origin.TopRight">
-                    <ActivatorContent Context="x">
-                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert"
-                                       Size="Size.Small"
-                                       Style="padding:0;width:22px;height:22px;min-width:22px"
-                                       OnClick="@x.ToggleAsync" />
-                    </ActivatorContent>
-                    <ChildContent>
-                        @if (Grid.IsGroupingTrayExpanded && _meta.Groupable)
-                        {
-                            <MudMenuItem OnClick="async () => await Grid.AddGroupAsync(_meta.SqlName)"
-                                         Icon="@Icons.Material.Filled.AccountTree"
-                                         IconColor="Color.Primary">Группировать</MudMenuItem>
-                        }
-                        @if (Grid.IsFilterTrayExpanded && _meta.Filterable)
-                        {
-                            <MudMenuItem OnClick="async () => await Grid.AddFilterAsync(_meta.SqlName)"
-                                         Icon="@Icons.Material.Filled.FilterAlt"
-                                         IconColor="Color.Primary">Фильтровать</MudMenuItem>
-                        }
-                    </ChildContent>
-                </MudMenu>
+                <KescoMenu Icon="@Icons.Material.Filled.MoreVert"
+                           Class="@("kesco-column-menu" + (Grid.ColumnMenuMode == ColumnMenuMode.Mobile ? " column-menu-mobile" : ""))"
+                           ActivatorStyle="padding:0;width:22px;height:22px;min-width:22px">
+                    @if (Grid.IsGroupingTrayExpanded && _meta.Groupable)
+                    {
+                        <MudMenuItem OnClick="async () => await Grid.AddGroupAsync(_meta.SqlName)"
+                                     Icon="@Icons.Material.Filled.AccountTree"
+                                     IconColor="Color.Primary">Группировать</MudMenuItem>
+                    }
+                    @if (Grid.IsFilterTrayExpanded && _meta.Filterable)
+                    {
+                        <MudMenuItem OnClick="async () => await Grid.AddFilterAsync(_meta.SqlName)"
+                                     Icon="@Icons.Material.Filled.FilterAlt"
+                                     IconColor="Color.Primary">Фильтровать</MudMenuItem>
+                    }
+                </KescoMenu>
             }
         </div>
     </HeaderTemplate>

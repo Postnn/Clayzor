@@ -172,6 +172,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
 | **KescoErrorBar** — баннер ошибок БД с детализацией (SQL, параметры) | [docs/kesco-error-bar.md](docs/kesco-error-bar.md) |
 | **KescoButton** — обёртка `MudTooltip` + `MudIconButton` с авто-сбросом тултипа после клика. Заменяет пару `<MudTooltip><MudIconButton/></MudTooltip>` | — |
+| **KescoMenu** — обёртка `MudMenu` с авто-построением кнопки-активатора (опциональный тултип, сброс тултипа после клика). Заменяет `<MudMenu><ActivatorContent><MudTooltip><MudIconButton/></MudTooltip></ActivatorContent></MudMenu>` | — |
 | **ConfirmDialog** — диалог подтверждения | [docs/confirm-dialog.md](docs/confirm-dialog.md) |
 | **ILookupEntity** — интерфейс справочной сущности (`int Id`, `string Name`) | [docs/entity-crud.md](docs/entity-crud.md) |
 | **KescoTheme** — corporate theme (DarkNavy + Gold accent). Applied in MainLayout | — |
@@ -305,6 +306,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - No CI/CD, no linter configuration
 - **Использовать готовые компоненты из `src\Kesco.Lib.Web.BZ.Controls`** при разработке форм (KescoEditForm, KescoComboBox, ConfirmDialog, KescoColumnFilterDialog, KescoErrorBar). Проверять наличие подходящего компонента перед использованием MudBlazor-компонентов напрямую.
 - **Кнопки с тултипом**: всегда использовать `<KescoButton>` вместо пары `<MudTooltip><MudIconButton/></MudTooltip>`. `KescoButton` автоматически сбрасывает тултип после клика, предотвращая «залипание» при открытии диалогов.
+- **Выпадающие меню**: всегда использовать `<KescoMenu>` вместо `<MudMenu>` с `<ActivatorContent>`, `<MudTooltip>` и `<MudIconButton>`. `KescoMenu` автоматически строит кнопку-активатор с опциональным тултипом и сбрасывает тултип после клика, аналогично `KescoButton`.
 - `[Column]` attributes use exact Russian database column names — do not translate
 - SQL queries reference tables by Russian names (e.g. `МедицинскиеАнализы`, `МедицинскиеАнализыТипы`)
 - Each SQL constant must be documented with `///` XML doc and `--` inline SQL comments for every column
