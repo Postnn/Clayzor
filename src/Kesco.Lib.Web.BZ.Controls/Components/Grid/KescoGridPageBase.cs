@@ -141,6 +141,29 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         = InferFilterColumnTypes();
 
     /// <summary>
+    /// Кеш маппинга SQL-имя колонки → <see cref="PropertyInfo"/> свойства сущности <typeparamref name="T"/>.
+    /// Используется при построении групповых заголовков для Excel-экспорта всех данных —
+    /// читает значения групповых колонок из свойств сущности по их SQL-именам.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, PropertyInfo> _propertyMap
+        = BuildPropertyMap();
+
+    /// <summary>
+    /// Строит словарь SQL-имя колонки → <see cref="PropertyInfo"/> через рефлексию
+    /// по <see cref="ColumnAttribute"/> и свойствам <typeparamref name="T"/>.
+    /// </summary>
+    private static Dictionary<string, PropertyInfo> BuildPropertyMap()
+    {
+        var map = new Dictionary<string, PropertyInfo>(StringComparer.OrdinalIgnoreCase);
+        foreach (var prop in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            var colAttr = prop.GetCustomAttribute<ColumnAttribute>();
+            map[colAttr?.Name ?? prop.Name] = prop;
+        }
+        return map;
+    }
+
+    /// <summary>
     /// Определяет типы колонок для фильтрации через рефлексию по свойствам <typeparamref name="T"/>.
     /// </summary>
     private static Dictionary<string, ColumnType> InferFilterColumnTypes()
@@ -202,7 +225,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
             {
                 ExcelExportMode.CurrentPage => await BuildExportRows(),
                 ExcelExportMode.Selected   => _rows, // TODO: отфильтровать по SelectedItems
-                ExcelExportMode.All        => _rows, // TODO: загрузить все данные без пагинации
+                ExcelExportMode.All        => await BuildAllRowsForExcel(),
                 _ => _rows
             };
 
@@ -337,6 +360,128 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Загружает ВСЕ строки для экспорта в Excel.
+    /// Плоский режим — один запрос (без пагинации).
+    /// Группировка — запрос агрегатов (GROUP BY) + один запрос всех строк,
+    /// групповая структура строится в C# по отсортированным данным.
+    /// </summary>
+    private async Task<List<IGridRow>> BuildAllRowsForExcel()
+    {
+        if (_query.GroupEnabled && _query.GroupColumns.Count > 0)
+            return await BuildAllGroupedRowsForExcel();
+        return await BuildAllFlatRowsForPrint();
+    }
+
+    /// <summary>
+    /// Режим группировки для Excel-экспорта всех данных.
+    /// Делает ровно 2 SQL-запроса:
+    /// 1. GROUP BY для агрегатов (количество записей в каждой группе)
+    /// 2. SELECT * без пагинации, отсортированный по групповым колонкам + детальный порядок.
+    /// Групповые заголовки (<see cref="GroupHeaderRow"/>) строятся в C# путём
+    /// однопроходного детектирования смены группового ключа.
+    /// В отличие от <see cref="BuildAllGroupedRowsForPrint"/> не делает N запросов
+    /// на каждую листовую группу.
+    /// </summary>
+    private async Task<List<IGridRow>> BuildAllGroupedRowsForExcel()
+    {
+        var selectSql     = Grid?.SelectSql     ?? string.Empty;
+        var searchColumns = Grid?.SearchColumns ?? [];
+        var defaultOrder  = Grid?.DefaultOrder  ?? string.Empty;
+
+        var searchWhere    = _query.BuildWhereClause(searchColumns);
+        var dp             = new DynamicParameters();
+        dp.Add("search", $"%{_query.SearchText}%");
+        var colFilterWhere = _query.BuildColumnFilterClause(dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+
+        var groupCols = _query.GroupColumns.ToList();
+
+        // ── Запрос 1: GROUP BY агрегаты ─────────────────────────────
+        var groupSql  = KescoGroupingEngine.BuildGroupAggregateSql(
+            selectSql, groupCols, where, _query.SortColumns);
+        var groupRows = await Db.QueryAsync<GridGroupRow>(groupSql, dp);
+
+        var aggregates = KescoGroupingEngine.BuildAggregates(groupRows);
+        var roots      = KescoGroupingEngine.BuildTree(aggregates);
+        KescoGroupingEngine.ComputeParentCounts(roots);
+
+        // FullKey → ItemCount (DFS по дереву — листовые и родительские узлы)
+        var countLookup = new Dictionary<string, int>();
+        CollectCounts(roots, countLookup);
+
+        // ── Запрос 2: все строки одним запросом ─────────────────────
+        // BuildOrderBy с GroupEnabled=true ставит групповые колонки первыми
+        // (с учётом направления сортировки) — данные приходят уже сгруппированными
+        var orderBy = _query.BuildOrderBy(defaultOrder);
+        var flatSql = $"SELECT * FROM ({selectSql}) _src";
+        if (!string.IsNullOrWhiteSpace(where))
+            flatSql += $" WHERE {where}";
+        if (!string.IsNullOrWhiteSpace(orderBy))
+            flatSql += $" ORDER BY {orderBy}";
+
+        var items = await Db.QueryAsync<T>(flatSql, dp);
+
+        // ── C# interleaving: групповые заголовки + строки ───────────
+        var result     = new List<IGridRow>();
+        string?[]? previousKeys = null;
+
+        foreach (var item in items)
+        {
+            // Извлекаем значения групповых колонок из свойств сущности
+            var currentKeys = groupCols
+                .Select(c => _propertyMap.TryGetValue(c, out var p)
+                    ? p.GetValue(item)?.ToString()
+                    : null)
+                .ToArray();
+
+            // Находим первый уровень, где групповой ключ изменился
+            int firstDiff = 0;
+            if (previousKeys is not null)
+            {
+                while (firstDiff < previousKeys.Length
+                       && firstDiff < currentKeys.Length
+                       && string.Equals(previousKeys[firstDiff], currentKeys[firstDiff]))
+                    firstDiff++;
+            }
+
+            // Эмитим заголовки для новых или изменившихся групп
+            for (int depth = firstDiff; depth < groupCols.Count; depth++)
+            {
+                var keys         = currentKeys.Take(depth + 1).ToList();
+                var displayValue = keys[depth] ?? "(пусто)";
+                var fullKey      = string.Join("", keys);
+
+                result.Add(new GroupHeaderRow
+                {
+                    DisplayValue = displayValue,
+                    FullKey      = fullKey,
+                    ItemCount    = countLookup.TryGetValue(fullKey, out var cnt) ? cnt : 0,
+                    Depth        = depth,
+                    GroupKeys    = keys!,
+                });
+            }
+
+            result.Add(new DetailRow<T> { Item = item });
+            previousKeys = currentKeys;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Рекурсивно собирает <c>FullKey → ItemCount</c> из дерева групп
+    /// (<see cref="GridGroupNode"/>), включая родительские и листовые узлы.
+    /// </summary>
+    private static void CollectCounts(List<GridGroupNode> nodes, Dictionary<string, int> lookup)
+    {
+        foreach (var node in nodes)
+        {
+            lookup[node.Aggregate.FullKey] = node.Aggregate.ItemCount;
+            CollectCounts(node.Children, lookup);
+        }
     }
 
     /// <summary>

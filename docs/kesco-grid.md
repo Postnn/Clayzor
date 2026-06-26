@@ -464,7 +464,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 **Индикатор загрузки**: флаг `_isExporting` в `KescoGrid.razor` устанавливается в `true` перед вызовом `DataLoader.ExcelExportAsync()` и сбрасывается в `false` в `finally`-блоке. Пока `_isExporting = true`, рядом с заголовком грида (`MudText Typo="Typo.h5"`) показывается `MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small"`.
 
-Режимы `Selected` и `All` — TODO (пока выгружают текущую страницу).
+Режим `Selected` — TODO (пока выгружает текущую страницу). Режим `All` — полностью реализован (один GROUP BY + один плоский запрос всех строк, групповая структура строится в C#).
 
 #### Печать всех данных
 
