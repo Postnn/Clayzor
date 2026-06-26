@@ -152,8 +152,7 @@ public static void Initialize()
             TotalCount="@_query.TotalCount"
             PageNumber="@_query.PageNumber"
             ShowPagination="true"
-            OnAdd="OpenAddDialog"
-            OnRowClick="OnRowClicked">
+            OnAdd="OpenAddDialog">
 
 
     <ColumnDefs>

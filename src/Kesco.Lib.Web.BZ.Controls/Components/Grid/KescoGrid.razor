@@ -274,7 +274,7 @@
                  Hover="true"
                  Striped="true"
                  Loading="@Loading"
-                 RowClick="@OnRowClick"
+
                  RowsPerPage="@_pageSize"
                  MultiSelection="@_selectMode"
                  SelectedItemsChanged="OnSelectedItemsChanged">
@@ -285,6 +285,24 @@
             }
             else
             {
+                @if (EditDialogType is not null)
+                {
+                    <TemplateColumn @key="ServiceEditColumnKey" T="TEntity"
+                                    Title=""
+                                    Sortable="false"
+                                    DragAndDropEnabled="false"
+                                    Style="width:44px;min-width:44px;max-width:44px">
+                        <CellTemplate>
+                            @if (context.Item is IDetailRow detail)
+                            {
+                                <KescoButton Icon="@Icons.Material.Filled.Edit"
+                                             Text="Редактировать"
+                                             Size="Size.Small"
+                                             OnClick="async () => await HandleEditClick(detail)" />
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                }
                 @foreach (var colId in _columnOrder)
                 {
                     if (!_columnById.TryGetValue(colId, out var ordMeta)) continue;
@@ -392,6 +410,7 @@
     private int _pageNumber = 1;
     private int _pageSize;
     private int _dataKey;
+    private const string ServiceEditColumnKey = "__kesco_edit";
 
     /// <summary>
     /// Срабатывает при регистрации или отмене регистрации колонки.
@@ -483,8 +502,10 @@
     /// <summary>Событие нажатия кнопки «Добавить».</summary>
     [Parameter] public EventCallback OnAdd { get; set; }
 
-    /// <summary>Событие клика по строке грида.</summary>
-    [Parameter] public EventCallback<DataGridRowClickEventArgs<TEntity>> OnRowClick { get; set; }
+    /// <summary>
+    /// Текст уведомления после успешного сохранения записи через сервисную колонку.
+    /// </summary>
+    [Parameter] public string EditSuccessMessage { get; set; } = "Запись обновлена";
 
     /// <summary>Событие изменения параметров запроса (поиск, сортировка, пагинация и т.д.).</summary>
     [Parameter] public EventCallback<KescoDataQuery> OnQueryChanged { get; set; }
@@ -790,6 +811,24 @@
             || (_filterTrayExpanded && meta.Filterable));
 
     private void HandleSortClick(string sqlName) => _ = ToggleSort(sqlName);
+
+    /// <summary>
+    /// Открывает диалог редактирования для строки детализации.
+    /// Вызывается из сервисной колонки с иконкой карандаша.
+    /// После успешного сохранения показывает уведомление и перезагружает данные.
+    /// </summary>
+    private async Task HandleEditClick(IDetailRow detail)
+    {
+        if (EditDialogType is null) return;
+        var parameters = new DialogParameters { ["Model"] = detail.Item };
+        var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
+        var dialog = await DialogService.ShowExAsync(EditDialogType, string.Empty, parameters, options);
+        if (!(await dialog.Result)?.Canceled ?? false)
+        {
+            Snackbar.Add(EditSuccessMessage, Severity.Success);
+            await NotifyQueryChanged();
+        }
+    }
 
     private List<int> _columnOrderSnapshot = [];
 

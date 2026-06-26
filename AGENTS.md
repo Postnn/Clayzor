@@ -169,8 +169,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Компонент | Документация |
 |---|---|
-| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode` | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoGridPageBase\<T>** — базовый класс страниц с гридом. Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`, `OnRowClicked`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. При `EditDialogType != null` автоматически добавляет сервисную колонку (первой) с иконкой карандаша для открытия диалога редактирования. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGridPageBase\<T>** — базовый класс страниц с гридом. Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumn\<T>** — колонка грида с авто-заголовком. Получает Title/SortName/Drag&Drop из `KescoColumnDef` по `ColumnId`. Скрывается при группировке. Кнопка меню ⋮ для мобильных | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnDef** — невидимый регистратор метаданных колонки: `ColumnId` (EditorRequired), `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGroupHeader** — заголовок строки группы с иконкой раскрытия/сворачивания и количеством элементов | [docs/kesco-grid.md](docs/kesco-grid.md) |

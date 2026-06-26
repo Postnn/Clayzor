@@ -3,6 +3,8 @@
 Универсальный компонент-грид с серверной постраничной выборкой, поиском, сортировкой, группировкой и фильтрацией по колонкам.
 Используется совместно с базовым классом страницы [`KescoGridPageBase<T>`](#kescogridpagebaset).
 
+При `EditDialogType != null` грид автоматически добавляет **сервисную колонку** (первой, ширина 44px) с иконкой карандаша (`Icons.Material.Filled.Edit`). Иконка отображается только для строк детализации (`DetailRow<T>`), для заголовков групп (`GroupHeaderRow`) — пустая ячейка. При клике открывается диалог редактирования с параметром `Model = detail.Item`. После успешного сохранения показывает уведомление (`EditSuccessMessage`) и перезагружает данные.
+
 ## Параметры
 
 | Параметр | Тип | По умолчанию | Описание |
@@ -29,10 +31,11 @@
 | `ShowExcel` | `bool` | `false` | Показать группу «Выгрузка в Excel» в меню групповых операций. При экспорте рядом с заголовком показывается спиннер |
 | `CustomBatchGroups` | `IReadOnlyList<BatchOperationGroup>?` | `null` | Кастомные группы операций (рендерятся после стандартных) |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
-| `OnRowClick` | `EventCallback<DataGridRowClickEventArgs<TEntity>>` | — | Клик по строке |
+| `EditSuccessMessage` | `string` | `"Запись обновлена"` | Текст уведомления после успешного сохранения через сервисную колонку |
 | `AllowColumnReorder` | `bool` | `true` | Разрешить перетаскивание колонок грида мышью |
 
 Удалённые параметры (больше не используются):
+- ~~`OnRowClick`~~ — редактирование открывается через сервисную колонку (иконка карандаша), которая добавляется автоматически при `EditDialogType != null`
 - ~~`OnPrintCurrentPage`, `OnPrintAll`, `OnPrintSelected`~~ — заменены на `ShowPrint`
 - ~~`OnExcelCurrentPage`, `OnExcelAll`, `OnExcelSelected`~~ — заменены на `ShowExcel`
 - ~~`Groupable`~~ — группировка выполняется сервером, не MudBlazor
@@ -309,7 +312,6 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 | `LoadData()` | Диспетчер: вызывает LoadGroupedData или LoadFlatData в зависимости от состояния группировки |
 | `ToggleGroup(GroupHeaderRow)` | Раскрытие/сворачивание группы с авто-пагинацией |
 | `OpenAddDialog()` | Открывает диалог добавления (тип из `EditDialogType`) |
-| `OnRowClicked(DataGridRowClickEventArgs<IKescoGridRow>)` | Обработчик клика по строке: группа → ToggleGroup, деталь → диалог редактирования |
 
 ### Поля (protected, доступны в разметке)
 
@@ -345,8 +347,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
             TotalCount="@_query.TotalCount"
             PageNumber="@_query.PageNumber"
             ShowPagination="true"
-            OnAdd="OpenAddDialog"
-            OnRowClick="OnRowClicked">
+            OnAdd="OpenAddDialog">
 
     <ColumnDefs>
         <KescoColumnDef ColumnId="1" SqlName="TestTypeName"            DisplayName="Тип"      Groupable="true" Filterable="true" />

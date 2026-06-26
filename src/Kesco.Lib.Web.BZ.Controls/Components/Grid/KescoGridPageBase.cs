@@ -772,35 +772,6 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         }
     }
 
-    /// <summary>
-    /// Обрабатывает клик по строке грида:
-    /// если строка — заголовок группы, переключает её раскрытие/сворачивание;
-    /// если строка — детальная запись, открывает диалог редактирования.
-    /// Тип диалога берётся из параметра <c>EditDialogType</c> грида.
-    /// После подтверждения редактирования показывает уведомление и перезагружает данные.
-    /// </summary>
-    protected async Task OnRowClicked(DataGridRowClickEventArgs<IKescoGridRow> args)
-    {
-        if (args.Item is GroupHeaderRow header)
-        {
-            await ToggleGroup(header);
-            return;
-        }
-
-        if (args.Item is DetailRow<T> detail)
-        {
-            var dialogType = Grid?.EditDialogType;
-            if (dialogType is null) return;
-
-            var parameters = new DialogParameters { ["Model"] = detail.Item };
-            var options = new DialogOptionsEx { MaxWidth = MaxWidth.Small, FullWidth = true, DragMode = MudDialogDragMode.Simple };
-            var dialog = await DialogService.ShowExAsync(dialogType, string.Empty, parameters, options);
-            if (!(await dialog.Result)?.Canceled ?? false)
-                Snackbar.Add(SaveSuccessMessage, Severity.Success);
-            await LoadData();
-        }
-    }
-
     // ── Загрузка данных (реализованы здесь, не переопределяются) ────────────────
 
     /// <summary>
