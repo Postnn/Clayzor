@@ -79,7 +79,7 @@ public class MyLookup : ILookupEntity
 
 ## Серверная группировка — модель данных
 
-`Kesco.Lib.Entities/GridRow.cs` содержит типы для плоской модели с группами:
+`Kesco.Lib.Web.BZ.Controls/Components/Grid/GridRow.cs` содержит типы для плоской модели с группами:
 
 ```csharp
 public interface IGridRow { }

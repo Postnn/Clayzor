@@ -718,33 +718,27 @@ body {
         display: none !important;
     }
 
-    /* ── Треи: скрыть пустые, показать активные ── */
-    .kesco-grid-printing .grouping-tray { display: none !important; }
-    .kesco-grid-printing .filter-tray     { display: none !important; }
-
+    /* ── Треи: скрыть в печати (вместо них — текстовые описания) ── */
+    .kesco-grid-printing .grouping-tray,
+    .kesco-grid-printing .filter-tray,
     .kesco-grid-printing .grouping-tray--active,
     .kesco-grid-printing .filter-tray--active {
-        display: flex !important;
+        display: none !important;
+    }
+
+    /* ── Текстовые описания группировки и фильтрации (аналог Print All) ── */
+    .kesco-grid-print-descriptions { display: none; }
+
+    .kesco-grid-printing .kesco-grid-print-descriptions {
+        display: block !important;
         margin-bottom: 8px !important;
     }
 
-    /* ── Чипы в активных треях — Ч/Б ── */
-    .kesco-grid-printing .grouping-chip,
-    .kesco-grid-printing .filter-chip {
-        background: #fff !important;
-        border: 1px solid #999 !important;
-        color: #000 !important;
-        border-radius: 2px !important;
-        padding: 2px 8px !important;
-    }
-
-    .kesco-grid-printing .grouping-tray-icon,
-    .kesco-grid-printing .filter-tray-icon {
-        color: #000 !important;
-    }
-
-    .kesco-grid-printing .chip-label {
-        color: #000 !important;
+    .kesco-grid-printing .kesco-grid-print-group-desc,
+    .kesco-grid-printing .kesco-grid-print-filter-desc {
+        font-size: 8pt !important;
+        color: #555 !important;
+        margin-bottom: 4px !important;
     }
 
     /* ── Заголовок грида ── */

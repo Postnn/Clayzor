@@ -1,4 +1,6 @@
-namespace Kesco.Lib.Entities;
+using Kesco.Lib.Entities;
+
+namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
 /// <summary>
 /// Маркерный интерфейс для строки в плоском списке с группами.

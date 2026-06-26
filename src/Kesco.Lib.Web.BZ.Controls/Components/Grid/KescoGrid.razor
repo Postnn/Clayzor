@@ -154,6 +154,24 @@
         </MudStack>
     </div>
 
+    @{
+        var filterDesc = BuildFilterDescription();
+        var groupDesc  = BuildGroupDescription();
+    }
+    @if (filterDesc is not null || groupDesc is not null)
+    {
+        <div class="kesco-grid-print-descriptions">
+            @if (groupDesc is not null)
+            {
+                <div class="kesco-grid-print-group-desc">@groupDesc</div>
+            }
+            @if (filterDesc is not null)
+            {
+                <div class="kesco-grid-print-filter-desc">@filterDesc</div>
+            }
+        </div>
+    }
+
     @if (_trayExpanded)
     {
         <div class="grouping-tray @(_groupColumns.Count > 0 ? "grouping-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
@@ -176,6 +194,18 @@
                     <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
                              Size="Size.Small"
                              Style="margin-right:6px;opacity:0.45;flex-shrink:0;cursor:grab" />
+                    @if (DataLoader is not null)
+                    {
+                        var depth = idx;
+                        var isExpanded = DataLoader.IsLevelFullyExpanded(depth);
+                        <MudIconButton
+                            Icon="@(isExpanded ? Icons.Material.Filled.UnfoldLess : Icons.Material.Filled.UnfoldMore)"
+                            Size="Size.Small"
+                            OnClick="async () => await ToggleLevel(depth)"
+                            Class="pa-0"
+                            Style="width:18px;height:18px;margin-right:4px;color:var(--lh-gold)"
+                            title="@(isExpanded ? "Свернуть все группы" : "Развернуть все группы")" />
+                    }
                     <span class="chip-label chip-label-clickable" @onclick="async () => await ToggleSort(col)" @onclick:stopPropagation="true">@displayName</span>
                     @GetSortBadge(col)
                     <MudIconButton Icon="@Icons.Material.Filled.Close"
@@ -923,6 +953,18 @@
         _groupColumns.Remove(column);
         _pageNumber = 1;
         await NotifyQueryChanged();
+    }
+
+    /// <summary>
+    /// Переключает развёрнутость всех групп на заданной глубине через DataLoader.
+    /// </summary>
+    private async Task ToggleLevel(int depth)
+    {
+        if (DataLoader is not null)
+        {
+            await DataLoader.ToggleLevelExpandedAsync(depth);
+            StateHasChanged();
+        }
     }
 
     private void OnChipDragStart(DragEventArgs e, int index)

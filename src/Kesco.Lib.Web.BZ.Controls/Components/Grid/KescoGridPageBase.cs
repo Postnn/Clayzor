@@ -43,6 +43,24 @@ public interface IKescoGridDataLoader
     Task<string> BuildPrintHtmlAsync(
         IReadOnlyList<KescoColumnMeta> columns, string title,
         string? filterDescription, string? groupDescription);
+
+    /// <summary>
+    /// Проверяет, развёрнуты ли ВСЕ группы на указанной глубине.
+    /// Используется чипами панели группировки для отображения иконки переключателя
+    /// (<see cref="Icons.Material.Filled.UnfoldLess"/> / <see cref="Icons.Material.Filled.UnfoldMore"/>).
+    /// Возвращает false, если хотя бы одна группа свёрнута или группировка не активна.
+    /// </summary>
+    bool IsLevelFullyExpanded(int depth);
+
+    /// <summary>
+    /// Переключает состояние ВСЕХ групп на указанной глубине.
+    /// При разворачивании — каскадно разворачивает родительские уровни (0..depth-1).
+    /// При сворачивании — сворачивает только этот уровень (дочерние группы сохраняют
+    /// своё индивидуальное состояние в <see cref="KescoDataQuery.ExpandedGroups"/>,
+    /// но становятся невидимы через <see cref="KescoGroupingEngine.WalkTree"/>).
+    /// После переключения сбрасывает страницу на 1 и перезагружает данные.
+    /// </summary>
+    Task ToggleLevelExpandedAsync(int depth);
 }
 
 /// <summary>
@@ -107,6 +125,20 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
 
     /// <summary>Признак загрузки данных — управляет индикатором в <see cref="KescoGrid{TEntity}"/>.</summary>
     protected bool _loading = true;
+
+    /// <summary>
+    /// Корни дерева групп — кешируются после успешной загрузки групповых данных
+    /// в <see cref="LoadGroupedData"/>. Используется для получения всех FullKey
+    /// групп по глубине (переключатели «развернуть/свернуть все» на чипах трея).
+    /// null — данные не загружены или активен плоский режим.
+    /// </summary>
+    private List<GridGroupNode>? _groupTreeRoots;
+
+    /// <summary>
+    /// Кеш: глубина → список FullKey всех групп на этой глубине.
+    /// Сбрасывается при каждой перезагрузке групповых данных.
+    /// </summary>
+    private Dictionary<int, List<string>>? _groupKeysByDepth;
 
     // ── Настройки уведомлений — могут быть переопределены на странице ─────────────
 
@@ -565,6 +597,75 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
             .TrimEnd('.');
     }
 
+    // ── Per-level expand/collapse (переключатели на чипах трея группировки) ────
+
+    /// <summary>
+    /// Возвращает словарь глубина → список FullKey всех групп на этой глубине.
+    /// Строится рекурсивным обходом кешированного дерева групп (<see cref="_groupTreeRoots"/>).
+    /// </summary>
+    private Dictionary<int, List<string>> GetGroupKeysByDepth()
+    {
+        if (_groupKeysByDepth is not null) return _groupKeysByDepth;
+        _groupKeysByDepth = new Dictionary<int, List<string>>();
+        if (_groupTreeRoots is not null)
+            CollectKeysByDepth(_groupTreeRoots, _groupKeysByDepth);
+        return _groupKeysByDepth;
+    }
+
+    /// <summary>
+    /// Рекурсивно собирает FullKey групп из дерева, группируя их по глубине.
+    /// </summary>
+    private static void CollectKeysByDepth(
+        List<GridGroupNode> nodes, Dictionary<int, List<string>> result)
+    {
+        foreach (var node in nodes)
+        {
+            var d = node.Aggregate.Depth;
+            if (!result.ContainsKey(d)) result[d] = [];
+            result[d].Add(node.Aggregate.FullKey);
+            CollectKeysByDepth(node.Children, result);
+        }
+    }
+
+    /// <summary>
+    /// Проверяет, развёрнуты ли ВСЕ группы на указанной глубине.
+    /// </summary>
+    bool IKescoGridDataLoader.IsLevelFullyExpanded(int depth)
+    {
+        var map = GetGroupKeysByDepth();
+        return map.TryGetValue(depth, out var keys) && keys.Count > 0
+            && keys.All(k => _query.ExpandedGroups.Contains(k));
+    }
+
+    /// <summary>
+    /// Переключает состояние ВСЕХ групп на указанной глубине.
+    /// При разворачивании — каскадно разворачивает родительские уровни (0..depth-1).
+    /// При сворачивании — сворачивает только этот уровень.
+    /// Сбрасывает страницу на 1 и перезагружает данные.
+    /// </summary>
+    async Task IKescoGridDataLoader.ToggleLevelExpandedAsync(int depth)
+    {
+        var map = GetGroupKeysByDepth();
+        if (!map.TryGetValue(depth, out var keys) || keys.Count == 0) return;
+
+        bool allExpanded = keys.All(k => _query.ExpandedGroups.Contains(k));
+
+        if (allExpanded)
+        {
+            foreach (var k in keys) _query.ExpandedGroups.Remove(k);
+        }
+        else
+        {
+            // Каскад вверх: разворачиваем все родительские уровни
+            for (int d = 0; d <= depth; d++)
+                if (map.TryGetValue(d, out var levelKeys))
+                    foreach (var k in levelKeys) _query.ExpandedGroups.Add(k);
+        }
+
+        _query.PageNumber = 1;
+        await LoadData();
+    }
+
     // ── Инфраструктура (не переопределяются на странице) ────────────────────────
 
     /// <summary>
@@ -708,6 +809,9 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// </summary>
     private async Task LoadFlatData()
     {
+        _groupTreeRoots   = null;
+        _groupKeysByDepth = null;
+
         var selectSql     = Grid?.SelectSql     ?? string.Empty;
         var searchColumns = Grid?.SearchColumns ?? [];
         var defaultOrder  = Grid?.DefaultOrder  ?? string.Empty;
@@ -754,6 +858,8 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         var aggregates = KescoGroupingEngine.BuildAggregates(groupRows);
         var roots      = KescoGroupingEngine.BuildTree(aggregates);
         KescoGroupingEngine.ComputeParentCounts(roots);
+        _groupTreeRoots    = roots;
+        _groupKeysByDepth  = null;
 
         // Шаг 3: страничная разметка
         int totalEffective = roots.Sum(r => KescoGroupingEngine.ComputeEffectiveRows(r, _query.ExpandedGroups));
