@@ -211,17 +211,17 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 2. **Запрос детальных строк** — выборка конкретных записей с `ROW_NUMBER()` и фильтром по значениям группы
 
 ### Модель данных
-- `IGridRow` — маркерный интерфейс строки в плоском списке (`Kesco.Lib.Web.BZ.Controls/Components/Grid/GridRow.cs`)
+- `IKescoGridRow` — маркерный интерфейс строки в плоском списке (`Kesco.Lib.Web.BZ.Controls/Components/Grid/KescoGridRow.cs`)
 - `GroupHeaderRow` — заголовок группы: `FullKey`, `DisplayValue`, `ItemCount`, `Depth`, `IsExpanded`
 - `DetailRow<T>` — обёртка сущности: `Item`, `GroupKey`, `Depth`
 - `GroupedPage<T>` — результат запроса: `Rows` (плоский список) + `TotalEffectiveRows`
 - `KescoDataQuery.ExpandedGroups` — `HashSet<string>` полных ключей развёрнутых групп (разделитель `\u001F`)
 
 ### Рендеринг
-- **Плоская модель**: заголовки групп и строки детализации передаются как единый `IEnumerable<IGridRow>`
+- **Плоская модель**: заголовки групп и строки детализации передаются как единый `IEnumerable<IKescoGridRow>`
 - Колонки используют компонент `<KescoColumn>` с проверкой типа в `CellTemplate`:
   ```razor
-  <KescoColumn TEntity="IGridRow" ColumnId="2">
+  <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
       <CellTemplate>
           @if (context.Item is GroupHeaderRow header)
           {
@@ -299,7 +299,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 ### Интеграция на странице (через KescoGridPageBase\<T>)
 Конфигурация SQL передаётся через параметры `<KescoGrid>`:
 ```razor
-<KescoGrid TEntity="IGridRow"
+<KescoGrid TEntity="IKescoGridRow"
            DataLoader="this"
            SelectSql="@SQLQueries.SELECT_МоиЗаписи"
            SearchColumns="@(new[]{"НазваниеАнализа","TestTypeName"})"
@@ -346,7 +346,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - **Grouping tray**: заголовки колонок генерируются автоматически через `<KescoColumn>` — drag-and-drop (`draggable="true"` с `data-col-sql`,
   `KescoDragState.DraggedColumn` устанавливается через JS→C# `SetDraggedColumn`) и серверная сортировка (`@onclick` → `Grid.ToggleSort(query.SqlName)`) встроены в компонент.
   При перетаскивании на панель группировки колонка добавляется автоматически. Сортировка по сгруппированным колонкам разрешена (клик по чипу в трее).
-  Каждый чип имеет переключатель `UnfoldMore`/`UnfoldLess` — разворачивает/сворачивает ВСЕ группы этого уровня (с каскадом вверх: разворачивание уровня N разворачивает и уровни 0..N−1).
+  Каждый чип имеет переключатель `UnfoldMore`/`UnfoldLess` — разворачивает/сворачивает ВСЕ группы этого уровня (с каскадом вверх: разворачивание уровня N разворачивает и уровни 0..N−1). Кнопка `MoreVert` (⋮) справа — контекстное меню с пунктом «Фильтровать» (аналог меню заголовка колонки, вызывает `OpenFilterDialog`).
   Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
   Кнопка группировки появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Groupable="true"`.
   Кнопки тулбара (группировка, фильтрация, добавить, выбрать, групповые операции) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /

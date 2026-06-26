@@ -79,12 +79,12 @@ public class MyLookup : ILookupEntity
 
 ## Серверная группировка — модель данных
 
-`Kesco.Lib.Web.BZ.Controls/Components/Grid/GridRow.cs` содержит типы для плоской модели с группами:
+`Kesco.Lib.Web.BZ.Controls/Components/Grid/KescoGridRow.cs` содержит типы для плоской модели с группами:
 
 ```csharp
-public interface IGridRow { }
+public interface IKescoGridRow { }
 
-public class GroupHeaderRow : IGridRow
+public class GroupHeaderRow : IKescoGridRow
 {
     public string DisplayValue { get; set; }
     public string FullKey { get; set; }      // ключи через \u001F
@@ -94,7 +94,7 @@ public class GroupHeaderRow : IGridRow
     public List<string> GroupKeys { get; set; }
 }
 
-public class DetailRow<T> : IGridRow where T : Entity
+public class DetailRow<T> : IKescoGridRow where T : Entity
 {
     public T Item { get; set; }
     public string GroupKey { get; set; }
@@ -103,7 +103,7 @@ public class DetailRow<T> : IGridRow where T : Entity
 
 public class GroupedPage<T> where T : Entity
 {
-    public List<IGridRow> Rows { get; set; }
+    public List<IKescoGridRow> Rows { get; set; }
     public int TotalEffectiveRows { get; set; }
 }
 ```

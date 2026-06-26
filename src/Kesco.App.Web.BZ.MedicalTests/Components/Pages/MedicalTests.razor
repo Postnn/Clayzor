@@ -6,7 +6,7 @@
 
 <PageTitle>Медицинские исследования</PageTitle>
 
-<KescoGrid TEntity="IGridRow"
+<KescoGrid TEntity="IKescoGridRow"
            @ref="_dataGrid"
            DataLoader="this"
            Title="Медицинские исследования"
@@ -40,7 +40,7 @@
 
     <Columns>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="2">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
             <CellTemplate>
                 @if (context.Item is GroupHeaderRow header)
                 {
@@ -53,7 +53,7 @@
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="3">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="3">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -62,7 +62,7 @@
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="1">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="1">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -71,7 +71,7 @@
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="4">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="4">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -80,7 +80,7 @@
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="5">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="5">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -91,7 +91,7 @@
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="6">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="6">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail)
                 {
@@ -109,6 +109,6 @@
 @code {
     // Поле конкретного типа нужно для @ref и вызовов UI-методов (ToggleSort, GetSortBadge, GroupColumns).
     // Grid в базовом классе заполняется через переопределение свойства.
-    private KescoGrid<IGridRow> _dataGrid = null!;
+    private KescoGrid<IKescoGridRow> _dataGrid = null!;
     protected override IKescoGrid? Grid => _dataGrid;
 }

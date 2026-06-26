@@ -6,13 +6,13 @@ namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 /// Маркерный интерфейс для строки в плоском списке с группами.
 /// Каждая строка в <see cref="GroupedPage{T}.Rows"/> реализует этот интерфейс.
 /// </summary>
-public interface IGridRow { }
+public interface IKescoGridRow { }
 
 /// <summary>
 /// Заголовок группы в плоском списке.
 /// Содержит ключ, название, количество элементов и состояние развёрнутости.
 /// </summary>
-public class GroupHeaderRow : IGridRow
+public class GroupHeaderRow : IKescoGridRow
 {
     /// <summary>Отображаемое значение группы (например, название типа).</summary>
     public string DisplayValue { get; set; } = "";
@@ -40,7 +40,7 @@ public class GroupHeaderRow : IGridRow
 /// Негенерик-интерфейс для доступа к сущности строки детализации без знания типа T.
 /// Используется при экспорте данных, где тип сущности известен только во время выполнения.
 /// </summary>
-public interface IDetailRow : IGridRow
+public interface IDetailRow : IKescoGridRow
 {
     object? Item { get; }
 }
@@ -49,7 +49,7 @@ public interface IDetailRow : IGridRow
 /// Строка детализации — оборачивает сущность T.
 /// </summary>
 /// <typeparam name="T">Тип сущности (наследник Entity).</typeparam>
-public class DetailRow<T> : IDetailRow, IGridRow where T : Entity
+public class DetailRow<T> : IDetailRow, IKescoGridRow where T : Entity
 {
     /// <summary>Сущность — строка данных.</summary>
     public T Item { get; set; } = default!;
@@ -72,7 +72,7 @@ public class DetailRow<T> : IDetailRow, IGridRow where T : Entity
 public class GroupedPage<T> where T : Entity
 {
     /// <summary>Плоский список строк для отображения: заголовки групп + строки детализации.</summary>
-    public List<IGridRow> Rows { get; set; } = [];
+    public List<IKescoGridRow> Rows { get; set; } = [];
 
     /// <summary>Общее количество эффективных строк (заголовки групп + все строки детализации) с учётом состояния развёрнутости.</summary>
     public int TotalEffectiveRows { get; set; }

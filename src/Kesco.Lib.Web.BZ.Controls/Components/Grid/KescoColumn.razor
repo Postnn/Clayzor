@@ -13,7 +13,7 @@
     - Скрывает колонку при группировке (Hidden = IsGrouped(SqlName))
 
     Использование:
-        <KescoColumn TEntity="IGridRow" ColumnId="3">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="3">
             <CellTemplate>
                 @if (context.Item is DetailRow<MedicalTest> detail) { <MudText>@detail.Item.Name</MudText> }
             </CellTemplate>

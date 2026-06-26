@@ -33,7 +33,7 @@ public static class KescoGridExcelGenerator
     public static byte[] ExportToExcel(
         string title,
         IReadOnlyList<KescoColumnMeta> columns,
-        IReadOnlyList<IGridRow> rows,
+        IReadOnlyList<IKescoGridRow> rows,
         Type entityType,
         HashSet<string>? expandedGroups = null,
         string? filterDescription = null,

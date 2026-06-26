@@ -104,7 +104,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// protected override IKescoGrid? Grid
     /// {
     ///     get => _dataGrid;
-    ///     set => _dataGrid = value;   // _dataGrid объявлен как KescoGrid&lt;IGridRow&gt;
+    ///     set => _dataGrid = value;   // _dataGrid объявлен как KescoGrid&lt;IKescoGridRow&gt;
     /// }
     /// </code>
     /// Или проще — страница переопределяет свойство <see cref="Grid"/> через <c>@ref</c>-поле.
@@ -121,7 +121,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     protected KescoDataQuery _query = new();
 
     /// <summary>Строки текущей страницы (заголовки групп + строки детализации).</summary>
-    protected List<IGridRow> _rows = [];
+    protected List<IKescoGridRow> _rows = [];
 
     /// <summary>Признак загрузки данных — управляет индикатором в <see cref="KescoGrid{TEntity}"/>.</summary>
     protected bool _loading = true;
@@ -253,7 +253,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
             var columns = request.VisibleColumns;
             if (columns.Count == 0) return;
 
-            List<IGridRow> rowsToExport = request.Mode switch
+            List<IKescoGridRow> rowsToExport = request.Mode switch
             {
                 ExcelExportMode.CurrentPage => await BuildExportRows(),
                 ExcelExportMode.Selected   => _rows, // TODO: отфильтровать по SelectedItems
@@ -298,7 +298,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// (поиск + фильтры), с учётом группировки и состояния развёрнутости групп.
     /// НЕ модифицирует <see cref="_rows"/> — возвращает новый список.
     /// </summary>
-    private async Task<List<IGridRow>> BuildAllRowsForPrint()
+    private async Task<List<IKescoGridRow>> BuildAllRowsForPrint()
     {
         if (_query.GroupEnabled && _query.GroupColumns.Count > 0)
             return await BuildAllGroupedRowsForPrint();
@@ -308,7 +308,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// <summary>
     /// Плоский режим: все строки без ROW_NUMBER() и пагинации.
     /// </summary>
-    private async Task<List<IGridRow>> BuildAllFlatRowsForPrint()
+    private async Task<List<IKescoGridRow>> BuildAllFlatRowsForPrint()
     {
         var selectSql     = Grid?.SelectSql     ?? string.Empty;
         var searchColumns = Grid?.SearchColumns ?? [];
@@ -328,14 +328,14 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
             sql += $" ORDER BY {orderBy}";
 
         var items = await Db.QueryAsync<T>(sql, dp);
-        return items.Select(i => (IGridRow)new DetailRow<T> { Item = i }).ToList();
+        return items.Select(i => (IKescoGridRow)new DetailRow<T> { Item = i }).ToList();
     }
 
     /// <summary>
     /// Режим группировки: GROUP BY для всего дерева, WalkTree без страничных
     /// границ (pageStart=1, pageEnd=int.MaxValue), все detail-строки развёрнутых групп.
     /// </summary>
-    private async Task<List<IGridRow>> BuildAllGroupedRowsForPrint()
+    private async Task<List<IKescoGridRow>> BuildAllGroupedRowsForPrint()
     {
         var selectSql     = Grid?.SelectSql     ?? string.Empty;
         var searchColumns = Grid?.SearchColumns ?? [];
@@ -363,7 +363,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         int cur    = 1;
         KescoGroupingEngine.WalkTree(roots, _query.ExpandedGroups, 1, int.MaxValue, ref cur, layout);
 
-        var result      = new List<IGridRow>();
+        var result      = new List<IKescoGridRow>();
         var detailOrder = KescoGroupingEngine.BuildDetailOrder(orderBy, _query.GroupColumns, defaultOrder);
 
         foreach (var item in layout)
@@ -400,7 +400,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// Группировка — запрос агрегатов (GROUP BY) + один запрос всех строк,
     /// групповая структура строится в C# по отсортированным данным.
     /// </summary>
-    private async Task<List<IGridRow>> BuildAllRowsForExcel()
+    private async Task<List<IKescoGridRow>> BuildAllRowsForExcel()
     {
         if (_query.GroupEnabled && _query.GroupColumns.Count > 0)
             return await BuildAllGroupedRowsForExcel();
@@ -417,7 +417,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// В отличие от <see cref="BuildAllGroupedRowsForPrint"/> не делает N запросов
     /// на каждую листовую группу.
     /// </summary>
-    private async Task<List<IGridRow>> BuildAllGroupedRowsForExcel()
+    private async Task<List<IKescoGridRow>> BuildAllGroupedRowsForExcel()
     {
         var selectSql     = Grid?.SelectSql     ?? string.Empty;
         var searchColumns = Grid?.SearchColumns ?? [];
@@ -457,7 +457,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         var items = await Db.QueryAsync<T>(flatSql, dp);
 
         // ── C# interleaving: групповые заголовки + строки ───────────
-        var result     = new List<IGridRow>();
+        var result     = new List<IKescoGridRow>();
         string?[]? previousKeys = null;
 
         foreach (var item in items)
@@ -522,12 +522,12 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// а не только те, что уместились на текущей странице.
     /// На грид это не влияет — данные загружаются отдельным запросом.
     /// </summary>
-    private async Task<List<IGridRow>> BuildExportRows()
+    private async Task<List<IKescoGridRow>> BuildExportRows()
     {
         if (!_query.GroupEnabled || _query.GroupColumns.Count == 0)
             return _rows;
 
-        var result      = new List<IGridRow>();
+        var result      = new List<IKescoGridRow>();
         var expandedSet = _query.ExpandedGroups;
 
         var selectSql     = Grid?.SelectSql     ?? "";
@@ -779,7 +779,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// Тип диалога берётся из параметра <c>EditDialogType</c> грида.
     /// После подтверждения редактирования показывает уведомление и перезагружает данные.
     /// </summary>
-    protected async Task OnRowClicked(DataGridRowClickEventArgs<IGridRow> args)
+    protected async Task OnRowClicked(DataGridRowClickEventArgs<IKescoGridRow> args)
     {
         if (args.Item is GroupHeaderRow header)
         {
@@ -825,7 +825,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
 
         _query.TotalCount = await Entity.GetCountAsync<T>(Db, selectSql, where, dp);
         var items         = await Entity.GetPagedAsync<T>(Db, selectSql, where, orderBy, dp, _query.PageNumber, _query.PageSize);
-        _rows             = items.Select(i => (IGridRow)new DetailRow<T> { Item = i }).ToList();
+        _rows             = items.Select(i => (IKescoGridRow)new DetailRow<T> { Item = i }).ToList();
     }
 
     /// <summary>
@@ -870,7 +870,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         KescoGroupingEngine.WalkTree(roots, _query.ExpandedGroups, pageStart, pageEnd, ref cur, layout);
 
         // Шаг 4: загружаем детальные строки для раскрытых групп
-        var newRows     = new List<IGridRow>();
+        var newRows     = new List<IKescoGridRow>();
         var detailOrder = KescoGroupingEngine.BuildDetailOrder(orderBy, _query.GroupColumns, defaultOrder);
 
         foreach (var item in layout)

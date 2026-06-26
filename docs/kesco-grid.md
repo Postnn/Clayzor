@@ -178,17 +178,17 @@ public static class KescoDragState
 
 ### Модель данных
 
-- `IGridRow` — маркерный интерфейс строки в плоском списке
+- `IKescoGridRow` — маркерный интерфейс строки в плоском списке
 - `GroupHeaderRow` — заголовок группы с `FullKey`, `DisplayValue`, `ItemCount`, `Depth`, `IsExpanded`
 - `DetailRow<T>` — обёртка сущности с `Item`, `GroupKey`, `Depth`
-- `GroupedPage<T>` — результат: `Rows` (плоский список `IGridRow`) + `TotalEffectiveRows`
+- `GroupedPage<T>` — результат: `Rows` (плоский список `IKescoGridRow`) + `TotalEffectiveRows`
 
 ### Рендеринг групп
 
 Колонки используют `<KescoColumn>` с проверкой типа в `CellTemplate`:
 
 ```razor
-<KescoColumn TEntity="IGridRow" ColumnId="2">
+<KescoColumn TEntity="IKescoGridRow" ColumnId="2">
     <CellTemplate>
         @if (context.Item is GroupHeaderRow header)
         {
@@ -263,7 +263,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 Конфигурация SQL передаётся через параметры `<KescoGrid>`. `KescoGridPageBase` автоматически читает их из `IKescoGrid`:
 
 ```razor
-<KescoGrid TEntity="IGridRow"
+<KescoGrid TEntity="IKescoGridRow"
            DataLoader="this"
            SelectSql="@SQLQueries.SELECT_МоиЗаписи"
            SearchColumns="@(new[]{"НазваниеАнализа","TestTypeName"})"
@@ -287,7 +287,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 2. Передаёт SQL-конфигурацию в параметры `<KescoGrid>`: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`
 3. Передаёт `DataLoader="this"` — подключает `IKescoGridDataLoader`
 4. Переопределяет свойство `Grid`: `protected override IKescoGrid? Grid => _dataGrid;`
-5. Объявляет поле `private KescoGrid<IGridRow> _dataGrid = null!;` для `@ref`
+5. Объявляет поле `private KescoGrid<IKescoGridRow> _dataGrid = null!;` для `@ref`
 
 ### Virtual-свойства (могут быть переопределены)
 
@@ -309,14 +309,14 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 | `LoadData()` | Диспетчер: вызывает LoadGroupedData или LoadFlatData в зависимости от состояния группировки |
 | `ToggleGroup(GroupHeaderRow)` | Раскрытие/сворачивание группы с авто-пагинацией |
 | `OpenAddDialog()` | Открывает диалог добавления (тип из `EditDialogType`) |
-| `OnRowClicked(DataGridRowClickEventArgs<IGridRow>)` | Обработчик клика по строке: группа → ToggleGroup, деталь → диалог редактирования |
+| `OnRowClicked(DataGridRowClickEventArgs<IKescoGridRow>)` | Обработчик клика по строке: группа → ToggleGroup, деталь → диалог редактирования |
 
 ### Поля (protected, доступны в разметке)
 
 | Поле | Тип | Описание |
 |---|---|---|
 | `_query` | `KescoDataQuery` | Текущее состояние запроса |
-| `_rows` | `List<IGridRow>` | Строки текущей страницы |
+| `_rows` | `List<IKescoGridRow>` | Строки текущей страницы |
 | `_loading` | `bool` | Признак загрузки |
 
 ### Шаблон страницы
@@ -330,7 +330,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 <PageTitle>Мои записи</PageTitle>
 
-<KescoGrid TEntity="IGridRow"
+<KescoGrid TEntity="IKescoGridRow"
            @ref="_dataGrid"
            DataLoader="this"
            Title="Мои записи"
@@ -356,7 +356,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
     <Columns>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="2">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
             <CellTemplate>
                 @if (context.Item is GroupHeaderRow header)
                 {
@@ -369,7 +369,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="3">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="3">
             <CellTemplate>
                 @if (context.Item is DetailRow<MyEntity> detail)
                 {
@@ -378,7 +378,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="1">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="1">
             <CellTemplate>
                 @if (context.Item is DetailRow<MyEntity> detail)
                 {
@@ -392,7 +392,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 </KescoGrid>
 
 @code {
-    private KescoGrid<IGridRow> _dataGrid = null!;
+    private KescoGrid<IKescoGridRow> _dataGrid = null!;
     protected override IKescoGrid? Grid => _dataGrid;
 }
 ```
@@ -401,7 +401,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 - **Поиск** — сбрасывает страницу на 1, вызывает `OnQueryChangedAsync` с debounce 300 мс
 - **Сортировка** — до 2 колонок, циклически: ASC → DESC → убрать. Сбрасывает страницу на 1. Сортировка по чипу в трее также работает (направление учитывается в `GROUP BY ... ORDER BY`). **`ToggleSort` возвращает `Task` — вызывать только через `await`**, иначе Blazor не дождётся перезагрузки данных
-- **Группировка (tray)** — панель над гридом, скрытая по умолчанию. Открывается кнопкой `AccountTree` в тулбаре (класс `grouping-toggle-btn`). Добавление колонок — перетаскивание заголовка на панель (drag встроен в `KescoColumn`). Удаление — клик по × на чипе. Изменение порядка — перетаскивание чипов. Сортировка по чипу — клик по его названию (бейдж `chip-sort-badge`). Переключатель `UnfoldMore`/`UnfoldLess` на чипе — разворачивает/сворачивает ВСЕ группы этого уровня (с каскадом вверх: разворачивание уровня N разворачивает и уровни 0..N−1). При любом изменении сбрасывается страница на 1
+- **Группировка (tray)** — панель над гридом, скрытая по умолчанию. Открывается кнопкой `AccountTree` в тулбаре (класс `grouping-toggle-btn`). Добавление колонок — перетаскивание заголовка на панель (drag встроен в `KescoColumn`). Удаление — клик по × на чипе. Изменение порядка — перетаскивание чипов. Сортировка по чипу — клик по его названию (бейдж `chip-sort-badge`). Переключатель `UnfoldMore`/`UnfoldLess` на чипе — разворачивает/сворачивает ВСЕ группы этого уровня (с каскадом вверх). Кнопка `MoreVert` (⋮) — контекстное меню с пунктом «Фильтровать» (аналог меню заголовка колонки). При любом изменении сбрасывается страница на 1
 - **Фильтрация (tray)** — панель над гридом, скрытая по умолчанию. Открывается кнопкой `FilterAlt` в тулбаре (класс `filter-toggle-btn`). Добавление фильтра — перетаскивание заголовка (drag встроен в `KescoColumn`) на панель → открывается `KescoColumnFilterDialog`. Редактирование — клик по чипу. Удаление — клик по × на чипе. При выключении трея все фильтры сбрасываются. При любом изменении сбрасывается страница на 1
 - **Сворачивание/разворачивание группы** — НЕ сбрасывает страницу на 1. Если детали не влезают — авто-переход вперёд
 - **Смена размера страницы** — числовое поле (1–999). Сбрасывает страницу на 1

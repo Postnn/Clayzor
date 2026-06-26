@@ -137,7 +137,7 @@ public static void Initialize()
 
 <PageTitle>Новые записи</PageTitle>
 
-<KescoGrid TEntity="IGridRow"
+<KescoGrid TEntity="IKescoGridRow"
            @ref="_dataGrid"
            DataLoader="this"
            Title="Новые записи"
@@ -163,7 +163,7 @@ public static void Initialize()
 
     <Columns>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="1">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="1">
             <CellTemplate>
                 @if (context.Item is GroupHeaderRow header)
                 {
@@ -176,7 +176,7 @@ public static void Initialize()
             </CellTemplate>
         </KescoColumn>
 
-        <KescoColumn TEntity="IGridRow" ColumnId="2">
+        <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
             <CellTemplate>
                 @if (context.Item is DetailRow<NewEntity> detail)
                 {
@@ -190,7 +190,7 @@ public static void Initialize()
 </KescoGrid>
 
 @code {
-    private KescoGrid<IGridRow> _dataGrid = null!;
+    private KescoGrid<IKescoGridRow> _dataGrid = null!;
     protected override IKescoGrid? Grid => _dataGrid;
 }
 ```
