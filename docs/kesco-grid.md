@@ -25,7 +25,7 @@
 | `DataLoader` | `IKescoGridDataLoader?` | `null` | Загрузчик данных. Страница передаёт `DataLoader="this"` |
 | `ColumnMenuMode` | `ColumnMenuMode` | `Mobile` | Режим кнопки меню (⋮) в заголовках: `Hidden` — скрыта, `Always` — всегда видна, `Mobile` — только на мобильных (≤960px) |
 | `SelectVisible` | `bool` | `false` | Показать кнопку выбора записей (чекбоксы + меню групповых операций) |
-| `ShowPrint` | `bool` | `false` | Показать группу «Печать» в меню групповых операций (текущая страница реализована) |
+| `ShowPrint` | `bool` | `false` | Показать группу «Печать» в меню групповых операций (текущая страница и все данные реализованы) |
 | `ShowExcel` | `bool` | `false` | Показать группу «Выгрузка в Excel» в меню групповых операций. При экспорте рядом с заголовком показывается спиннер |
 | `CustomBatchGroups` | `IReadOnlyList<BatchOperationGroup>?` | `null` | Кастомные группы операций (рендерятся после стандартных) |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
@@ -409,6 +409,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - **Переход по страницам** — кнопки `|<`, `<`, `>`, `>|`. Не сбрасывают фильтры
 - **Защита выхода за границы** — при уменьшении `TotalCount` номер страницы автоматически обрезается до максимального
 - **Экспорт в Excel** — на время выгрузки рядом с заголовком грида показывается `MudProgressCircular` (Size.Small, Indeterminate). Флаг `_isExporting` устанавливается в `true` перед вызовом `DataLoader.ExcelExportAsync()` и сбрасывается в `false` в `finally`-блоке. После завершения появляется снекбар с именем файла или ошибкой
+- **Печать всех данных** — `_isExporting` = true → `DataLoader.BuildPrintHtmlAsync(columns, title, ...)` (загружает все строки в отдельный список, не трогая `_rows`) → `KescoGridPrintHtmlGenerator.Build()` (генерирует HTML с инлайн-стилями) → `kescoGridPrint.printHtml(html)` (рендерит в скрытый iframe, печатает, удаляет). Грид НЕ модифицируется. Свёрнутые группы печатаются только заголовком
 
 ## Кнопки тулбара
 
@@ -446,7 +447,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 | Параметр | Тип | По умолчанию | Описание |
 |---|---|---|---|
-| `ShowPrint` | `bool` | `false` | Группа «Печать»: текущая страница (реализована), выбранные (заглушка), все данные (заглушка) |
+| `ShowPrint` | `bool` | `false` | Группа «Печать»: текущая страница (реализована), все данные (реализована), выбранные (заглушка) |
 | `ShowExcel` | `bool` | `false` | Группа «Выгрузка в Excel»: текущая страница, выбранные, все данные. На время экспорта рядом с заголовком грида показывается `MudProgressCircular` |
 
 ```razor
@@ -464,6 +465,23 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 **Индикатор загрузки**: флаг `_isExporting` в `KescoGrid.razor` устанавливается в `true` перед вызовом `DataLoader.ExcelExportAsync()` и сбрасывается в `false` в `finally`-блоке. Пока `_isExporting = true`, рядом с заголовком грида (`MudText Typo="Typo.h5"`) показывается `MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small"`.
 
 Режимы `Selected` и `All` — TODO (пока выгружают текущую страницу).
+
+#### Печать всех данных
+
+Реализована через три компонента:
+- **`KescoGridPageBase.BuildPrintHtmlAsync()`** (сервер) — загружает все строки в отдельный список (НЕ модифицирует `_rows`) и генерирует HTML
+- **`KescoGridPrintHtmlGenerator.Build()`** (сервер) — строит самодостаточный HTML с инлайн-стилями (Ч/Б-таблица, тёмный header, `@page{landscape;15mm}`, `thead{display:table-header-group}`)
+- **`kescoGridPrint.printHtml(html)`** (клиент) — создаёт скрытый iframe, пишет HTML, вызывает `iframe.contentWindow.print()`, удаляет iframe после `afterprint`
+
+Поток: `PrintAllInternal()` → `DataLoader.BuildPrintHtmlAsync(columns, title, ...)` → `KescoGridPrintHtmlGenerator.Build()` → `kescoGridPrint.printHtml(html)`.
+
+**Ключевое отличие от v1**: грид (`_rows`, `_dataKey`, `_query`, `ExpandedGroups`) полностью не затрагивается. Печать изолирована в iframe — никакого восстановления страницы не требуется.
+
+**Индикатор загрузки**: `MudProgressCircular` у заголовка (`_isExporting`).
+
+**Плоский режим**: SQL `SELECT * FROM (selectSql) _src WHERE ... ORDER BY ...` — без `ROW_NUMBER()`.
+
+**Режим группировки**: `WalkTree` с `pageStart=1, pageEnd=int.MaxValue` — всё дерево. Для развёрнутых листовых групп загружаются ВСЕ detail-строки. Свёрнутые группы — только заголовок.
 
 ### Кастомные операции
 

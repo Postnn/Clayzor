@@ -127,7 +127,14 @@ window.kescoGridColumnDrag = (function () {
 
         function onDrop(e) {
             if (!srcSqlName) return;
-            if (!isOverOurThead(e.target)) { cleanup(); return; }
+            if (!isOverOurThead(e.target)) {
+                // Drop on grouping tray — don't call cleanup(), let Blazor's
+                // OnTrayDrop read KescoDragState.DraggedColumn. We only clear
+                // JS-side state; the C# handler will call SetDraggedColumn(null).
+                srcSqlName = null;
+                hideIndicator();
+                return;
+            }
             e.preventDefault();
             e.stopPropagation();
             var target = findDropTarget(e.clientX);

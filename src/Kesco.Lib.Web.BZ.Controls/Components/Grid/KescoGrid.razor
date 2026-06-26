@@ -19,6 +19,7 @@
             {
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Small" />
             }
+            <span id="@(Id + "-print-spinner")" class="kesco-print-spinner" style="display:none"></span>
         </MudStack>
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
             <MudTextField T="string"
@@ -626,7 +627,28 @@
         => _openSubGroups.TryGetValue(label, out var isOpen) && isOpen;
 
     private async Task PrintCurrentPageInternal()    => await JS.InvokeVoidAsync("kescoGridPrint.printCurrentPage", Id);
-    private async Task PrintAllInternal()             => Snackbar.Add("Печать всех данных — в разработке", Severity.Info);
+
+    private async Task PrintAllInternal()
+    {
+        if (DataLoader is null) return;
+        // JS-спиннер — не трогает Blazor-рендер, грид не перерендеривается
+        var spinnerId = Id + "-print-spinner";
+        _ = JS.InvokeVoidAsync("kescoGridPrint.showSpinner", spinnerId);
+        try
+        {
+            var columns = ((IKescoGrid)this).GetVisibleColumns();
+            var html = await DataLoader.BuildPrintHtmlAsync(
+                columns, Title, BuildFilterDescription(), BuildGroupDescription());
+            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
+            await JS.InvokeAsync<object>("kescoGridPrint.printHtml", html);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
+            Snackbar.Add($"Ошибка печати: {ex.Message}", Severity.Error);
+        }
+    }
+
     private async Task PrintSelectedInternal()        => Snackbar.Add($"Печать {_selectedCount} выбранных — в разработке", Severity.Info);
     private string? BuildFilterDescription()
     {
