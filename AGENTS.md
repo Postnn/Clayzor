@@ -287,6 +287,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`
 - `columnNameMap` — опциональный маппинг имён (например, `"TestTypeName"` → `"t.ТипМедицинскогоАнализа"`) для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима
 - `IsNull`/`IsNotNull` → `IS NULL` / `IS NOT NULL` без параметра; `IsEmpty`/`IsNotEmpty` → `(col IS NULL OR col = '')` / `(col IS NOT NULL AND col <> '')`
+- LIKE-операторы (`Contains`, `StartsWith`, `EndsWith` и их Not-варианты) используют `ESCAPE '\'` с экранированием спецсимволов: `\` → `\\`, `[` → `[[]`, `%` → `\%`, `_` → `\_`. Значения параметризованы через Dapper
 
 ### Типы данных фильтрации (`ColumnType`)
 - `Text` — строки: Contains, NotContains, Equals, NotEquals, StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsEmpty, IsNotEmpty

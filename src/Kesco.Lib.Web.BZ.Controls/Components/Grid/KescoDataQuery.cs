@@ -342,23 +342,23 @@ public sealed class KescoDataQuery
             case ColumnFilterOperator.IsNotNull:
                 return $"{colName} IS NOT NULL";
             case ColumnFilterOperator.Contains:
-                dp.Add(paramName, $"%{value}%");
-                return $"{colName} LIKE @{paramName}";
+                dp.Add(paramName, $"%{EscapeLikeValue(value)}%");
+                return $"{colName} LIKE @{paramName} ESCAPE '\\'";
             case ColumnFilterOperator.NotContains:
-                dp.Add(paramName, $"%{value}%");
-                return $"{colName} NOT LIKE @{paramName}";
+                dp.Add(paramName, $"%{EscapeLikeValue(value)}%");
+                return $"{colName} NOT LIKE @{paramName} ESCAPE '\\'";
             case ColumnFilterOperator.StartsWith:
-                dp.Add(paramName, $"{value}%");
-                return $"{colName} LIKE @{paramName}";
+                dp.Add(paramName, $"{EscapeLikeValue(value)}%");
+                return $"{colName} LIKE @{paramName} ESCAPE '\\'";
             case ColumnFilterOperator.NotStartsWith:
-                dp.Add(paramName, $"{value}%");
-                return $"{colName} NOT LIKE @{paramName}";
+                dp.Add(paramName, $"{EscapeLikeValue(value)}%");
+                return $"{colName} NOT LIKE @{paramName} ESCAPE '\\'";
             case ColumnFilterOperator.EndsWith:
-                dp.Add(paramName, $"%{value}");
-                return $"{colName} LIKE @{paramName}";
+                dp.Add(paramName, $"%{EscapeLikeValue(value)}");
+                return $"{colName} LIKE @{paramName} ESCAPE '\\'";
             case ColumnFilterOperator.NotEndsWith:
-                dp.Add(paramName, $"%{value}");
-                return $"{colName} NOT LIKE @{paramName}";
+                dp.Add(paramName, $"%{EscapeLikeValue(value)}");
+                return $"{colName} NOT LIKE @{paramName} ESCAPE '\\'";
             case ColumnFilterOperator.Equals:
                 dp.Add(paramName, value);
                 return $"{colName} = @{paramName}";
@@ -381,6 +381,20 @@ public sealed class KescoDataQuery
                 dp.Add(paramName, value);
                 return $"{colName} = @{paramName}";
         }
+    }
+
+    /// <summary>
+    /// Экранирует спецсимволы LIKE в пользовательском значении для использования с <c>ESCAPE '\'</c>.
+    /// <c>\</c> → <c>\\</c>, <c>%</c> → <c>\%</c>, <c>_</c> → <c>\_</c>, <c>[</c> → <c>[[]</c>.
+    /// Одинарная кавычка (<c>'</c>) не экранируется — значения передаются через Dapper-параметры.
+    /// </summary>
+    private static string EscapeLikeValue(object? value)
+    {
+        var s = value?.ToString() ?? "";
+        return s.Replace("\\", "\\\\")
+                .Replace("[", "[[]")
+                .Replace("%", "\\%")
+                .Replace("_", "\\_");
     }
 
     /// <summary>
