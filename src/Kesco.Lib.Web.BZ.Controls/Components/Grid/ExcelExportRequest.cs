@@ -20,6 +20,12 @@ public sealed record ExcelExportRequest
 
     /// <summary>Текстовое представление колонок группировки (или null).</summary>
     public string? GroupDescription { get; init; }
+
+    /// <summary>
+    /// ID выбранных сущностей для режима <see cref="ExcelExportMode.Selected"/>.
+    /// Заполняется гридом из <see cref="KescoGrid{TEntity}.SelectedIds"/>.
+    /// </summary>
+    public IReadOnlyList<int> SelectedIds { get; init; } = [];
 }
 
 /// <summary>Режим выгрузки в Excel.</summary>

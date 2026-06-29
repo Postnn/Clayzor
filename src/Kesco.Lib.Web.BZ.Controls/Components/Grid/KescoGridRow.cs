@@ -34,6 +34,15 @@ public class GroupHeaderRow : IKescoGridRow
 
     /// <summary>Значения группировки по уровням (для фильтрации детальных строк).</summary>
     public List<string> GroupKeys { get; set; } = [];
+
+    /// <summary>
+    /// Количество выбранных дочерних элементов в этой группе.
+    /// <c>null</c> — не применимо (обычный режим).
+    /// <c>0</c> — ни одного не выбрано.
+    /// <c>&gt;0 и &lt;ItemCount</c> — выбраны частично (indeterminate).
+    /// <c>==ItemCount</c> — выбраны все.
+    /// </summary>
+    public int? SelectedItemCount { get; set; }
 }
 
 /// <summary>

@@ -81,14 +81,11 @@
                             @if (IsSubGroupOpen("Печать"))
                             {
                                 <MudMenuItem OnClick="PrintCurrentPageInternal" Style="padding-left:44px">Текущая страница</MudMenuItem>
-                                @if (_selectedCount > 0)
+                                @if (_selectedIds.Count > 0)
                                 {
-                                    <MudMenuItem OnClick="PrintSelectedInternal" Style="padding-left:44px">Выбранные (@_selectedCount)</MudMenuItem>
+                                    <MudMenuItem OnClick="PrintSelectedInternal" Style="padding-left:44px">Выбранные (@_selectedIds.Count)</MudMenuItem>
                                 }
-                                @if (_selectedCount == 0 || _selectAllChecked)
-                                {
-                                    <MudMenuItem OnClick="PrintAllInternal" Style="padding-left:44px">Все данные</MudMenuItem>
-                                }
+                                <MudMenuItem OnClick="PrintAllInternal" Style="padding-left:44px">Все данные</MudMenuItem>
                             }
                         }
                         @if (ShowExcel)
@@ -103,14 +100,11 @@
                             @if (IsSubGroupOpen("Excel"))
                             {
                                 <MudMenuItem OnClick="ExcelCurrentPageInternal" Style="padding-left:44px">Текущая страница</MudMenuItem>
-                                @if (_selectedCount > 0)
+                                @if (_selectedIds.Count > 0)
                                 {
-                                    <MudMenuItem OnClick="ExcelSelectedInternal" Style="padding-left:44px">Выбранные (@_selectedCount)</MudMenuItem>
+                                    <MudMenuItem OnClick="ExcelSelectedInternal" Style="padding-left:44px">Выбранные (@_selectedIds.Count)</MudMenuItem>
                                 }
-                                @if (_selectedCount == 0 || _selectAllChecked)
-                                {
-                                    <MudMenuItem OnClick="ExcelAllInternal" Style="padding-left:44px">Все данные</MudMenuItem>
-                                }
+                                <MudMenuItem OnClick="ExcelAllInternal" Style="padding-left:44px">Все данные</MudMenuItem>
                             }
                         }
                         @if (CustomBatchGroups is not null)
@@ -133,8 +127,8 @@
                                     foreach (var op in group.Operations)
                                     {
                                         var show = (!op.RequiresSelection && !op.RequiresAll)
-                                            || (op.RequiresSelection && _selectedCount > 0)
-                                            || (op.RequiresAll && (_selectedCount == 0 || _selectAllChecked));
+                                            || (op.RequiresSelection && _selectedIds.Count > 0)
+                                            || op.RequiresAll;
                                         if (show)
                                         {
                                             <MudMenuItem OnClick="async () => { if (op.OnExecute is not null) await op.OnExecute(); }" Style="padding-left:44px">
@@ -275,9 +269,7 @@
                  Striped="true"
                  Loading="@Loading"
 
-                 RowsPerPage="@_pageSize"
-                 MultiSelection="@_selectMode"
-                 SelectedItemsChanged="OnSelectedItemsChanged">
+                 RowsPerPage="@_pageSize">
         <Columns>
             @if (!_columnsReady)
             {
@@ -285,6 +277,89 @@
             }
             else
             {
+                @if (_selectMode)
+                {
+                    <TemplateColumn @key="@SelectColumnKey" T="TEntity"
+                                    Title=""
+                                    Sortable="false"
+                                    DragAndDropEnabled="false"
+                                    Style="width:48px;min-width:48px;max-width:48px">
+                        <HeaderTemplate>
+                            <div @onclick="OnHeaderTriToggle"
+                                 style="display:flex;align-items:center;justify-content:center;width:100%;cursor:pointer;user-select:none">
+                                @if (IsHeaderIndeterminate())
+                                {
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box" title="Выбраны не все">
+                                        <span style="display:block;width:8px;height:8px;background:#424242"></span>
+                                    </span>
+                                }
+                                else if (_selectAllChecked)
+                                {
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #424242;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box" title="Снять выделение">
+                                        <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box" title="Выделить всё"></span>
+                                }
+                            </div>
+                        </HeaderTemplate>
+                        <CellTemplate>
+                            <div style="display:flex;align-items:center;justify-content:center;width:100%">
+                            @if (context.Item is GroupHeaderRow gh)
+                            {
+                                var gs = ComputeGroupCheckState(gh);
+                                <div @onclick="async () => await OnGroupTriToggle(gh)"
+                                     @onclick:stopPropagation="true"
+                                     style="cursor:pointer;user-select:none"
+                                     title="Переключить выделение группы">
+                                    @if (gs.Indeterminate)
+                                    {
+                                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box">
+                                            <span style="display:block;width:8px;height:8px;background:#424242"></span>
+                                        </span>
+                                    }
+                                    else if (gs.Checked)
+                                    {
+                                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #424242;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box">
+                                            <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box"></span>
+                                    }
+                                </div>
+                            }
+                            else if (context.Item is IDetailRow dr)
+                            {
+                                var ent = dr.Item as Entity;
+                                if (ent != null)
+                                {
+                                    var eid = ent.Id;
+                                    var detailChecked = _selectedIds.Contains(eid);
+                                    <div @onclick="async () => await OnRowSelectAsync(eid, !detailChecked)"
+                                         @onclick:stopPropagation="true"
+                                         style="cursor:pointer;user-select:none"
+                                         title="Выбрать запись">
+                                        @if (detailChecked)
+                                        {
+                                            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #424242;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box">
+                                                <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box"></span>
+                                        }
+                                    </div>
+                                }
+                            }
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                }
                 @if (EditDialogType is not null)
                 {
                     <TemplateColumn @key="ServiceEditColumnKey" T="TEntity"
@@ -393,24 +468,25 @@
     private List<SortColumn> _sortState = [];
 
     private bool _selectMode;
-    private HashSet<TEntity> _selectedItems = [];
     private bool _selectAllChecked;
+    private HashSet<int> _selectedIds = [];
+    private KescoDataQuery _lastQuery = new();
     private Dictionary<string, bool> _openSubGroups = [];
-    private int _selectedCount => _selectedItems.Count;
     private bool _isExporting;
 
-    private void OnSelectedItemsChanged(HashSet<TEntity> items)
-    {
-        _selectedItems = items;
-        _selectAllChecked = _selectedItems.Count > 0 && Items is not null
-            && _selectedItems.Count == Items.Count();
-    }
+    /// <summary>
+    /// Кеш: FullKey группы → ID дочерних сущностей.
+    /// Заполняется лениво при первом взаимодействии с чекбоксом группы в grouped-режиме.
+    /// Сбрасывается при деактивации режима выбора и при перезагрузке данных.
+    /// </summary>
+    private Dictionary<string, HashSet<int>> _groupChildIds = [];
 
     private Dictionary<string, ColumnFilter> _activeFilters = [];
     private int _pageNumber = 1;
     private int _pageSize;
     private int _dataKey;
     private const string ServiceEditColumnKey = "__kesco_edit";
+    private const string SelectColumnKey = "__kesco_select";
 
     /// <summary>
     /// Срабатывает при регистрации или отмене регистрации колонки.
@@ -580,8 +656,8 @@
     /// <summary>SQL-имена колонок текущей группировки.</summary>
     public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
 
-    /// <summary>Выбранные в данный момент строки (режим выбора).</summary>
-    public IReadOnlyCollection<TEntity> SelectedItems => _selectedItems;
+    /// <summary>ID выбранных сущностей (персистентно между страницами).</summary>
+    public IReadOnlyCollection<int> SelectedIds => _selectedIds;
 
     private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
 
@@ -598,7 +674,11 @@
         _pageNumber = PageNumber;
         if (TotalCount > 0 && _pageNumber > _totalPages)
             _pageNumber = _totalPages;
+        if (_selectMode)
+            _selectAllChecked = ComputeSelectAllState();
     }
+
+    private bool _loadingChildIds;
 
     /// <inheritdoc/>
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -612,9 +692,32 @@
         else if (_columnsReady && !string.IsNullOrEmpty(Id))
         {
             // Реинициализируем drag после каждого ре-рендера динамических колонок.
-            // kescoGridColumnDrag.init() безопасно вызывается многократно — внутри dispose предыдущего.
             _dotnetRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("kescoGridColumnDrag.init", Id, _dotnetRef);
+
+            // Eager load group-child IDs so group checkboxes reflect selection state
+            if (_selectMode && DataLoader is not null && !_loadingChildIds)
+            {
+                var missingKeys = new List<string>();
+                foreach (var row in Items ?? [])
+                {
+                    if (row is GroupHeaderRow gh && !_groupChildIds.ContainsKey(gh.FullKey))
+                        missingKeys.Add(gh.FullKey);
+                }
+                if (missingKeys.Count > 0)
+                {
+                    _loadingChildIds = true;
+                    try
+                    {
+                        await LoadChildIdsForGroupsAsync(missingKeys);
+                        StateHasChanged();
+                    }
+                    finally
+                    {
+                        _loadingChildIds = false;
+                    }
+                }
+            }
         }
     }
 
@@ -671,7 +774,248 @@
     {
         _selectMode = !_selectMode;
         if (!_selectMode)
-            _selectedItems.Clear();
+        {
+            _selectedIds.Clear();
+            _groupChildIds.Clear();
+            _selectAllChecked = false;
+        }
+        _dataKey++;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// true — некоторые (но не все) сущности на текущей странице выбраны.
+    /// Учитывает как DetailRow, так и дочерние сущности GroupHeaderRow.
+    /// </summary>
+    private bool IsHeaderIndeterminate()
+    {
+        if (Items is null) return false;
+        bool anySelected = false;
+        bool allSelected = true;
+        bool anyItem = false;
+
+        foreach (var row in Items)
+        {
+            if (row is IDetailRow dr && dr.Item is Entity e)
+            {
+                anyItem = true;
+                if (_selectedIds.Contains(e.Id)) anySelected = true;
+                else allSelected = false;
+            }
+            else if (row is GroupHeaderRow gh)
+            {
+                var childIds = GetChildIdsForGroup(gh.FullKey);
+                if (childIds is not null && childIds.Count > 0)
+                {
+                    anyItem = true;
+                    bool groupAllSelected = true;
+                    foreach (var id in childIds)
+                    {
+                        if (_selectedIds.Contains(id)) anySelected = true;
+                        else groupAllSelected = false;
+                    }
+                    if (!groupAllSelected) allSelected = false;
+                }
+            }
+        }
+
+        return anyItem && anySelected && !allSelected;
+    }
+
+    /// <summary>
+    /// Вычисляет состояние чекбокса в заголовке: все ли сущности на текущей странице выбраны.
+    /// Учитывает как DetailRow, так и дочерние сущности GroupHeaderRow.
+    /// </summary>
+    private bool ComputeSelectAllState()
+    {
+        if (Items is null) return false;
+        bool anyItem = false;
+
+        foreach (var row in Items)
+        {
+            if (row is IDetailRow dr && dr.Item is Entity e)
+            {
+                anyItem = true;
+                if (!_selectedIds.Contains(e.Id)) return false;
+            }
+            else if (row is GroupHeaderRow gh)
+            {
+                var childIds = GetChildIdsForGroup(gh.FullKey);
+                if (childIds is not null && childIds.Count > 0)
+                {
+                    anyItem = true;
+                    foreach (var id in childIds)
+                        if (!_selectedIds.Contains(id)) return false;
+                }
+            }
+        }
+
+        return anyItem;
+    }
+
+    /// <summary>
+    /// Tri-state чекбокса для группового заголовка.
+    /// Все потомки выбраны → (true, false), ни одного → (false, false), часть → (false, true).
+    /// </summary>
+    private (bool Checked, bool Indeterminate) ComputeGroupCheckState(GroupHeaderRow gh)
+    {
+        var childIds = GetChildIdsForGroup(gh.FullKey);
+        if (childIds is null || childIds.Count == 0)
+            return (false, false);
+
+        int selectedCount = 0;
+        foreach (var id in childIds)
+            if (_selectedIds.Contains(id))
+                selectedCount++;
+
+        if (selectedCount == 0) return (false, false);
+        if (selectedCount == childIds.Count) return (true, false);
+        return (false, true);
+    }
+
+    /// <summary>
+    /// Возвращает ID всех дочерних сущностей группы (из кеша или null).
+    /// При первом обращении кеш заполняется через DataLoader.
+    /// </summary>
+    private HashSet<int>? GetChildIdsForGroup(string fullKey)
+    {
+        if (_groupChildIds.TryGetValue(fullKey, out var ids))
+            return ids;
+        return null;
+    }
+
+    /// <summary>
+    /// Ленивая загрузка ID дочерних сущностей группы через DataLoader.
+    /// Вызывается при первом клике по чекбоксу группы.
+    /// </summary>
+    private async Task LoadChildIdsForGroupsAsync(List<string> fullKeys)
+    {
+        if (DataLoader is null || fullKeys.Count == 0) return;
+        var batch = await DataLoader.LoadGroupChildIdsAsync(fullKeys, _lastQuery);
+        foreach (var kv in batch)
+            _groupChildIds[kv.Key] = kv.Value;
+    }
+
+    /// <summary>
+    /// Сбрасывает кеш дочерних ID групп (вызывается перед перезагрузкой данных).
+    /// </summary>
+    private void ClearGroupChildCache()
+    {
+        if (_selectMode)
+            _groupChildIds.Clear();
+    }
+
+    /// <summary>
+    /// Обработчик клика по tri-state иконке в заголовке колонки выбора.
+    /// Если есть выделенные (хотя бы один) → снимаем всё, иначе → выделяем всё.
+    /// Обрабатывает как DetailRow, так и GroupHeaderRow (через дочерние ID).
+    /// </summary>
+    private async Task OnHeaderTriToggle()
+    {
+        bool anySelected = IsHeaderIndeterminate() || _selectAllChecked;
+        _selectAllChecked = !anySelected;
+
+        // Убедимся, что дочерние ID всех видимых групп загружены
+        var missingKeys = new List<string>();
+        foreach (var row in Items ?? [])
+        {
+            if (row is GroupHeaderRow gh && GetChildIdsForGroup(gh.FullKey) is null)
+                missingKeys.Add(gh.FullKey);
+        }
+        if (missingKeys.Count > 0)
+            await LoadChildIdsForGroupsAsync(missingKeys);
+
+        foreach (var row in Items ?? [])
+        {
+            if (row is IDetailRow dr && dr.Item is Entity entity)
+            {
+                if (!anySelected) _selectedIds.Add(entity.Id);
+                else _selectedIds.Remove(entity.Id);
+            }
+            else if (row is GroupHeaderRow gh)
+            {
+                var childIds = GetChildIdsForGroup(gh.FullKey);
+                if (childIds is not null)
+                {
+                    foreach (var id in childIds)
+                    {
+                        if (!anySelected) _selectedIds.Add(id);
+                        else _selectedIds.Remove(id);
+                    }
+                }
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    // ── Selection event handlers ─────────────────────────────────────────────────
+
+    /// <summary>
+    /// Обработчик клика по чекбоксу строки детализации — добавляет/удаляет ID сущности.
+    /// </summary>
+    private async Task OnRowSelectAsync(int entityId, bool selected)
+    {
+        if (selected)
+            _selectedIds.Add(entityId);
+        else
+            _selectedIds.Remove(entityId);
+        _selectAllChecked = ComputeSelectAllState();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Обработчик клика по tri-state иконке группы.
+    /// Если все потомки выбраны → снимаем всё; иначе → выделяем всё.
+    /// </summary>
+    private async Task OnGroupTriToggle(GroupHeaderRow gh)
+    {
+        var childIds = GetChildIdsForGroup(gh.FullKey);
+        if (childIds is null)
+        {
+            await LoadChildIdsForGroupsAsync([gh.FullKey]);
+            childIds = GetChildIdsForGroup(gh.FullKey);
+        }
+        if (childIds is null || childIds.Count == 0) return;
+
+        bool allSelected = true;
+        foreach (var id in childIds)
+        {
+            if (!_selectedIds.Contains(id)) { allSelected = false; break; }
+        }
+
+        foreach (var id in childIds)
+        {
+            if (allSelected) _selectedIds.Remove(id);
+            else _selectedIds.Add(id);
+        }
+        _selectAllChecked = ComputeSelectAllState();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Обработчик клика по чекбоксу группы — выделяет/снимает всех потомков.
+    /// При первом обращении лениво загружает ID дочерних сущностей через DataLoader.
+    /// </summary>
+    private async Task OnGroupSelectAsync(GroupHeaderRow gh, bool selected)
+    {
+        var childIds = GetChildIdsForGroup(gh.FullKey);
+        if (childIds is null)
+        {
+            // Ленивая загрузка при первом клике
+            await LoadChildIdsForGroupsAsync([gh.FullKey]);
+            childIds = GetChildIdsForGroup(gh.FullKey);
+        }
+        if (childIds is null) return;
+
+        foreach (var id in childIds)
+        {
+            if (selected)
+                _selectedIds.Add(id);
+            else
+                _selectedIds.Remove(id);
+        }
+        _selectAllChecked = ComputeSelectAllState();
         StateHasChanged();
     }
 
@@ -709,7 +1053,26 @@
         }
     }
 
-    private async Task PrintSelectedInternal()        => Snackbar.Add($"Печать {_selectedCount} выбранных — в разработке", Severity.Info);
+    private async Task PrintSelectedInternal()
+    {
+        if (DataLoader is null || _selectedIds.Count == 0) return;
+        var spinnerId = Id + "-print-spinner";
+        _ = JS.InvokeVoidAsync("kescoGridPrint.showSpinner", spinnerId);
+        try
+        {
+            var columns = ((IKescoGrid)this).GetVisibleColumns();
+            var html = await DataLoader.BuildPrintHtmlForSelectedAsync(
+                columns, Title, _selectedIds.ToList(),
+                BuildFilterDescription(), BuildGroupDescription());
+            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
+            await JS.InvokeAsync<object>("kescoGridPrint.printHtml", html);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
+            Snackbar.Add($"Ошибка печати: {ex.Message}", Severity.Error);
+        }
+    }
     private string? BuildFilterDescription()
     {
         if (_activeFilters.Count == 0) return null;
@@ -782,7 +1145,7 @@
 
     private async Task ExcelSelectedInternal()
     {
-        if (DataLoader is null || _selectedCount == 0) return;
+        if (DataLoader is null || _selectedIds.Count == 0) return;
         _isExporting = true;
         StateHasChanged();
         try
@@ -793,6 +1156,7 @@
                 Mode = ExcelExportMode.Selected,
                 Title = Title,
                 VisibleColumns = columns,
+                SelectedIds = _selectedIds.ToList(),
                 FilterDescription = BuildFilterDescription(),
                 GroupDescription = BuildGroupDescription(),
             });
@@ -1198,6 +1562,7 @@
     private async Task NotifyQueryChanged()
     {
         _dataKey++;
+        ClearGroupChildCache();
         var query = new KescoDataQuery
         {
             SearchText    = _searchText,
@@ -1208,6 +1573,26 @@
             PageSize      = _pageSize,
             ColumnFilters = _activeFilters.ToDictionary(kv => kv.Key, kv => kv.Value),
         };
+
+        // Если изменилась суть запроса (фильтр, поиск, группировка, сортировка) —
+        // сбрасываем выделение, т.к. набор данных поменялся.
+        // При смене только номера страницы или размера страницы — выделение сохраняется.
+        if (_selectMode && _lastQuery.PageNumber != 0)
+        {
+            var essenceChanged =
+                _lastQuery.SearchText    != query.SearchText ||
+                !_lastQuery.GroupColumns.SequenceEqual(query.GroupColumns) ||
+                !_lastQuery.SortColumns.SequenceEqual(query.SortColumns) ||
+                _lastQuery.ColumnFilters.Count != query.ColumnFilters.Count ||
+                !_lastQuery.ColumnFilters.Keys.SequenceEqual(query.ColumnFilters.Keys);
+            if (essenceChanged)
+            {
+                _selectedIds.Clear();
+                _selectAllChecked = false;
+            }
+        }
+
+        _lastQuery = query;
         if (DataLoader is not null)
             await DataLoader.OnQueryChangedAsync(query);
         else

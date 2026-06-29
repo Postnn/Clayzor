@@ -99,18 +99,13 @@ public static class KescoGridPrintHtmlGenerator
 
     private static void AppendGroupRow(StringBuilder sb, GroupHeaderRow gh, int colCount)
     {
-        string icon = gh.IsExpanded
-            ? KescoGridPrintStyles.GroupExpandedIcon
-            : KescoGridPrintStyles.GroupCollapsedIcon;
-
         sb.Append("<tr class=\"mud-table-row\" style=\"page-break-inside:avoid\">");
         sb.Append("<td class=\"mud-table-cell group-header-cell\" colspan=\"")
           .Append(colCount).Append("\" style=\"padding-left:")
           .Append(16 + gh.Depth * 16).Append("px\">")
-          .Append(EscapeHtml(icon)).Append(" ")
-          .Append(EscapeHtml(gh.DisplayValue))
-          .Append(" (").Append(gh.ItemCount).Append(" шт.)")
-          .Append("</td>");
+          .Append(EscapeHtml(gh.DisplayValue));
+        sb.Append(" (").Append(gh.ItemCount).Append(" шт.)");
+        sb.Append("</td>");
         sb.Append("</tr>");
     }
 

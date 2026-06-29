@@ -74,45 +74,65 @@ public static class KescoGridExcelGenerator
         WriteHeaderRow(ws, currentRow, columns);
         currentRow++;
 
-        // ── Строки данных + отслеживание границ групп ─────────────────
-        int? groupHeaderRow = null;    // строка заголовка текущей группы
-        int groupDetailStart = 0;      // первая строка детализации текущей группы
-        bool groupIsExpanded = true;
+        // ── Стек групп для вложенных Excel Outline ──────────────────
+        // (HeaderRow, Depth, DataStart, IsExpanded)
+        var groupStack = new Stack<(int HeaderRow, int Depth, int DataStart, bool IsExpanded)>();
 
         foreach (var row in rows)
         {
             if (row is GroupHeaderRow gh)
             {
-                // Закрыть предыдущую группу
-                if (groupHeaderRow.HasValue && groupDetailStart > 0)
+                // Закрываем группы, глубина которых >= глубине нового заголовка
+                while (groupStack.Count > 0 && groupStack.Peek().Depth >= gh.Depth)
                 {
-                    int detailEnd = currentRow - 1;
-                    ws.Rows(groupDetailStart, detailEnd).Group(1);
-                    if (!groupIsExpanded)
-                        ws.Rows(groupDetailStart, detailEnd).Collapse();
+                    var closed = groupStack.Pop();
+                    int dEnd = currentRow - 1;
+                    if (closed.DataStart > 0 && dEnd >= closed.DataStart)
+                    {
+                        ws.Rows(closed.DataStart, dEnd).Group();
+                        if (!closed.IsExpanded)
+                            ws.Rows(closed.DataStart, dEnd).Collapse();
+                    }
+                }
+
+                // Если есть родительская группа без DataStart — начинаем её диапазон
+                if (groupStack.Count > 0)
+                {
+                    var parent = groupStack.Pop();
+                    if (parent.DataStart == 0)
+                        parent.DataStart = currentRow;
+                    groupStack.Push(parent);
                 }
 
                 WriteGroupHeaderRow(ws, currentRow, gh, colCount);
-                groupHeaderRow   = currentRow;
-                groupDetailStart = 0;
-                groupIsExpanded  = expandedGroups?.Contains(gh.FullKey) ?? true;
+                groupStack.Push((currentRow, gh.Depth, 0, expandedGroups?.Contains(gh.FullKey) ?? true));
             }
             else if (row is IDetailRow detailRow)
             {
-                if (groupDetailStart == 0)
-                    groupDetailStart = currentRow;
+                // Фиксируем начало данных для группы на вершине стека
+                if (groupStack.Count > 0)
+                {
+                    var top = groupStack.Pop();
+                    if (top.DataStart == 0)
+                        top.DataStart = currentRow;
+                    groupStack.Push(top);
+                }
                 WriteDetailRow(ws, currentRow, detailRow, columns, propMap);
             }
             currentRow++;
         }
 
-        // Закрыть последнюю группу
-        if (groupHeaderRow.HasValue && groupDetailStart > 0)
+        // Закрыть оставшиеся группы (от глубоких к внешним)
+        while (groupStack.Count > 0)
         {
-            int detailEnd = currentRow - 1;
-            ws.Rows(groupDetailStart, detailEnd).Group(1);
-            if (!groupIsExpanded)
-                ws.Rows(groupDetailStart, detailEnd).Collapse();
+            var closed = groupStack.Pop();
+            int dEnd = currentRow - 1;
+            if (closed.DataStart > 0 && dEnd >= closed.DataStart)
+            {
+                ws.Rows(closed.DataStart, dEnd).Group();
+                if (!closed.IsExpanded)
+                    ws.Rows(closed.DataStart, dEnd).Collapse();
+            }
         }
 
         // ── Авто-ширина колонок ──────────────────────────────────────
@@ -205,7 +225,18 @@ public static class KescoGridExcelGenerator
 
         // Значение + количество в первой колонке
         var cell = ws.Cell(rowNum, 1);
-        cell.Value = $"{header.DisplayValue} ({header.ItemCount} шт.)";
+        if (header.SelectedItemCount.HasValue)
+        {
+            // Режим «выбранные»: показываем количество выбранных
+            if (header.SelectedItemCount.Value > 0 && header.SelectedItemCount.Value < header.ItemCount)
+                cell.Value = $"{header.DisplayValue} ({header.SelectedItemCount.Value} из {header.ItemCount} шт.)";
+            else
+                cell.Value = $"{header.DisplayValue} ({header.ItemCount} шт.)";
+        }
+        else
+        {
+            cell.Value = $"{header.DisplayValue} ({header.ItemCount} шт.)";
+        }
         cell.Style.Font.Bold = true;
         cell.Style.Font.FontSize = 10;
         cell.Style.Font.FontName = KescoFontFamily;

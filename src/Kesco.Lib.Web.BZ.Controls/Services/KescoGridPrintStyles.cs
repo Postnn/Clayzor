@@ -13,4 +13,7 @@ public static class KescoGridPrintStyles
     // ── Булевы значения (аналог MudBlazor CheckCircle / Cancel) ──
     public const string BoolTrueIcon  = "✓";
     public const string BoolFalseIcon = "✗";
+
+    // ── Состояние выбора группы (indeterminate) ──
+    public const string GroupIndeterminateIcon = "⊟";
 }

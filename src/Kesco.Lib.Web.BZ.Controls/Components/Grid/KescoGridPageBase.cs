@@ -61,6 +61,32 @@ public interface IKescoGridDataLoader
     /// После переключения сбрасывает страницу на 1 и перезагружает данные.
     /// </summary>
     Task ToggleLevelExpandedAsync(int depth);
+
+    /// <summary>
+    /// Загружает ID всех дочерних сущностей для указанных групп (по FullKey).
+    /// Используется для tri-state чекбоксов групп и массового выбора потомков.
+    /// Вызывается лениво при первом клике по чекбоксу группы.
+    /// </summary>
+    /// <param name="groupFullKeys">FullKey групп (разделитель ).</param>
+    /// <param name="query">Текущее состояние запроса (фильтры, поиск).</param>
+    /// <returns>Словарь FullKey → множество ID дочерних сущностей.</returns>
+    Task<Dictionary<string, HashSet<int>>> LoadGroupChildIdsAsync(
+        IReadOnlyList<string> groupFullKeys, KescoDataQuery query);
+
+    /// <summary>
+    /// Вызывается гридом при выборе пункта меню «Печать выбранных».
+    /// Загружает только выбранные строки (по ID) с групповыми заголовками
+    /// и возвращает готовый HTML-документ для печати в iframe.
+    /// </summary>
+    /// <param name="columns">Видимые колонки в порядке отображения.</param>
+    /// <param name="title">Заголовок грида.</param>
+    /// <param name="selectedIds">ID выбранных сущностей.</param>
+    /// <param name="filterDescription">Описание активных фильтров (или null).</param>
+    /// <param name="groupDescription">Описание колонок группировки (или null).</param>
+    Task<string> BuildPrintHtmlForSelectedAsync(
+        IReadOnlyList<KescoColumnMeta> columns, string title,
+        IReadOnlyList<int> selectedIds,
+        string? filterDescription, string? groupDescription);
 }
 
 /// <summary>
@@ -181,6 +207,20 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         = BuildPropertyMap();
 
     /// <summary>
+    /// Имя колонки первичного ключа в БД для сущности <typeparamref name="T"/>.
+    /// Берётся из <see cref="ColumnAttribute"/> на свойстве <c>Id</c>, либо <c>"Id"</c>.
+    /// </summary>
+    private static readonly string _idColumnName = GetIdColumnName();
+
+    private static string GetIdColumnName()
+    {
+        var idProp = typeof(T).GetProperty("Id", BindingFlags.Public | BindingFlags.Instance);
+        if (idProp == null) return "Id";
+        var colAttr = idProp.GetCustomAttribute<ColumnAttribute>();
+        return colAttr?.Name ?? "Id";
+    }
+
+    /// <summary>
     /// Строит словарь SQL-имя колонки → <see cref="PropertyInfo"/> через рефлексию
     /// по <see cref="ColumnAttribute"/> и свойствам <typeparamref name="T"/>.
     /// </summary>
@@ -253,13 +293,22 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
             var columns = request.VisibleColumns;
             if (columns.Count == 0) return;
 
-            List<IKescoGridRow> rowsToExport = request.Mode switch
+            List<IKescoGridRow> rowsToExport;
+            switch (request.Mode)
             {
-                ExcelExportMode.CurrentPage => await BuildExportRows(),
-                ExcelExportMode.Selected   => _rows, // TODO: отфильтровать по SelectedItems
-                ExcelExportMode.All        => await BuildAllRowsForExcel(),
-                _ => _rows
-            };
+                case ExcelExportMode.CurrentPage:
+                    rowsToExport = await BuildExportRows();
+                    break;
+                case ExcelExportMode.Selected:
+                    rowsToExport = await BuildAllRowsForSelected(new HashSet<int>(request.SelectedIds));
+                    break;
+                case ExcelExportMode.All:
+                    rowsToExport = await BuildAllRowsForExcel();
+                    break;
+                default:
+                    rowsToExport = _rows;
+                    break;
+            }
 
             if (rowsToExport.Count == 0)
             {
@@ -288,6 +337,60 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         string? filterDescription, string? groupDescription)
     {
         var rows = await BuildAllRowsForPrint();
+        return KescoGridPrintHtmlGenerator.Build(
+            title, columns, rows, typeof(T), _query.ExpandedGroups,
+            filterDescription, groupDescription);
+    }
+
+    async Task<Dictionary<string, HashSet<int>>> IKescoGridDataLoader.LoadGroupChildIdsAsync(
+        IReadOnlyList<string> groupFullKeys, KescoDataQuery query)
+    {
+        var result = new Dictionary<string, HashSet<int>>();
+        if (groupFullKeys.Count == 0) return result;
+
+        var selectSql     = Grid?.SelectSql     ?? string.Empty;
+        var searchColumns = Grid?.SearchColumns ?? [];
+
+        var searchWhere    = query.BuildWhereClause(searchColumns);
+        var dp             = new DynamicParameters();
+        dp.Add("search", $"%{query.SearchText}%");
+        var colFilterWhere = query.BuildColumnFilterClause(dp);
+        var baseWhere      = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var groupExprs     = query.GroupColumns;
+
+        foreach (var fullKey in groupFullKeys)
+        {
+            var keys = fullKey.Split('');
+            var keyParts = new List<string>();
+            for (int i = 0; i < keys.Length && i < groupExprs.Count; i++)
+            {
+                var pName = $"gk_{fullKey.GetHashCode() & 0x7FFFFFFF}_{i}";
+                dp.Add(pName, keys[i]);
+                keyParts.Add($"{groupExprs[i]} = @{pName}");
+            }
+
+            if (keyParts.Count == 0) continue;
+
+            var groupWhere    = string.Join(" AND ", keyParts);
+            var combinedWhere = KescoDataQuery.CombineWhere(baseWhere, groupWhere);
+
+            var sql = $"SELECT {_idColumnName} FROM ({selectSql}) _src";
+            if (!string.IsNullOrWhiteSpace(combinedWhere))
+                sql += $" WHERE {combinedWhere}";
+
+            var ids = (await Db.QueryAsync<int>(sql, dp)).ToHashSet();
+            result[fullKey] = ids;
+        }
+
+        return result;
+    }
+
+    async Task<string> IKescoGridDataLoader.BuildPrintHtmlForSelectedAsync(
+        IReadOnlyList<KescoColumnMeta> columns, string title,
+        IReadOnlyList<int> selectedIds,
+        string? filterDescription, string? groupDescription)
+    {
+        var rows = await BuildAllRowsForSelected(new HashSet<int>(selectedIds));
         return KescoGridPrintHtmlGenerator.Build(
             title, columns, rows, typeof(T), _query.ExpandedGroups,
             filterDescription, groupDescription);
@@ -595,6 +698,185 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
         var invalid = Path.GetInvalidFileNameChars();
         return string.Join("_", name.Split(invalid, StringSplitOptions.RemoveEmptyEntries))
             .TrimEnd('.');
+    }
+
+    // ── Selected rows loading ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Строит список строк, содержащий только выбранные сущности (по ID).
+    /// В grouped-режиме сохраняет групповые заголовки для групп, в которых есть
+    /// хотя бы одна выбранная запись.
+    /// </summary>
+    private async Task<List<IKescoGridRow>> BuildAllRowsForSelected(HashSet<int> selectedIds)
+    {
+        if (selectedIds.Count == 0) return [];
+
+        if (_query.GroupEnabled && _query.GroupColumns.Count > 0)
+            return await BuildAllGroupedRowsForSelected(selectedIds);
+        return await BuildAllFlatRowsForSelected(selectedIds);
+    }
+
+    /// <summary>
+    /// Плоский режим: загружает выбранные сущности по ID с учётом текущих фильтров.
+    /// </summary>
+    private async Task<List<IKescoGridRow>> BuildAllFlatRowsForSelected(HashSet<int> selectedIds)
+    {
+        var selectSql     = Grid?.SelectSql     ?? string.Empty;
+        var searchColumns = Grid?.SearchColumns ?? [];
+
+        var searchWhere    = _query.BuildWhereClause(searchColumns);
+        var dp             = new DynamicParameters();
+        dp.Add("search", $"%{_query.SearchText}%");
+        var colFilterWhere = _query.BuildColumnFilterClause(dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+
+        // IN clause из selected IDs
+        var idParams = new List<string>();
+        int idx = 0;
+        foreach (var id in selectedIds)
+        {
+            var pName = $"sid{idx}";
+            dp.Add(pName, id);
+            idParams.Add($"@{pName}");
+            idx++;
+        }
+        var idFilter    = $"{_idColumnName} IN ({string.Join(",", idParams)})";
+        var fullWhere   = KescoDataQuery.CombineWhere(where, idFilter);
+
+        var sql = $"SELECT * FROM ({selectSql}) _src";
+        if (!string.IsNullOrWhiteSpace(fullWhere))
+            sql += $" WHERE {fullWhere}";
+
+        var items = await Db.QueryAsync<T>(sql, dp);
+        return items.Select(i => (IKescoGridRow)new DetailRow<T> { Item = i }).ToList();
+    }
+
+    /// <summary>
+    /// Группированный режим: загружает выбранные сущности, строит групповые заголовки
+    /// через C# interleaving (как в <see cref="BuildAllGroupedRowsForExcel"/>).
+    /// </summary>
+    private async Task<List<IKescoGridRow>> BuildAllGroupedRowsForSelected(HashSet<int> selectedIds)
+    {
+        var selectSql     = Grid?.SelectSql     ?? string.Empty;
+        var searchColumns = Grid?.SearchColumns ?? [];
+        var defaultOrder  = Grid?.DefaultOrder  ?? string.Empty;
+
+        var searchWhere    = _query.BuildWhereClause(searchColumns);
+        var dp             = new DynamicParameters();
+        dp.Add("search", $"%{_query.SearchText}%");
+        var colFilterWhere = _query.BuildColumnFilterClause(dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var groupCols      = _query.GroupColumns.ToList();
+
+        // Шаг 1: GROUP BY агрегаты (полная структура групп)
+        var groupSql  = KescoGroupingEngine.BuildGroupAggregateSql(
+            selectSql, groupCols, where, _query.SortColumns);
+        var groupRows = await Db.QueryAsync<GridGroupRow>(groupSql, dp);
+
+        var aggregates = KescoGroupingEngine.BuildAggregates(groupRows);
+        var roots      = KescoGroupingEngine.BuildTree(aggregates);
+        KescoGroupingEngine.ComputeParentCounts(roots);
+
+        // FullKey → ItemCount (из полного дерева, для отображения в заголовках)
+        var countLookup = new Dictionary<string, int>();
+        CollectCounts(roots, countLookup);
+
+        // Шаг 2: Все выбранные строки, отсортированные по групповым колонкам
+        var idParams = new List<string>();
+        int idx = 0;
+        foreach (var id in selectedIds)
+        {
+            var pName = $"sid{idx}";
+            dp.Add(pName, id);
+            idParams.Add($"@{pName}");
+            idx++;
+        }
+        var idFilter     = $"{_idColumnName} IN ({string.Join(",", idParams)})";
+        var whereWithIds = KescoDataQuery.CombineWhere(where, idFilter);
+
+        var orderBy = _query.BuildOrderBy(defaultOrder);
+        var flatSql = $"SELECT * FROM ({selectSql}) _src";
+        if (!string.IsNullOrWhiteSpace(whereWithIds))
+            flatSql += $" WHERE {whereWithIds}";
+        if (!string.IsNullOrWhiteSpace(orderBy))
+            flatSql += $" ORDER BY {orderBy}";
+
+        var items = await Db.QueryAsync<T>(flatSql, dp);
+
+        // Шаг 3: C# interleaving — детектирование смены группового ключа
+        var result      = new List<IKescoGridRow>();
+        string?[]? previousKeys = null;
+
+        foreach (var item in items)
+        {
+            var currentKeys = groupCols
+                .Select(c => _propertyMap.TryGetValue(c, out var p)
+                    ? p.GetValue(item)?.ToString()
+                    : null)
+                .ToArray();
+
+            int firstDiff = 0;
+            if (previousKeys is not null)
+            {
+                while (firstDiff < previousKeys.Length
+                       && firstDiff < currentKeys.Length
+                       && string.Equals(previousKeys[firstDiff], currentKeys[firstDiff]))
+                    firstDiff++;
+            }
+
+            for (int depth = firstDiff; depth < groupCols.Count; depth++)
+            {
+                var keys         = currentKeys.Take(depth + 1).ToList();
+                var displayValue = keys[depth] ?? "(пусто)";
+                var fullKey      = string.Join("", keys);
+
+                result.Add(new GroupHeaderRow
+                {
+                    DisplayValue = displayValue,
+                    FullKey      = fullKey,
+                    ItemCount    = countLookup.TryGetValue(fullKey, out var cnt) ? cnt : 0,
+                    Depth        = depth,
+                    GroupKeys    = keys!,
+                });
+            }
+
+            result.Add(new DetailRow<T> { Item = item });
+            previousKeys = currentKeys;
+        }
+
+        // Пост-обработка: вычисляем SelectedItemCount для каждого GroupHeaderRow.
+        // Используем стек (List) для отслеживания текущих открытых групп.
+        var headerStack = new List<GroupHeaderRow>();
+        var countStack  = new List<int>();
+        foreach (var row in result)
+        {
+            if (row is GroupHeaderRow gh)
+            {
+                // Закрываем группы с глубиной >= текущей
+                while (headerStack.Count > 0 && headerStack[^1].Depth >= gh.Depth)
+                {
+                    headerStack[^1].SelectedItemCount = countStack[^1];
+                    headerStack.RemoveAt(headerStack.Count - 1);
+                    countStack.RemoveAt(countStack.Count - 1);
+                }
+                headerStack.Add(gh);
+                countStack.Add(0);
+            }
+            else if (row is DetailRow<T>)
+            {
+                for (int i = 0; i < countStack.Count; i++)
+                    countStack[i]++;
+            }
+        }
+        // Закрываем оставшиеся
+        while (headerStack.Count > 0)
+        {
+            headerStack[^1].SelectedItemCount = countStack[^1];
+            headerStack.RemoveAt(headerStack.Count - 1);
+            countStack.RemoveAt(countStack.Count - 1);
+        }
+
+        return result;
     }
 
     // ── Per-level expand/collapse (переключатели на чипах трея группировки) ────
