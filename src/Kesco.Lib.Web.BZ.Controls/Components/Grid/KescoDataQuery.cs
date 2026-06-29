@@ -90,10 +90,22 @@ public enum ColumnMenuMode
 }
 
 /// <summary>
+/// Источник происхождения условия фильтра.
+/// </summary>
+public enum KescoFilterSource
+{
+    /// <summary>Создано через диалог отдельной колонки (<see cref="KescoColumnFilterDialog"/>).</summary>
+    ColumnDialog,
+    /// <summary>Создано через диалог настраиваемого фильтра (составной фильтр).</summary>
+    CompositeDialog,
+}
+
+/// <summary>
 /// Условие фильтрации по одной SQL-колонке.
 /// Поддерживает до двух условий, объединяемых через <see cref="LogicalOperator"/>.
+/// Является листовым узлом в дереве составного фильтра (<see cref="Filter.IKescoFilterNode"/>).
 /// </summary>
-public sealed class ColumnFilter
+public sealed class ColumnFilter : Filter.IKescoFilterNode
 {
     /// <summary>SQL-имя колонки (например, "НазваниеАнализа" или "a.НазваниеАнализа").</summary>
     public string Column { get; set; } = "";
@@ -106,6 +118,9 @@ public sealed class ColumnFilter
 
     /// <summary>Оператор сравнения первого условия.</summary>
     public ColumnFilterOperator Operator { get; set; } = ColumnFilterOperator.Contains;
+
+    /// <summary>Источник происхождения — для маршрутизации редактирования чипа в трее.</summary>
+    public KescoFilterSource Source { get; set; } = KescoFilterSource.ColumnDialog;
 
     /// <summary>Возвращает true, если первое условие имеет значимое значение.</summary>
     public bool HasValue => Operator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
@@ -133,6 +148,20 @@ public sealed class ColumnFilter
     public bool HasSecondClause => SecondOperator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
         or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull
         || (SecondValue is not null && SecondValue.ToString() is { Length: > 0 });
+
+    /// <summary>Глубокое копирование листового условия (оба значения и Source).</summary>
+    public Filter.IKescoFilterNode Clone() => new ColumnFilter
+    {
+        Column = Column,
+        ParamName = ParamName,
+        Operator = Operator,
+        Value = Value,
+        LogicalOperator = LogicalOperator,
+        SecondParamName = SecondParamName,
+        SecondOperator = SecondOperator,
+        SecondValue = SecondValue,
+        Source = Source,
+    };
 }
 
 /// <summary>

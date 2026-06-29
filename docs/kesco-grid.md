@@ -256,6 +256,13 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `KescoFilterOption` — вариант значения для выпадающего списка в диалоге фильтра (`Value`, `Label`)
 - `KescoGridPageBase.FilterLookupOptions` — virtual-словарь (SqlName → список `KescoFilterOption`) для замены текстового/числового редактора на `MudSelect`
 
+### Составной фильтр (дерево И/ИЛИ)
+
+Типы в `Components/Grid/Filter/`:
+- `IKescoFilterNode` — интерфейс узла дерева с рекурсивным `Clone()`
+- `KescoFilterGroupNode` — группа: `Logic` (And/Or), `Nodes` (List\<IKescoFilterNode\>), `Clone()`. Переиспользует существующий `LogicalOperator`
+- `ColumnFilter` реализует `IKescoFilterNode` — листовой узел. `Source` (`KescoFilterSource`) — `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
+
 ### SQL-генерация
 - `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`
 - `columnNameMap` — опциональный маппинг имён для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима

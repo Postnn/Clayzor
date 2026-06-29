@@ -297,6 +297,11 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `KescoGridPageBase.MapClrTypeToColumnType` — авто-маппинг CLR-типов в `ColumnType`
 - `KescoGridPageBase.FilterLookupOptions` — необязательный virtual-словарь (SqlName → список `KescoFilterOption`) для выпадающего выбора значений в диалоге фильтра. Страница может переопределить. Грид пробрасывает в `KescoColumnFilterDialog.LookupOptions`
 
+### Типы составного фильтра (`Components/Grid/Filter/`)
+- `IKescoFilterNode` — интерфейс узла дерева фильтра: `Clone()` (рекурсивное глубокое копирование)
+- `KescoFilterGroupNode` — группа И/ИЛИ (`LogicalOperator Logic` + `List<IKescoFilterNode> Nodes` + рекурсивный `Clone()`). Переиспользует существующий `LogicalOperator`
+- `ColumnFilter` реализует `IKescoFilterNode` — листовой узел дерева. `ColumnFilter.Source` (`KescoFilterSource`) — происхождение: `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
+
 ### Filter tray
 - Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)
 - Добавление фильтра: перетаскивание заголовка колонки на панель → открывается `KescoColumnFilterDialog`
