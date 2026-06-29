@@ -27,9 +27,20 @@
                 }
             </MudSelect>
 
-            @if (!IsEmptyOrNotEmpty(_op1))
+            @if (!IsNoValueOperator(_op1))
             {
-                if (ColumnType == ColumnType.Text)
+                @if (_lookupOptions1 is not null)
+                {
+                    <MudSelect T="object" Label="Значение" @bind-Value="_lookup1" @ref="_lookupFieldRef"
+                               Variant="Variant.Outlined" Margin="Margin.Dense"
+                               AnchorOrigin="Origin.BottomLeft" Clearable="true" AutoFocus="true">
+                        @foreach (var opt in _lookupOptions1)
+                        {
+                            <MudSelectItem Value="@opt.Value">@opt.Label</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+                else if (ColumnType == ColumnType.Text)
                 {
                     <MudTextField T="string" Label="Значение" @bind-Value="_text1" @ref="_textFieldRef"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" AutoFocus="true" />
@@ -38,6 +49,17 @@
                 {
                     <MudNumericField T="int?" Label="Значение" @bind-Value="_num1" @ref="_numFieldRef"
                                      Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" AutoFocus="true" />
+                }
+                else if (ColumnType == ColumnType.Decimal)
+                {
+                    <MudNumericField T="decimal?" Label="Значение" @bind-Value="_dec1" @ref="_decFieldRef"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" AutoFocus="true" />
+                }
+                else if (ColumnType == ColumnType.Date)
+                {
+                    <MudDatePicker Label="Значение" @bind-Date="_date1" @ref="_dateFieldRef"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                   DateFormat="dd.MM.yyyy" />
                 }
                 else if (ColumnType == ColumnType.Boolean)
                 {
@@ -84,9 +106,20 @@
                     }
                 </MudSelect>
 
-                @if (!IsEmptyOrNotEmpty(_op2))
+                @if (!IsNoValueOperator(_op2))
                 {
-                    if (ColumnType == ColumnType.Text)
+                    @if (_lookupOptions2 is not null)
+                    {
+                        <MudSelect T="object" Label="Значение" @bind-Value="_lookup2" @ref="_lookupFieldRef2"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   AnchorOrigin="Origin.BottomLeft" Clearable="true">
+                            @foreach (var opt in _lookupOptions2)
+                            {
+                                <MudSelectItem Value="@opt.Value">@opt.Label</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else if (ColumnType == ColumnType.Text)
                     {
                         <MudTextField T="string" Label="Значение" @bind-Value="_text2" @ref="_textFieldRef2"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" />
@@ -95,6 +128,17 @@
                     {
                         <MudNumericField T="int?" Label="Значение" @bind-Value="_num2" @ref="_numFieldRef2"
                                          Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                    }
+                    else if (ColumnType == ColumnType.Decimal)
+                    {
+                        <MudNumericField T="decimal?" Label="Значение" @bind-Value="_dec2" @ref="_decFieldRef2"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
+                    }
+                    else if (ColumnType == ColumnType.Date)
+                    {
+                        <MudDatePicker Label="Значение" @bind-Date="_date2" @ref="_dateFieldRef2"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                                       DateFormat="dd.MM.yyyy" />
                     }
                     else if (ColumnType == ColumnType.Boolean)
                     {
@@ -152,11 +196,18 @@
     /// <summary>Существующий фильтр для режима редактирования. null — новый фильтр.</summary>
     [Parameter] public ColumnFilter? ExistingFilter { get; set; }
 
+    /// <summary>Необязательный список вариантов для выпадающего выбора значения.</summary>
+    [Parameter] public IReadOnlyList<KescoFilterOption>? LookupOptions { get; set; }
+
     // ── Состояние первого условия ──────────────────────────────────────────────
     private ColumnFilterOperator _op1;
     private string? _text1;
     private int? _num1;
+    private decimal? _dec1;
+    private DateTime? _date1;
     private bool? _bool1;
+    private object? _lookup1;
+    private IReadOnlyList<KescoFilterOption>? _lookupOptions1;
 
     // ── Состояние второго условия ──────────────────────────────────────────────
     private bool _showSecond;
@@ -164,17 +215,27 @@
     private ColumnFilterOperator _op2;
     private string? _text2;
     private int? _num2;
+    private decimal? _dec2;
+    private DateTime? _date2;
     private bool? _bool2;
+    private object? _lookup2;
+    private IReadOnlyList<KescoFilterOption>? _lookupOptions2;
 
     private IReadOnlyList<ColumnFilterOperator> _availableOperators = [];
 
     private MudTextField<string>? _textFieldRef;
     private MudNumericField<int?>? _numFieldRef;
+    private MudNumericField<decimal?>? _decFieldRef;
+    private MudDatePicker? _dateFieldRef;
     private MudSelect<bool?>? _boolFieldRef;
+    private MudSelect<object>? _lookupFieldRef;
 
     private MudTextField<string>? _textFieldRef2;
     private MudNumericField<int?>? _numFieldRef2;
+    private MudNumericField<decimal?>? _decFieldRef2;
+    private MudDatePicker? _dateFieldRef2;
     private MudSelect<bool?>? _boolFieldRef2;
+    private MudSelect<object>? _lookupFieldRef2;
 
     private bool _focusSecond;
 
@@ -188,11 +249,14 @@
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusSecond && _showSecond && !IsEmptyOrNotEmpty(_op2))
+        if (_focusSecond && _showSecond && !IsNoValueOperator(_op2))
         {
-            if (_textFieldRef2 is not null)      await _textFieldRef2.FocusAsync();
-            else if (_numFieldRef2 is not null)  await _numFieldRef2.FocusAsync();
-            else if (_boolFieldRef2 is not null) await _boolFieldRef2.FocusAsync();
+            if (_textFieldRef2 is not null)       await _textFieldRef2.FocusAsync();
+            else if (_numFieldRef2 is not null)   await _numFieldRef2.FocusAsync();
+            else if (_decFieldRef2 is not null)   await _decFieldRef2.FocusAsync();
+            else if (_dateFieldRef2 is not null)  await _dateFieldRef2.FocusAsync();
+            else if (_boolFieldRef2 is not null)  await _boolFieldRef2.FocusAsync();
+            else if (_lookupFieldRef2 is not null) await _lookupFieldRef2.FocusAsync();
             _focusSecond = false;
         }
     }
@@ -226,27 +290,33 @@
         return $"{displayName}: {first}";
     }
 
+    private static string FormatFilterValue(object? value) =>
+        value is DateTime dt ? dt.ToString("dd.MM.yyyy") : value?.ToString() ?? "";
+
     private static string DescribeClause(ColumnFilterOperator op, object? value) => op switch
     {
-        ColumnFilterOperator.Contains           => $"содержит «{value}»",
-        ColumnFilterOperator.NotContains        => $"не содержит «{value}»",
-        ColumnFilterOperator.Equals             => $"= «{value}»",
-        ColumnFilterOperator.NotEquals          => $"≠ «{value}»",
-        ColumnFilterOperator.StartsWith         => $"начинается с «{value}»",
-        ColumnFilterOperator.NotStartsWith      => $"не начинается с «{value}»",
-        ColumnFilterOperator.EndsWith           => $"заканчивается на «{value}»",
-        ColumnFilterOperator.NotEndsWith        => $"не заканчивается на «{value}»",
-        ColumnFilterOperator.GreaterThan        => $"> «{value}»",
-        ColumnFilterOperator.GreaterThanOrEqual => $"≥ «{value}»",
-        ColumnFilterOperator.LessThan           => $"< «{value}»",
-        ColumnFilterOperator.LessThanOrEqual    => $"≤ «{value}»",
+        ColumnFilterOperator.Contains           => $"содержит «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.NotContains        => $"не содержит «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.Equals             => $"= «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.NotEquals          => $"≠ «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.StartsWith         => $"начинается с «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.NotStartsWith      => $"не начинается с «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.EndsWith           => $"заканчивается на «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.NotEndsWith        => $"не заканчивается на «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.GreaterThan        => $"> «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.GreaterThanOrEqual => $"≥ «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.LessThan           => $"< «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.LessThanOrEqual    => $"≤ «{FormatFilterValue(value)}»",
         ColumnFilterOperator.IsEmpty            => "пустая строка",
         ColumnFilterOperator.IsNotEmpty         => "не пустая строка",
-        _ => $"= «{value}»"
+        ColumnFilterOperator.IsNull             => "пусто (NULL)",
+        ColumnFilterOperator.IsNotNull          => "не пусто (NOT NULL)",
+        _ => $"= «{FormatFilterValue(value)}»"
     };
 
-    private static bool IsEmptyOrNotEmpty(ColumnFilterOperator op)
-        => op is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty;
+    private static bool IsNoValueOperator(ColumnFilterOperator op)
+        => op is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
+            or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull;
 
     protected override void OnParametersSet()
     {
@@ -254,9 +324,14 @@
         {
             ColumnType.Text    => ColumnFilterOperatorList.TextOperators,
             ColumnType.Number  => ColumnFilterOperatorList.NumberOperators,
+            ColumnType.Decimal => ColumnFilterOperatorList.DecimalOperators,
+            ColumnType.Date    => ColumnFilterOperatorList.DateOperators,
             ColumnType.Boolean => ColumnFilterOperatorList.BooleanOperators,
             _ => ColumnFilterOperatorList.TextOperators
         };
+
+        _lookupOptions1 = LookupOptions;
+        _lookupOptions2 = LookupOptions;
 
         if (ExistingFilter is not null)
         {
@@ -284,50 +359,64 @@
 
     private void RestoreValue1(object? value)
     {
-        (_text1, _num1, _bool1) = ((string?)null, (int?)null, (bool?)null);
-        if (ColumnType == ColumnType.Text)      _text1 = value?.ToString();
-        else if (ColumnType == ColumnType.Number) _num1 = value is int i ? i : value is not null ? (int?)Convert.ToInt32(value) : null;
+        (_text1, _num1, _dec1, _date1, _bool1, _lookup1) = ((string?)null, (int?)null, (decimal?)null, (DateTime?)null, (bool?)null, null);
+        if (_lookupOptions1 is not null)     _lookup1 = value;
+        else if (ColumnType == ColumnType.Text)    _text1 = value?.ToString();
+        else if (ColumnType == ColumnType.Number)  _num1 = value is int i ? i : value is not null ? (int?)Convert.ToInt32(value) : null;
+        else if (ColumnType == ColumnType.Decimal) _dec1 = value is decimal d ? d : value is not null ? (decimal?)Convert.ToDecimal(value) : null;
+        else if (ColumnType == ColumnType.Date)    _date1 = value is DateTime dt ? dt : null;
         else if (ColumnType == ColumnType.Boolean) _bool1 = value is bool b ? b : null;
     }
 
     private void RestoreValue2(object? value)
     {
-        (_text2, _num2, _bool2) = ((string?)null, (int?)null, (bool?)null);
-        if (ColumnType == ColumnType.Text)      _text2 = value?.ToString();
-        else if (ColumnType == ColumnType.Number) _num2 = value is int i ? i : value is not null ? (int?)Convert.ToInt32(value) : null;
+        (_text2, _num2, _dec2, _date2, _bool2, _lookup2) = ((string?)null, (int?)null, (decimal?)null, (DateTime?)null, (bool?)null, null);
+        if (_lookupOptions2 is not null)     _lookup2 = value;
+        else if (ColumnType == ColumnType.Text)    _text2 = value?.ToString();
+        else if (ColumnType == ColumnType.Number)  _num2 = value is int i ? i : value is not null ? (int?)Convert.ToInt32(value) : null;
+        else if (ColumnType == ColumnType.Decimal) _dec2 = value is decimal d ? d : value is not null ? (decimal?)Convert.ToDecimal(value) : null;
+        else if (ColumnType == ColumnType.Date)    _date2 = value is DateTime dt ? dt : null;
         else if (ColumnType == ColumnType.Boolean) _bool2 = value is bool b ? b : null;
     }
 
-    private object? GetValue1() => ColumnType switch
+    private object? GetValue1() => _lookupOptions1 is not null ? _lookup1 : ColumnType switch
     {
         ColumnType.Text    => _text1,
         ColumnType.Number  => _num1,
+        ColumnType.Decimal => _dec1,
+        ColumnType.Date    => _date1,
         ColumnType.Boolean => (object?)_bool1,
         _ => _text1
     };
 
-    private object? GetValue2() => ColumnType switch
+    private object? GetValue2() => _lookupOptions2 is not null ? _lookup2 : ColumnType switch
     {
         ColumnType.Text    => _text2,
         ColumnType.Number  => _num2,
+        ColumnType.Decimal => _dec2,
+        ColumnType.Date    => _date2,
         ColumnType.Boolean => (object?)_bool2,
         _ => _text2
     };
 
-    private bool Clause1HasValue => IsEmptyOrNotEmpty(_op1) || ColumnType switch
+    private bool Clause1HasValue => IsNoValueOperator(_op1) || ColumnType switch
     {
         ColumnType.Text    => !string.IsNullOrEmpty(_text1),
         ColumnType.Number  => _num1.HasValue,
+        ColumnType.Decimal => _dec1.HasValue,
+        ColumnType.Date    => _date1.HasValue,
         ColumnType.Boolean => _bool1.HasValue,
-        _ => false
+        _ => _lookupOptions1 is not null ? _lookup1 is not null : false
     };
 
-    private bool Clause2HasValue => IsEmptyOrNotEmpty(_op2) || ColumnType switch
+    private bool Clause2HasValue => IsNoValueOperator(_op2) || ColumnType switch
     {
         ColumnType.Text    => !string.IsNullOrEmpty(_text2),
         ColumnType.Number  => _num2.HasValue,
+        ColumnType.Decimal => _dec2.HasValue,
+        ColumnType.Date    => _date2.HasValue,
         ColumnType.Boolean => _bool2.HasValue,
-        _ => false
+        _ => _lookupOptions2 is not null ? _lookup2 is not null : false
     };
 
     private bool HasValidValue => _showSecond
@@ -346,7 +435,10 @@
         _showSecond = false;
         _text2 = null;
         _num2 = null;
+        _dec2 = null;
+        _date2 = null;
         _bool2 = null;
+        _lookup2 = null;
     }
 
     private void SetLogic(LogicalOperator op)
@@ -432,6 +524,8 @@
         ColumnFilterOperator.LessThanOrEqual    => "меньше или равно (≤)",
         ColumnFilterOperator.IsEmpty            => "пустая строка",
         ColumnFilterOperator.IsNotEmpty         => "не пустая строка",
+        ColumnFilterOperator.IsNull             => "пусто (NULL)",
+        ColumnFilterOperator.IsNotNull          => "не пусто (NOT NULL)",
         _ => op.ToString()
     };
 }

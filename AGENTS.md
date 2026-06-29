@@ -286,6 +286,16 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 ### SQL-генерация
 - `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`
 - `columnNameMap` — опциональный маппинг имён (например, `"TestTypeName"` → `"t.ТипМедицинскогоАнализа"`) для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима
+- `IsNull`/`IsNotNull` → `IS NULL` / `IS NOT NULL` без параметра; `IsEmpty`/`IsNotEmpty` → `(col IS NULL OR col = '')` / `(col IS NOT NULL AND col <> '')`
+
+### Типы данных фильтрации (`ColumnType`)
+- `Text` — строки: Contains, NotContains, Equals, NotEquals, StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsEmpty, IsNotEmpty
+- `Number` — целые числа (int/long/short/byte): Equals, NotEquals, сравнения >/</>=/<=, IsNull, IsNotNull
+- `Decimal` — дробные (decimal/double/float): те же что Number, редактор `MudNumericField<decimal?>`
+- `Date` — даты (DateTime/DateTimeOffset/DateOnly): сравнения + IsNull/IsNotNull, редактор `MudDatePicker`
+- `Boolean` — булевы: Equals, IsNull, IsNotNull
+- `KescoGridPageBase.MapClrTypeToColumnType` — авто-маппинг CLR-типов в `ColumnType`
+- `KescoGridPageBase.FilterLookupOptions` — необязательный virtual-словарь (SqlName → список `KescoFilterOption`) для выпадающего выбора значений в диалоге фильтра. Страница может переопределить. Грид пробрасывает в `KescoColumnFilterDialog.LookupOptions`
 
 ### Filter tray
 - Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)

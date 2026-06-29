@@ -20,6 +20,7 @@
 | `Columns` | `RenderFragment?` | — | Колонки грида — `<KescoColumn>` компоненты |
 | `ColumnDefs` | `RenderFragment?` | — | Метаданные колонок — `<KescoColumnDef>` компоненты для регистрации группируемых/фильтруемых колонок |
 | `FilterColumnTypes` | `IReadOnlyDictionary<string, ColumnType>` | `[]` | Тип данных фильтруемых колонок: SQL-имя → `ColumnType`. Авто-вычисляется в `KescoGridPageBase` через рефлексию |
+| `FilterLookupOptions` | `IReadOnlyDictionary<string, IReadOnlyList<KescoFilterOption>>?` | `null` | Необязательный источник вариантов для выпадающего списка в диалоге фильтра. Ключ — SQL-имя колонки. Если задан — вместо текстового/числового поля показывается `MudSelect` |
 | `SelectSql` | `string` | `""` | Базовый SELECT SQL (без WHERE/ORDER BY) |
 | `SearchColumns` | `string[]` | `[]` | Выходные имена колонок для полнотекстового поиска |
 | `DefaultOrder` | `string` | `""` | Порядок сортировки по умолчанию (например, `"Порядок, НазваниеАнализа"`) |
@@ -242,11 +243,18 @@ foreach (var a in aggregates) { ... }
 UI — панель фильтров (filter tray) с drag-and-drop заголовков и диалогом `KescoColumnFilterDialog` для настройки условий.
 
 ### Модель данных
-- `ColumnType` — тип данных колонки: `Text` (10 операторов: Contains/NotContains/Equals/NotEquals/StartsWith/NotStartsWith/EndsWith/NotEndsWith/IsEmpty/IsNotEmpty), `Number` (равенство + сравнения >/</>=/<=), `Boolean` (Equals)
-- `ColumnFilterOperator` — оператор сравнения: `Contains`, `NotContains`, `Equals`, `NotEquals`, `StartsWith`, `NotStartsWith`, `EndsWith`, `NotEndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `IsEmpty`, `IsNotEmpty`
+- `ColumnType` — тип данных колонки:
+  - `Text` — строки (10 операторов: Contains/NotContains/Equals/NotEquals/StartsWith/NotStartsWith/EndsWith/NotEndsWith/IsEmpty/IsNotEmpty)
+  - `Number` — целые числа (int/long/short/byte: равенство + сравнения >/</>=/<=, IsNull, IsNotNull)
+  - `Decimal` — дробные числа (decimal/double/float: те же что Number, редактор `MudNumericField<decimal?>`)
+  - `Date` — даты (DateTime/DateTimeOffset/DateOnly: сравнения, IsNull, IsNotNull, редактор `MudDatePicker`)
+  - `Boolean` — булевы (Equals, IsNull, IsNotNull)
+- `ColumnFilterOperator` — оператор сравнения: все 14 значений + `IsNull`, `IsNotNull`
 - `LogicalOperator` — `And` / `Or` для объединения двух условий на одной колонке
-- `ColumnFilter` — условие фильтра: `Column` (SQL-имя), `ParamName` (имя Dapper-параметра), `Operator`, `Value` + опциональные `LogicalOperator`, `SecondOperator`, `SecondValue`, `SecondParamName` (до двух условий на колонку)
+- `ColumnFilter` — условие фильтра: `Column` (SQL-имя), `ParamName` (имя Dapper-параметра), `Operator`, `Value` + опциональные `LogicalOperator`, `SecondOperator`, `SecondValue`, `SecondParamName` (до двух условий на колонку). `HasValue` учитывает `IsNull`/`IsNotNull`
 - `KescoDataQuery.ColumnFilters` — `Dictionary<string, ColumnFilter>` — ключ = SQL-имя колонки
+- `KescoFilterOption` — вариант значения для выпадающего списка в диалоге фильтра (`Value`, `Label`)
+- `KescoGridPageBase.FilterLookupOptions` — virtual-словарь (SqlName → список `KescoFilterOption`) для замены текстового/числового редактора на `MudSelect`
 
 ### SQL-генерация
 - `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`

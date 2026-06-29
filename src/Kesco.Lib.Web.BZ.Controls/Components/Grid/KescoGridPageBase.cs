@@ -257,15 +257,28 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     private static ColumnType MapClrTypeToColumnType(Type clrType)
     {
         var t = Nullable.GetUnderlyingType(clrType) ?? clrType;
-        if (t == typeof(bool))    return ColumnType.Boolean;
+        if (t == typeof(bool))               return ColumnType.Boolean;
+        if (t == typeof(DateTime)            ||
+            t == typeof(DateTimeOffset)      ||
+            t == typeof(DateOnly))           return ColumnType.Date;
+        if (t == typeof(decimal)             ||
+            t == typeof(double)              ||
+            t == typeof(float))              return ColumnType.Decimal;
         if (t == typeof(int)    || t == typeof(long)    ||
             t == typeof(short)  || t == typeof(byte)    ||
-            t == typeof(decimal)|| t == typeof(float)   ||
-            t == typeof(double) || t == typeof(uint)    ||
-            t == typeof(ulong)  || t == typeof(ushort))
-            return ColumnType.Number;
+            t == typeof(uint)   || t == typeof(ulong)   ||
+            t == typeof(ushort))             return ColumnType.Number;
         return ColumnType.Text;
     }
+
+    /// <summary>
+    /// Необязательный источник вариантов для выпадающего списка значений фильтра.
+    /// Ключ — SQL-имя колонки, значение — список вариантов (<see cref="KescoFilterOption"/>).
+    /// Если для колонки задан список, в диалоге фильтра вместо текстового/числового поля
+    /// показывается выпадающий список. Не меняет <see cref="ColumnType"/> и SQL.
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, IReadOnlyList<KescoFilterOption>> FilterLookupOptions { get; }
+        = new Dictionary<string, IReadOnlyList<KescoFilterOption>>();
 
     // ── IKescoGridDataLoader — вызывается гридом при изменении запроса ───────────
 

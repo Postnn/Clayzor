@@ -608,6 +608,13 @@
     [Parameter] public IReadOnlyDictionary<string, ColumnType> FilterColumnTypes { get; set; }
         = new Dictionary<string, ColumnType>();
 
+    /// <summary>
+    /// Необязательный источник вариантов для выпадающего списка значений в диалоге фильтра.
+    /// Ключ — SQL-имя колонки, значение — список вариантов (<see cref="KescoFilterOption"/>).
+    /// Передаётся со страницы, которая может переопределить <see cref="KescoGridPageBase{T}.FilterLookupOptions"/>.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, IReadOnlyList<KescoFilterOption>>? FilterLookupOptions { get; set; }
+
     /// <summary>Базовый SQL-запрос SELECT (без WHERE / ORDER BY).</summary>
     [Parameter] public string SelectSql { get; set; } = string.Empty;
 
@@ -1532,6 +1539,7 @@
             { x => x.ColumnSqlName,     sqlName },
             { x => x.ColumnType,        colType },
             { x => x.ExistingFilter,    existing },
+            { x => x.LookupOptions,     FilterLookupOptions?.GetValueOrDefault(sqlName) },
         };
         var options = new DialogOptionsEx
         {

@@ -16,8 +16,12 @@ public enum ColumnType
 {
     /// <summary>Текстовая колонка — операторы Contains/Equals/StartsWith/EndsWith/NotEquals.</summary>
     Text,
-    /// <summary>Числовая колонка — операторы Equals/NotEquals/GreaterThan/GreaterThanOrEqual/LessThan/LessThanOrEqual.</summary>
+    /// <summary>Целочисленная колонка — операторы Equals/NotEquals/GreaterThan/GreaterThanOrEqual/LessThan/LessThanOrEqual.</summary>
     Number,
+    /// <summary>Дробная колонка (decimal/double/float) — те же операторы что и Number, редактор MudNumericField&lt;decimal?&gt;.</summary>
+    Decimal,
+    /// <summary>Колонка даты (DateTime/DateTimeOffset/DateOnly) — операторы сравнения + IsNull/IsNotNull.</summary>
+    Date,
     /// <summary>Булевая колонка — оператор Equals, значение Да/Нет.</summary>
     Boolean,
 }
@@ -55,6 +59,10 @@ public enum ColumnFilterOperator
     IsEmpty,
     /// <summary>Не пустая строка / NOT NULL — не требует значения.</summary>
     IsNotEmpty,
+    /// <summary>NULL — не требует значения (для нестроковых типов).</summary>
+    IsNull,
+    /// <summary>NOT NULL — не требует значения (для нестроковых типов).</summary>
+    IsNotNull,
 }
 
 /// <summary>
@@ -100,8 +108,9 @@ public sealed class ColumnFilter
     public ColumnFilterOperator Operator { get; set; } = ColumnFilterOperator.Contains;
 
     /// <summary>Возвращает true, если первое условие имеет значимое значение.</summary>
-    public bool HasValue => Value is not null && (Operator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
-        || Value.ToString() is { Length: > 0 });
+    public bool HasValue => Operator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
+        or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull
+        || (Value is not null && Value.ToString() is { Length: > 0 });
 
     // ── Второе условие (опционально) ──────────────────────────────────────────────
 
@@ -121,8 +130,20 @@ public sealed class ColumnFilter
     public ColumnFilterOperator SecondOperator { get; set; } = ColumnFilterOperator.Contains;
 
     /// <summary>Возвращает true, если второе условие задано и имеет значение.</summary>
-    public bool HasSecondClause => SecondValue is not null && (SecondOperator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
-        || SecondValue.ToString() is { Length: > 0 });
+    public bool HasSecondClause => SecondOperator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
+        or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull
+        || (SecondValue is not null && SecondValue.ToString() is { Length: > 0 });
+}
+
+/// <summary>
+/// Вариант значения для выпадающего списка в диалоге фильтра.
+/// </summary>
+public sealed class KescoFilterOption
+{
+    /// <summary>Значение (строка или число), уходящее в SQL-параметр.</summary>
+    public object? Value { get; set; }
+    /// <summary>Отображаемая метка.</summary>
+    public string Label { get; set; } = "";
 }
 
 /// <summary>
@@ -144,7 +165,7 @@ public static class ColumnFilterOperatorList
         ColumnFilterOperator.IsNotEmpty,
     ];
 
-    /// <summary>Операторы для числовых колонок.</summary>
+    /// <summary>Операторы для целочисленных колонок.</summary>
     public static readonly IReadOnlyList<ColumnFilterOperator> NumberOperators = [
         ColumnFilterOperator.Equals,
         ColumnFilterOperator.NotEquals,
@@ -152,11 +173,39 @@ public static class ColumnFilterOperatorList
         ColumnFilterOperator.GreaterThanOrEqual,
         ColumnFilterOperator.LessThan,
         ColumnFilterOperator.LessThanOrEqual,
+        ColumnFilterOperator.IsNull,
+        ColumnFilterOperator.IsNotNull,
+    ];
+
+    /// <summary>Операторы для дробных колонок (те же что и Number).</summary>
+    public static readonly IReadOnlyList<ColumnFilterOperator> DecimalOperators = [
+        ColumnFilterOperator.Equals,
+        ColumnFilterOperator.NotEquals,
+        ColumnFilterOperator.GreaterThan,
+        ColumnFilterOperator.GreaterThanOrEqual,
+        ColumnFilterOperator.LessThan,
+        ColumnFilterOperator.LessThanOrEqual,
+        ColumnFilterOperator.IsNull,
+        ColumnFilterOperator.IsNotNull,
+    ];
+
+    /// <summary>Операторы для колонок дат.</summary>
+    public static readonly IReadOnlyList<ColumnFilterOperator> DateOperators = [
+        ColumnFilterOperator.Equals,
+        ColumnFilterOperator.NotEquals,
+        ColumnFilterOperator.GreaterThan,
+        ColumnFilterOperator.GreaterThanOrEqual,
+        ColumnFilterOperator.LessThan,
+        ColumnFilterOperator.LessThanOrEqual,
+        ColumnFilterOperator.IsNull,
+        ColumnFilterOperator.IsNotNull,
     ];
 
     /// <summary>Операторы для булевых колонок.</summary>
     public static readonly IReadOnlyList<ColumnFilterOperator> BooleanOperators = [
         ColumnFilterOperator.Equals,
+        ColumnFilterOperator.IsNull,
+        ColumnFilterOperator.IsNotNull,
     ];
 }
 
@@ -259,6 +308,10 @@ public sealed class KescoDataQuery
                 return $"({colName} IS NULL OR {colName} = '')";
             case ColumnFilterOperator.IsNotEmpty:
                 return $"({colName} IS NOT NULL AND {colName} <> '')";
+            case ColumnFilterOperator.IsNull:
+                return $"{colName} IS NULL";
+            case ColumnFilterOperator.IsNotNull:
+                return $"{colName} IS NOT NULL";
             case ColumnFilterOperator.Contains:
                 dp.Add(paramName, $"%{value}%");
                 return $"{colName} LIKE @{paramName}";
