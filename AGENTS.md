@@ -170,7 +170,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Компонент | Документация |
 |---|---|
 | **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Разметка в `KescoGrid.razor`, логика в 9 partial class-файлах (1 основной + 8 по темам, см. «Codebehind-структура» ниже). При `EditDialogType != null` автоматически добавляет сервисную колонку (первой) с иконкой карандаша для открытия диалога редактирования. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode` | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoGridPageBase\<T>** — базовый класс страниц с гридом. Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGridPageBase\<T>** — базовый класс страниц с гридом в 5 partial-файлах (1 основной + 4 по темам, см. «Codebehind-структура KescoGridPageBase» ниже). Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumn\<T>** — колонка грида с авто-заголовком. Получает Title/SortName/Drag&Drop из `KescoColumnDef` по `ColumnId`. Скрывается при группировке. Кнопка меню ⋮ для мобильных | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnDef** — невидимый регистратор метаданных колонки: `ColumnId` (EditorRequired), `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGroupHeader** — заголовок строки группы с иконкой раскрытия/сворачивания и количеством элементов | [docs/kesco-grid.md](docs/kesco-grid.md) |
@@ -225,6 +225,23 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - `KescoGrid.Filtering.cs` будет переписан задачами 10–11 (переход на дерево фильтра), поэтому изолирован
 - При добавлении using — в тот файл, где используется тип
 - Базовый класс и интерфейсы — только в `KescoGrid.razor.cs`
+
+### Codebehind-структура KescoGridPageBase
+
+После рефакторинга (задача 06 мастер-плана) логика `KescoGridPageBase<T>` разнесена по partial-файлам. Все файлы объявляют `public abstract partial class KescoGridPageBase<T> where T : Entity` в namespace `Kesco.Lib.Web.BZ.Controls.Components.Grid`. Базовый класс (`ComponentBase`) и реализуемые интерфейсы (`IKescoGridDataLoader`) — только в основном файле.
+
+| Файл | Строк | Содержание |
+|---|---|---|
+| `KescoGridPageBase.cs` | 365 | Ядро: `[Inject]`-сервисы (`Db`, `Snackbar`, `DialogService`, `JS`), свойство `Grid`, поля `_query`/`_rows`/`_loading`/`_totalGroupCount`, `OnAfterRenderAsync`, `LoadData`, `LoadFlatData`, `LoadGroupedData`, `ToggleGroup`, `OpenAddDialog`, `Dispose`, интерфейс `IKescoGridDataLoader` |
+| `KescoGridPageBase.ColumnTypes.cs` | 83 | Вывод типов колонок: `_idColumnName`, `_propertyMap`, `_inferredColumnTypes`, `FilterColumnTypes`, `GetIdColumnName`, `BuildPropertyMap`, `InferFilterColumnTypes`, `MapClrTypeToColumnType` |
+| `KescoGridPageBase.Export.Excel.cs` | 208 | Экспорт в Excel: `IKescoGridDataLoader.ExcelExportAsync`, `BuildAllRowsForExcel`, `BuildAllGroupedRowsForExcel`, `BuildExportRows`, `CollectCounts`, `SanitizeFileName` |
+| `KescoGridPageBase.Export.Print.cs` | 89 | Печать всех данных: `BuildAllRowsForPrint`, `BuildAllFlatRowsForPrint`, `BuildAllGroupedRowsForPrint` |
+| `KescoGridPageBase.Export.Selected.cs` | 225 | Экспорт/печать выбранных: `BuildPrintHtmlForSelectedAsync`, `BuildAllRowsForSelected`, `BuildAllFlatRowsForSelected`, `BuildAllGroupedRowsForSelected`, `GetGroupKeysByDepth`, `CollectKeysByDepth` |
+
+**Правила модификации:**
+- Новые поля/методы добавлять в соответствующий тематический файл, а не в `KescoGridPageBase.cs`
+- При добавлении using — в тот файл, где используется тип
+- Базовый класс и интерфейсы — только в `KescoGridPageBase.cs`
 
 ## Server-side grouping architecture
 

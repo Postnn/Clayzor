@@ -420,6 +420,23 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 }
 ```
 
+### Codebehind-структура
+
+После рефакторинга (задача 06 мастер-плана) логика `KescoGridPageBase<T>` разнесена по 5 partial-файлам. Все файлы объявляют `public abstract partial class KescoGridPageBase<T> where T : Entity` в namespace `Kesco.Lib.Web.BZ.Controls.Components.Grid`. Базовый класс (`ComponentBase`) и реализуемые интерфейсы (`IKescoGridDataLoader`) — только в основном файле.
+
+| Файл | Строк | Содержание |
+|---|---|---|
+| `KescoGridPageBase.cs` | 365 | Ядро: `[Inject]`-сервисы (`Db`, `Snackbar`, `DialogService`, `JS`), свойство `Grid`, поля `_query`/`_rows`/`_loading`/`_totalGroupCount`, `OnAfterRenderAsync`, `LoadData`, `LoadFlatData`, `LoadGroupedData`, `ToggleGroup`, `OpenAddDialog`, `Dispose`, интерфейс `IKescoGridDataLoader` |
+| `KescoGridPageBase.ColumnTypes.cs` | 83 | Вывод типов колонок: `_idColumnName`, `_propertyMap`, `_inferredColumnTypes`, `FilterColumnTypes`, `GetIdColumnName`, `BuildPropertyMap`, `InferFilterColumnTypes`, `MapClrTypeToColumnType` |
+| `KescoGridPageBase.Export.Excel.cs` | 208 | Экспорт в Excel: `IKescoGridDataLoader.ExcelExportAsync`, `BuildAllRowsForExcel`, `BuildAllGroupedRowsForExcel`, `BuildExportRows`, `CollectCounts`, `SanitizeFileName` |
+| `KescoGridPageBase.Export.Print.cs` | 89 | Печать всех данных: `BuildAllRowsForPrint`, `BuildAllFlatRowsForPrint`, `BuildAllGroupedRowsForPrint` |
+| `KescoGridPageBase.Export.Selected.cs` | 225 | Экспорт/печать выбранных: `BuildPrintHtmlForSelectedAsync`, `BuildAllRowsForSelected`, `BuildAllFlatRowsForSelected`, `BuildAllGroupedRowsForSelected`, `GetGroupKeysByDepth`, `CollectKeysByDepth` |
+
+**Правила модификации:**
+- Новые поля/методы добавлять в соответствующий тематический файл, а не в `KescoGridPageBase.cs`
+- При добавлении using — в тот файл, где используется тип
+- Базовый класс и интерфейсы — только в `KescoGridPageBase.cs`
+
 ## Состояния
 
 - **Поиск** — сбрасывает страницу на 1, вызывает `OnQueryChangedAsync` с debounce 300 мс
