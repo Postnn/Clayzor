@@ -290,12 +290,13 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 ### Filter tray
 - Панель включается кнопкой `FilterAlt`, скрыта по умолчанию. Кнопка появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Filterable="true"`
-- Добавление фильтра: перетаскивание заголовка колонки (KescoColumn автоматически поддерживает drag) на панель → открывается `KescoColumnFilterDialog`
-- Редактирование: клик по чипу фильтра → повторно открывается диалог с текущими значениями
-- Удаление: клик по × на чипе
-- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`), данные перезагружаются
-- Чип показывает читаемое описание: `«Название содержит «грипп»»` или для двух условий `«Название: содержит «грипп» И не содержит «ковид»»` (через `KescoColumnFilterDialog.GetFilterDescription`)
-- Чипы отрисовываются через `ColumnDialogLeaves` — листья `_filterRoot` с `Source=ColumnDialog` (дерево фильтра, а не словарь)
+- При активной панели показывается кнопка «Настроить фильтр» (`FilterList`) — открывает `OpenCompositeFilterDialog()` → `KescoFilterDialog`
+- Добавление колоночного фильтра: перетаскивание заголовка колонки (KescoColumn автоматически поддерживает drag) на панель → открывается `KescoColumnFilterDialog` → лист `Source=ColumnDialog` в `_filterRoot`
+- Редактирование: клик по сегменту колоночного условия → `OpenFilterDialog(sqlName, displayName)` с `ExistingFilter`; клик по сегменту составного фильтра → `OpenCompositeFilterDialog()`
+- Удаление колоночного фильтра: × на чипе → `RemoveFilter(sqlName)`. Удаление составного фильтра: × на чипе → `RemoveCompositeNodes()`
+- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`)
+- **Два типа чипов:** колоночные (один на колонку, каждое условие — отдельный сегмент) и составной (один чип для всего поддерева `CompositeDialog`). Сегменты — кликабельные `<span>` с маршрутизацией по `FilterSegment.Source`
+- Сегменты/описание строятся через `KescoFilterDescriptionBuilder`: `BuildSegments(root, getDisplayName)` → `IReadOnlyList<FilterSegment>`; `BuildText(root, getDisplayName)` → строка для экспорта/печати (группы в скобках, И/ИЛИ)
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице

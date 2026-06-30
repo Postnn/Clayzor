@@ -51,6 +51,13 @@
                              Icon="@Icons.Material.Filled.FilterAlt"
                              Class="@(_filterTrayExpanded ? "filter-toggle-btn filter-toggle-btn--active" : "filter-toggle-btn")"
                              OnClick="@ToggleFilterTray" />
+                @if (_filterTrayExpanded)
+                {
+                    <KescoButton Text="Настроить фильтр"
+                                 Icon="@Icons.Material.Filled.FilterList"
+                                 Class="filter-composite-btn"
+                                 OnClick="@OpenCompositeFilterDialog" />
+                }
             }
             @if (ShowAddButton)
             {
@@ -227,30 +234,75 @@
 
     @if (_filterTrayExpanded)
     {
-        <div class="filter-tray @(ColumnDialogLeaves.Any() ? "filter-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
+        var _filterSegments   = BuildFilterSegments();
+        var _hasComposite     = _filterRoot.Nodes.Any(n =>
+            n is not ColumnFilter cf || cf.Source != KescoFilterSource.ColumnDialog);
+        var _hasAnyFilter     = _filterSegments.Count > 0;
+        <div class="filter-tray @(_hasAnyFilter ? "filter-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnFilterTrayDragOver"
              @ondragover:preventDefault="true"
              @ondrop="OnFilterTrayDrop">
             <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Class="filter-tray-icon" />
-            @foreach (var filter in ColumnDialogLeaves)
+
+            @* ── Чипы по листьям ColumnDialog (один чип на колонку) ── *@
+            @foreach (var leaf in ColumnDialogLeaves.ToList())
             {
-                var sqlName  = filter.Column;
-                var dispName = _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName;
-                var desc = KescoColumnFilterDialog.GetFilterDescription(filter, dispName);
+                var leafSqlName  = leaf.Column;
+                var leafDispName = _columnBySqlName.TryGetValue(leafSqlName, out var lm) ? lm.DisplayName : leafSqlName;
+                var leafSegments = _filterSegments
+                    .Where(s => s.Source == KescoFilterSource.ColumnDialog && s.Column == leafSqlName)
+                    .ToList();
                 <div class="filter-chip">
-                    <span class="chip-label chip-label-clickable"
-                          @onclick="async () => await OpenFilterDialog(sqlName, dispName)"
-                          @onclick:stopPropagation="true">
-                        @desc
-                    </span>
+                    @foreach (var seg in leafSegments)
+                    {
+                        var segText = seg.Text;
+                        <span class="chip-label chip-label-clickable"
+                              @onclick="async () => await OpenFilterDialog(leafSqlName, leafDispName)"
+                              @onclick:stopPropagation="true">
+                            @segText
+                        </span>
+                    }
                     <MudIconButton Icon="@Icons.Material.Filled.Close"
                                    Size="Size.Small"
-                                   OnClick="async () => await RemoveFilter(sqlName)"
+                                   OnClick="async () => await RemoveFilter(leafSqlName)"
                                    Class="chip-remove-btn pa-0"
                                    Style="width:18px;height:18px" />
                 </div>
             }
-            @if (!ColumnDialogLeaves.Any())
+
+            @* ── Чип составного фильтра (если есть CompositeDialog-узлы) ── *@
+            @if (_hasComposite)
+            {
+                var compositeSegments = _filterSegments
+                    .Where(s => s.Source == KescoFilterSource.CompositeDialog)
+                    .ToList();
+                <div class="filter-chip filter-chip--composite">
+                    @foreach (var seg in compositeSegments)
+                    {
+                        var segText = seg.Text;
+                        <span class="chip-label chip-label-clickable"
+                              @onclick="async () => await OpenCompositeFilterDialog()"
+                              @onclick:stopPropagation="true">
+                            @segText
+                        </span>
+                    }
+                    @if (compositeSegments.Count == 0)
+                    {
+                        <span class="chip-label chip-label-clickable"
+                              @onclick="async () => await OpenCompositeFilterDialog()"
+                              @onclick:stopPropagation="true">
+                            Настраиваемый фильтр
+                        </span>
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                   Size="Size.Small"
+                                   OnClick="async () => await RemoveCompositeNodes()"
+                                   Class="chip-remove-btn pa-0"
+                                   Style="width:18px;height:18px" />
+                </div>
+            }
+
+            @if (!_hasAnyFilter)
             {
                 <span class="filter-tray-hint">Перетащите заголовок колонки сюда для фильтрации</span>
             }

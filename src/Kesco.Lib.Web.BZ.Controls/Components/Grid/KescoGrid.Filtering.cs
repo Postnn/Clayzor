@@ -112,6 +112,18 @@ public partial class KescoGrid<TEntity> where TEntity : class
         }
     }
 
+    /// <summary>
+    /// Удаляет все узлы составного фильтра (<c>Source=CompositeDialog</c> и группы)
+    /// из корня дерева, оставляя только листья <c>Source=ColumnDialog</c>.
+    /// </summary>
+    private async Task RemoveCompositeNodes()
+    {
+        _filterRoot.Nodes.RemoveAll(n =>
+            n is not ColumnFilter cf || cf.Source != KescoFilterSource.ColumnDialog);
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
     /// <summary>Удаляет листовой фильтр колонки из дерева.</summary>
     private async Task RemoveFilter(string sqlName)
     {
@@ -127,28 +139,57 @@ public partial class KescoGrid<TEntity> where TEntity : class
     }
 
     /// <summary>
-    /// Строит читаемое описание активных фильтров для экспорта/печати.
-    /// Учитывает листья с <c>Source=ColumnDialog</c> в корне дерева.
+    /// Строит читаемое описание всего дерева фильтра для экспорта/печати.
     /// </summary>
     private string? BuildFilterDescription()
-    {
-        var leaves = ColumnDialogLeaves.ToList();
-        if (leaves.Count == 0) return null;
-        var parts = leaves.Select(f =>
-        {
-            var dn = _columnBySqlName.TryGetValue(f.Column, out var m) ? m.DisplayName : f.Column;
-            return KescoColumnFilterDialog.GetFilterDescription(f, dn);
-        });
-        return $"Фильтр: {string.Join("; ", parts)}";
-    }
+        => KescoFilterDescriptionBuilder.BuildText(
+            _filterRoot,
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName);
+
+    /// <summary>
+    /// Строит список кликабельных сегментов из всего дерева фильтра для панели.
+    /// </summary>
+    private IReadOnlyList<FilterSegment> BuildFilterSegments()
+        => KescoFilterDescriptionBuilder.BuildSegments(
+            _filterRoot,
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName);
 
     /// <inheritdoc cref="IKescoGrid.ActiveCompositeFilter"/>
     public KescoFilterGroupNode? ActiveCompositeFilter => _filterRoot;
 
     /// <inheritdoc cref="IKescoGrid.OpenCompositeFilterDialog"/>
-    public Task OpenCompositeFilterDialog()
+    public async Task OpenCompositeFilterDialog()
     {
-        // UI-реализация — задача 11
-        return Task.CompletedTask;
+        // Фильтруемые колонки — только зарегистрированные Filterable в текущем порядке
+        var filterableCols = ((IKescoGrid)this).GetVisibleColumns()
+            .Where(c => c.Filterable)
+            .ToList();
+
+        // Если нет ни одной Filterable колонки — берём все зарегистрированные
+        if (filterableCols.Count == 0)
+            filterableCols = _columnBySqlName.Values.Where(c => c.Filterable).ToList();
+
+        var parameters = new DialogParameters<KescoFilterDialog>
+        {
+            { x => x.Root,         _filterRoot },
+            { x => x.Columns,      (IReadOnlyList<KescoColumnMeta>)filterableCols },
+            { x => x.LookupOptions, FilterLookupOptions },
+        };
+        var options = new DialogOptionsEx
+        {
+            MaxWidth  = MaxWidth.Medium,
+            FullWidth = true,
+            DragMode  = MudDialogDragMode.Simple,
+        };
+        var dialog = await DialogService.ShowExAsync<KescoFilterDialog>(
+            "Настраиваемый фильтр", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled && result.Data is KescoFilterGroupNode newRoot)
+        {
+            _filterRoot = newRoot;
+            _pageNumber = 1;
+            await NotifyQueryChanged();
+        }
     }
 }

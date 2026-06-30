@@ -184,6 +184,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoFilterExpression** — редактор одного листового условия составного фильтра: выбор колонки, оператора и значения через `KescoFilterValueEditor` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterGroup** — рекурсивный узел-группа составного фильтра с переключателем И/ИЛИ, кнопками добавления условия/группы и удаления | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterDialog** — диалог настраиваемого (составного) фильтра в стиле Telerik Filter. Работает с глубокой копией дерева, возвращает результат через `DialogResult.Ok(KescoFilterGroupNode)` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **FilterSegment** — кликабельный сегмент в панели фильтра: `Text`, `Source` (ColumnDialog/CompositeDialog), `Column` (маршрутизация клика) | — |
+| **KescoFilterDescriptionBuilder** — статический построитель: `BuildSegments(root, getDisplayName)` → список кликабельных сегментов; `BuildText(root, getDisplayName)` → строка описания для экспорта/печати | — |
 | **KescoColumnSettingsDialog** — диалог настройки порядка, видимости и сортировки колонок (jQuery UI Sortable drag-and-drop с авто-прокруткой) | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
@@ -220,7 +222,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | `KescoGrid.Search.cs` | 18 | `_searchText`, `DebounceTimer`, обработчики поиска |
 | `KescoGrid.Sorting.cs` | 66 | `_sortState`, `ToggleSort`, `HandleSortClick`, `GetSortBadge` |
 | `KescoGrid.Grouping.cs` | 217 | `_groupColumns`, `_trayExpanded`, `AddGroupColumn`, `RemoveGroupColumn`, `OnChipDragStart/End`, `OnTrayDragOver/Drop`, `GroupColumns`, `OnGroupTriToggle`, `OnHeaderTriToggle`, `_groupChildIds` |
-| `KescoGrid.Filtering.cs` | 155 | `_filterRoot` (KescoFilterGroupNode), `_filterTrayExpanded`, `ColumnDialogLeaves`, `OpenFilterDialog`, `AddFilterAsync`, `RemoveFilter`, `OnFilterTrayDragOver`, `OnFilterTrayDrop`, `BuildFilterDescription`, `ActiveCompositeFilter`, `OpenCompositeFilterDialog` |
+| `KescoGrid.Filtering.cs` | 195 | `_filterRoot` (KescoFilterGroupNode), `_filterTrayExpanded`, `ColumnDialogLeaves`, `OpenFilterDialog`, `AddFilterAsync`, `RemoveFilter`, `RemoveCompositeNodes`, `OnFilterTrayDragOver`, `OnFilterTrayDrop`, `BuildFilterDescription`, `BuildFilterSegments`, `ActiveCompositeFilter`, `OpenCompositeFilterDialog` |
 | `KescoGrid.DragDrop.cs` | 86 | `_dragSourceIndex`, drag-and-drop чипов группировки (перемещение/перестановка в трее) |
 | `KescoGrid.Selection.cs` | 113 | `_selectMode`, `_selectAllChecked`, `_selectedIds`, `OnRowSelectAsync`, `SelectAllAsync`, `DeselectAllAsync`, `ToggleSelectMode`, персистентность выделения |
 | `KescoGrid.ExportMenu.cs` | 141 | `_isExporting`, `_openSubGroups`, `ToggleSubGroup`, `Print{CurrentPage,Selected,All}Internal`, `Excel{CurrentPage,Selected,All}Internal` |
@@ -361,14 +363,18 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `ColumnFilter` реализует `IKescoFilterNode` — листовой узел дерева. `ColumnFilter.Source` (`KescoFilterSource`) — происхождение: `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
 - `KescoCompositeSqlBuilder` — статический SQL-билдер (задача 07 мастер-плана). `Build(root, parameters, knownColumns, columnNameMap?)` рекурсивно обходит дерево `KescoFilterGroupNode` и возвращает фрагмент WHERE (без слова WHERE). Безопасность: имя колонки — только из белого списка `knownColumns`; значения — только Dapper-параметры; уникальные имена параметров через сквозной счётчик (`p0, p1, …`). Листовые узлы с неизвестной колонкой отбрасываются. Переиспользует `KescoDataQuery.BuildSingleClause` (теперь `internal`)
 
-### Filter tray
+### Filter tray (задача 11)
 - Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)
-- Добавление фильтра: перетаскивание заголовка колонки на панель → открывается `KescoColumnFilterDialog`
-- Редактирование: клик по чипу фильтра → повторно открывается диалог с текущими значениями
-- Удаление: клик по × на чипе
-- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`), данные перезагружаются
-- Чип показывает читаемое описание: `«Название содержит «грипп»»` или для двух условий `«Название: содержит «грипп» И не содержит «ковид»»` (через `KescoColumnFilterDialog.GetFilterDescription`)
-- Чипы отрисовываются через `ColumnDialogLeaves` — `IEnumerable<ColumnFilter>` листьев с `Source=ColumnDialog` из `_filterRoot`
+- При активной панели показывается кнопка «Настроить фильтр» (`FilterList`) — открывает `OpenCompositeFilterDialog()`
+- Добавление колоночного фильтра: перетаскивание заголовка на панель → `KescoColumnFilterDialog` → лист `Source=ColumnDialog` в `_filterRoot`
+- Редактирование: клик по сегменту колоночного условия → `OpenFilterDialog(sqlName, displayName)` с `ExistingFilter`; клик по сегменту составного фильтра → `OpenCompositeFilterDialog()`
+- Удаление колоночного фильтра: клик по × на чипе → `RemoveFilter(sqlName)`. Удаление составного фильтра: × на чипе → `RemoveCompositeNodes()` (удаляет все узлы кроме `Source=ColumnDialog`)
+- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`)
+- **Два типа чипов в панели:**
+  - **Колоночные** — по одному чипу на колонку. Каждое условие (клауза) — отдельный `<span class="chip-label chip-label-clickable">`, маршрутизация → `KescoColumnFilterDialog`
+  - **Составной** — один чип для всего поддерева `CompositeDialog`. Сегменты кликабельны, маршрутизация → `KescoFilterDialog`. При отсутствии сегментов — текст-заглушка «Настраиваемый фильтр»
+- Сегменты строятся через `KescoFilterDescriptionBuilder.BuildSegments(_filterRoot, getDisplayName)` → `IReadOnlyList<FilterSegment>`: каждый `FilterSegment` содержит `Text`, `Source`, `Column`
+- Описание для экспорта/печати — `KescoFilterDescriptionBuilder.BuildText(_filterRoot, getDisplayName)`: группы в скобках, условия через И/ИЛИ
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице (через KescoGridPageBase\<T>)
