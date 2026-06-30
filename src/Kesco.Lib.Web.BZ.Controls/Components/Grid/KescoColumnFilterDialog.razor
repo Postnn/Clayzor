@@ -1,4 +1,5 @@
 @using MudBlazor
+@using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter
 @inject IJSRuntime JS
 
 <MudDialog>
@@ -27,50 +28,12 @@
                 }
             </MudSelect>
 
-            @if (!IsNoValueOperator(_op1))
-            {
-                @if (_lookupOptions1 is not null)
-                {
-                    <MudSelect T="object" Label="Значение" @bind-Value="_lookup1" @ref="_lookupFieldRef"
-                               Variant="Variant.Outlined" Margin="Margin.Dense"
-                               AnchorOrigin="Origin.BottomLeft" Clearable="true" AutoFocus="true">
-                        @foreach (var opt in _lookupOptions1)
-                        {
-                            <MudSelectItem Value="@opt.Value">@opt.Label</MudSelectItem>
-                        }
-                    </MudSelect>
-                }
-                else if (ColumnType == ColumnType.Text)
-                {
-                    <MudTextField T="string" Label="Значение" @bind-Value="_text1" @ref="_textFieldRef"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" AutoFocus="true" />
-                }
-                else if (ColumnType == ColumnType.Number)
-                {
-                    <MudNumericField T="int?" Label="Значение" @bind-Value="_num1" @ref="_numFieldRef"
-                                     Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" AutoFocus="true" />
-                }
-                else if (ColumnType == ColumnType.Decimal)
-                {
-                    <MudNumericField T="decimal?" Label="Значение" @bind-Value="_dec1" @ref="_decFieldRef"
-                                     Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" AutoFocus="true" />
-                }
-                else if (ColumnType == ColumnType.Date)
-                {
-                    <MudDatePicker Label="Значение" @bind-Date="_date1" @ref="_dateFieldRef"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
-                                   DateFormat="dd.MM.yyyy" />
-                }
-                else if (ColumnType == ColumnType.Boolean)
-                {
-                    <MudSelect T="bool?" Label="Значение" @bind-Value="_bool1" @ref="_boolFieldRef"
-                               Variant="Variant.Outlined" Margin="Margin.Dense"
-                               AnchorOrigin="Origin.BottomLeft" Clearable="true">
-                        <MudSelectItem Value="@((bool?)true)">Да</MudSelectItem>
-                        <MudSelectItem Value="@((bool?)false)">Нет</MudSelectItem>
-                    </MudSelect>
-                }
-            }
+            <KescoFilterValueEditor Type="@_descriptor"
+                                    Value="@_value1"
+                                    ValueChanged="@(v => _value1 = v)"
+                                    Options="@LookupOptions"
+                                    Operator="@_op1"
+                                    AutoFocus="true" />
 
             @* ── Второе условие (опционально) ────────────────────── *@
             @if (_showSecond)
@@ -106,50 +69,12 @@
                     }
                 </MudSelect>
 
-                @if (!IsNoValueOperator(_op2))
-                {
-                    @if (_lookupOptions2 is not null)
-                    {
-                        <MudSelect T="object" Label="Значение" @bind-Value="_lookup2" @ref="_lookupFieldRef2"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                   AnchorOrigin="Origin.BottomLeft" Clearable="true">
-                            @foreach (var opt in _lookupOptions2)
-                            {
-                                <MudSelectItem Value="@opt.Value">@opt.Label</MudSelectItem>
-                            }
-                        </MudSelect>
-                    }
-                    else if (ColumnType == ColumnType.Text)
-                    {
-                        <MudTextField T="string" Label="Значение" @bind-Value="_text2" @ref="_textFieldRef2"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Clearable="true" />
-                    }
-                    else if (ColumnType == ColumnType.Number)
-                    {
-                        <MudNumericField T="int?" Label="Значение" @bind-Value="_num2" @ref="_numFieldRef2"
-                                         Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
-                    }
-                    else if (ColumnType == ColumnType.Decimal)
-                    {
-                        <MudNumericField T="decimal?" Label="Значение" @bind-Value="_dec2" @ref="_decFieldRef2"
-                                         Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" />
-                    }
-                    else if (ColumnType == ColumnType.Date)
-                    {
-                        <MudDatePicker Label="Значение" @bind-Date="_date2" @ref="_dateFieldRef2"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
-                                       DateFormat="dd.MM.yyyy" />
-                    }
-                    else if (ColumnType == ColumnType.Boolean)
-                    {
-                        <MudSelect T="bool?" Label="Значение" @bind-Value="_bool2" @ref="_boolFieldRef2"
-                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                   AnchorOrigin="Origin.BottomLeft" Clearable="true">
-                            <MudSelectItem Value="@((bool?)true)">Да</MudSelectItem>
-                            <MudSelectItem Value="@((bool?)false)">Нет</MudSelectItem>
-                        </MudSelect>
-                    }
-                }
+                <KescoFilterValueEditor Type="@_descriptor"
+                                        Value="@_value2"
+                                        ValueChanged="@(v => _value2 = v)"
+                                        Options="@LookupOptions"
+                                        Operator="@_op2"
+                                        AutoFocus="@_focusSecond" />
             }
             else
             {
@@ -201,64 +126,34 @@
 
     // ── Состояние первого условия ──────────────────────────────────────────────
     private ColumnFilterOperator _op1;
-    private string? _text1;
-    private int? _num1;
-    private decimal? _dec1;
-    private DateTime? _date1;
-    private bool? _bool1;
-    private object? _lookup1;
-    private IReadOnlyList<KescoFilterOption>? _lookupOptions1;
+    private object? _value1;
 
     // ── Состояние второго условия ──────────────────────────────────────────────
     private bool _showSecond;
     private LogicalOperator _logic = LogicalOperator.And;
     private ColumnFilterOperator _op2;
-    private string? _text2;
-    private int? _num2;
-    private decimal? _dec2;
-    private DateTime? _date2;
-    private bool? _bool2;
-    private object? _lookup2;
-    private IReadOnlyList<KescoFilterOption>? _lookupOptions2;
+    private object? _value2;
 
     private IReadOnlyList<ColumnFilterOperator> _availableOperators = [];
 
-    private MudTextField<string>? _textFieldRef;
-    private MudNumericField<int?>? _numFieldRef;
-    private MudNumericField<decimal?>? _decFieldRef;
-    private MudDatePicker? _dateFieldRef;
-    private MudSelect<bool?>? _boolFieldRef;
-    private MudSelect<object>? _lookupFieldRef;
-
-    private MudTextField<string>? _textFieldRef2;
-    private MudNumericField<int?>? _numFieldRef2;
-    private MudNumericField<decimal?>? _decFieldRef2;
-    private MudDatePicker? _dateFieldRef2;
-    private MudSelect<bool?>? _boolFieldRef2;
-    private MudSelect<object>? _lookupFieldRef2;
-
+    /// <summary>
+    /// Признак того, что второе условие только что добавлено и ему нужен AutoFocus.
+    /// Сбрасывается после рендера.
+    /// </summary>
     private bool _focusSecond;
 
     /// <summary>
-    /// Устанавливает фокус на поле ввода значения: при открытии — на первое,
-    /// после добавления второго условия или переключения И/ИЛИ — на второе.
+    /// Сбрасывает флаг <see cref="_focusSecond"/> после рендера, чтобы AutoFocus
+    /// на втором редакторе не «залипал» при последующих обновлениях.
     /// </summary>
-    /// <summary>
-    /// Устанавливает фокус на поле ввода значения второго условия после его добавления.
-    /// Первое условие фокусируется нативно через <c>AutoFocus="true"</c> на полях ввода.
-    /// </summary>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_focusSecond && _showSecond && !IsNoValueOperator(_op2))
+        if (_focusSecond)
         {
-            if (_textFieldRef2 is not null)       await _textFieldRef2.FocusAsync();
-            else if (_numFieldRef2 is not null)   await _numFieldRef2.FocusAsync();
-            else if (_decFieldRef2 is not null)   await _decFieldRef2.FocusAsync();
-            else if (_dateFieldRef2 is not null)  await _dateFieldRef2.FocusAsync();
-            else if (_boolFieldRef2 is not null)  await _boolFieldRef2.FocusAsync();
-            else if (_lookupFieldRef2 is not null) await _lookupFieldRef2.FocusAsync();
             _focusSecond = false;
+            StateHasChanged();
         }
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -328,20 +223,21 @@
         _descriptor = ColumnTypes.ColumnTypeRegistry.FromKind(ColumnType);
         _availableOperators = (IReadOnlyList<ColumnFilterOperator>)_descriptor.Operators;
 
-        _lookupOptions1 = LookupOptions;
-        _lookupOptions2 = LookupOptions;
-
         if (ExistingFilter is not null)
         {
-            _op1 = ExistingFilter.Operator;
-            RestoreValue1(ExistingFilter.Value);
+            _op1    = ExistingFilter.Operator;
+            _value1 = LookupOptions is not null
+                ? ExistingFilter.Value
+                : _descriptor.Parse(ExistingFilter.Value?.ToString());
 
             if (ExistingFilter.HasSecondClause)
             {
                 _showSecond = true;
                 _logic      = ExistingFilter.LogicalOperator;
                 _op2        = ExistingFilter.SecondOperator;
-                RestoreValue2(ExistingFilter.SecondValue);
+                _value2     = LookupOptions is not null
+                    ? ExistingFilter.SecondValue
+                    : _descriptor.Parse(ExistingFilter.SecondValue?.ToString());
             }
             else
             {
@@ -350,74 +246,18 @@
         }
         else
         {
-            _op1 = _descriptor.DefaultOperator;
+            _op1        = _descriptor.DefaultOperator;
+            _value1     = null;
             _showSecond = false;
         }
     }
 
-    private void RestoreValue1(object? value)
-    {
-        (_text1, _num1, _dec1, _date1, _bool1, _lookup1) = ((string?)null, (int?)null, (decimal?)null, (DateTime?)null, (bool?)null, null);
-        if (_lookupOptions1 is not null) { _lookup1 = value; return; }
-        var parsed = _descriptor.Parse(value?.ToString());
-        if (ColumnType == ColumnType.Text)    _text1 = parsed as string;
-        else if (ColumnType == ColumnType.Number)  _num1 = parsed as int?;
-        else if (ColumnType == ColumnType.Decimal) _dec1 = parsed as decimal?;
-        else if (ColumnType == ColumnType.Date)    _date1 = parsed is DateTime dt ? dt : null;
-        else if (ColumnType == ColumnType.Boolean) _bool1 = parsed as bool?;
-    }
+    private static bool ValueHasContent(object? value) =>
+        value is string s ? !string.IsNullOrEmpty(s) : value is not null;
 
-    private void RestoreValue2(object? value)
-    {
-        (_text2, _num2, _dec2, _date2, _bool2, _lookup2) = ((string?)null, (int?)null, (decimal?)null, (DateTime?)null, (bool?)null, null);
-        if (_lookupOptions2 is not null) { _lookup2 = value; return; }
-        var parsed = _descriptor.Parse(value?.ToString());
-        if (ColumnType == ColumnType.Text)    _text2 = parsed as string;
-        else if (ColumnType == ColumnType.Number)  _num2 = parsed as int?;
-        else if (ColumnType == ColumnType.Decimal) _dec2 = parsed as decimal?;
-        else if (ColumnType == ColumnType.Date)    _date2 = parsed is DateTime dt ? dt : null;
-        else if (ColumnType == ColumnType.Boolean) _bool2 = parsed as bool?;
-    }
+    private bool Clause1HasValue => IsNoValueOperator(_op1) || ValueHasContent(_value1);
 
-    private object? GetValue1() => _lookupOptions1 is not null ? _lookup1 : ColumnType switch
-    {
-        ColumnType.Text    => _text1,
-        ColumnType.Number  => _num1,
-        ColumnType.Decimal => _dec1,
-        ColumnType.Date    => _date1,
-        ColumnType.Boolean => (object?)_bool1,
-        _ => _text1
-    };
-
-    private object? GetValue2() => _lookupOptions2 is not null ? _lookup2 : ColumnType switch
-    {
-        ColumnType.Text    => _text2,
-        ColumnType.Number  => _num2,
-        ColumnType.Decimal => _dec2,
-        ColumnType.Date    => _date2,
-        ColumnType.Boolean => (object?)_bool2,
-        _ => _text2
-    };
-
-    private bool Clause1HasValue => IsNoValueOperator(_op1) || ColumnType switch
-    {
-        ColumnType.Text    => !string.IsNullOrEmpty(_text1),
-        ColumnType.Number  => _num1.HasValue,
-        ColumnType.Decimal => _dec1.HasValue,
-        ColumnType.Date    => _date1.HasValue,
-        ColumnType.Boolean => _bool1.HasValue,
-        _ => _lookupOptions1 is not null ? _lookup1 is not null : false
-    };
-
-    private bool Clause2HasValue => IsNoValueOperator(_op2) || ColumnType switch
-    {
-        ColumnType.Text    => !string.IsNullOrEmpty(_text2),
-        ColumnType.Number  => _num2.HasValue,
-        ColumnType.Decimal => _dec2.HasValue,
-        ColumnType.Date    => _date2.HasValue,
-        ColumnType.Boolean => _bool2.HasValue,
-        _ => _lookupOptions2 is not null ? _lookup2 is not null : false
-    };
+    private bool Clause2HasValue => IsNoValueOperator(_op2) || ValueHasContent(_value2);
 
     private bool HasValidValue => _showSecond
         ? Clause1HasValue && Clause2HasValue
@@ -433,12 +273,7 @@
     private void RemoveSecond()
     {
         _showSecond = false;
-        _text2 = null;
-        _num2 = null;
-        _dec2 = null;
-        _date2 = null;
-        _bool2 = null;
-        _lookup2 = null;
+        _value2 = null;
     }
 
     private void SetLogic(LogicalOperator op)
@@ -458,14 +293,14 @@
             Column    = ColumnSqlName,
             ParamName = Transliterate("cf_" + ColumnSqlName),
             Operator  = _op1,
-            Value     = GetValue1(),
+            Value     = _value1,
         };
 
         if (_showSecond)
         {
             filter.LogicalOperator = _logic;
             filter.SecondOperator  = _op2;
-            filter.SecondValue     = GetValue2();
+            filter.SecondValue     = _value2;
             filter.SecondParamName = Transliterate("cf2_" + ColumnSqlName);
         }
 

@@ -177,7 +177,9 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoDragState** — статическое хранилище SQL-имени перетаскиваемой колонки между dragstart и drop | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPrintHtmlGenerator** — статический генератор HTML для печати всех данных грида. Генерирует HTML с теми же MudBlazor CSS-классами (`.mud-table`, `.mud-table-cell`, `.group-header-cell`) и встраивает полный `@media print` CSS — визуально идентичен печати текущей страницы | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPrintStyles** — символы для печатных форм: иконки групп (`▸`/`▾` — аналог MudBlazor ChevronRight/ExpandMore), булевы значения (`✓`/`✗` — аналог CheckCircle/Cancel) | — |
-| **KescoColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами | [docs/kesco-column-filter-dialog.md](docs/kesco-column-filter-dialog.md) |
+| **KescoColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами. Использует `KescoFilterValueEditor` для редакторов значений | [docs/kesco-column-filter-dialog.md](docs/kesco-column-filter-dialog.md) |
+| **KescoFilterOption** — класс варианта для выпадающего списка значения фильтра: `Value` (object?), `Label` (string) | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterValueEditor** — единый редактор значения фильтра по типу колонки (Text/Number/Decimal/Date/Boolean/lookup). Скрывается при операторах без значения. Переиспользуется в `KescoColumnFilterDialog` и будущем диалоге составного фильтра | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnSettingsDialog** — диалог настройки порядка, видимости и сортировки колонок (jQuery UI Sortable drag-and-drop с авто-прокруткой) | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |

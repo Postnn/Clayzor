@@ -6,25 +6,35 @@
 
 Поддерживает до двух условий на одну колонку, объединяемых через логический оператор **И** / **ИЛИ**.
 
+Редакторы значений делегированы в [`KescoFilterValueEditor`](#kescofiltervalueeditor) — единый компонент,
+переиспользуемый также в диалоге составного фильтра (задача 09 мастер-плана).
+
 ## Параметры
 
 | Параметр | Тип | По умолчанию | Описание |
 |---|---|---|---|
 | `ColumnDisplayName` | `string` | `""` | Отображаемое имя колонки (в заголовке диалога и чипе) |
 | `ColumnSqlName` | `string` | `""` | SQL-имя колонки — включается в возвращаемый `ColumnFilter` |
-| `ColumnType` | `ColumnType` | `Text` | Тип данных колонки — определяет доступные операторы и поле ввода |
+| `ColumnType` | `ColumnType` | `Text` | Тип данных колонки — определяет доступные операторы. Конвертируется в `ColumnTypeDescriptor` через `ColumnTypeRegistry` |
+| `LookupOptions` | `IReadOnlyList<KescoFilterOption>?` | `null` | Список вариантов для выпадающего выбора значения (вместо типозависимого редактора) |
 | `ExistingFilter` | `ColumnFilter?` | `null` | Существующий фильтр для режима редактирования. `null` — новый фильтр |
 
 ## ColumnType и доступные операторы
 
-| `ColumnType` | Поле ввода | Операторы |
+Тип колонки конвертируется в `ColumnTypeDescriptor` через `ColumnTypeRegistry.FromKind()`.
+Дескриптор предоставляет список операторов, оператор по умолчанию, парсинг/формат значений и проверку `OperatorTakesValue()`.
+
+| `ColumnType` | Компонент-редактор | Операторы |
 |---|---|---|
 | `Text` | `MudTextField T="string"` | Contains, NotContains, Equals, NotEquals, StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsEmpty, IsNotEmpty |
-| `Number` | `MudNumericField T="int?"` | Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual |
-| `Boolean` | `MudSelect T="bool?"` (Да/Нет) | Equals |
+| `Number` | `MudNumericField T="int?"` | Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual, IsNull, IsNotNull |
+| `Decimal` | `MudNumericField T="decimal?"` | Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual, IsNull, IsNotNull |
+| `Date` | `MudDatePicker` | Equals, NotEquals, GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual, IsNull, IsNotNull |
+| `Boolean` | `MudSelect T="bool?"` (Да/Нет) | Equals, IsNull, IsNotNull |
+| с `LookupOptions` | `MudSelect T="object"` | Операторы зависят от типа колонки |
 
-- **IsEmpty** / **IsNotEmpty** — поле значения скрывается, кнопка «Применить» активна без ввода значения
-- Остальные операторы требуют заполненного значения
+Редактор значения отрисовывается компонентом `KescoFilterValueEditor`. При операторах без значения
+(IsEmpty/IsNotEmpty/IsNull/IsNotNull) редактор скрывается, `Value = null`.
 
 ## Два условия и логический оператор
 
@@ -66,6 +76,8 @@ col LIKE @p1
 | `LessThanOrEqual` | `col <= @p` | «меньше или равно (≤)» |
 | `IsEmpty` | `(col IS NULL OR col = '')` | «пустая строка» |
 | `IsNotEmpty` | `(col IS NOT NULL AND col <> '')` | «не пустая строка» |
+| `IsNull` | `col IS NULL` | «NULL» |
+| `IsNotNull` | `col IS NOT NULL` | «не NULL» |
 
 ## ColumnFilter — модель данных
 
