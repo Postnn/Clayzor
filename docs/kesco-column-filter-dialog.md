@@ -100,7 +100,10 @@ class ColumnFilter
 }
 ```
 
-## Статический метод
+## Статические методы
+
+Метки операторов вынесены в переиспользуемый хелпер `KescoFilterOperatorLabels.Get(ColumnFilterOperator)` —
+общий для `KescoColumnFilterDialog` и `KescoFilterDialog` (задача 09).
 
 ### `GetFilterDescription(ColumnFilter filter, string displayName)`
 

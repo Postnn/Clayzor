@@ -1,0 +1,55 @@
+@using Kesco.Lib.Web.BZ.Controls.Components.Grid
+@using Kesco.Lib.Web.BZ.Controls.Components.Grid.ColumnTypes
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="display:flex;align-items:center;gap:8px">
+            <MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" />
+            Настраиваемый фильтр
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div style="min-width:480px;max-width:700px">
+            @if (_draft.Nodes.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Style="color:var(--mud-palette-text-secondary);padding:8px 0">
+                    Нет условий. Нажмите «добавить условие», чтобы начать.
+                </MudText>
+                <MudButton Variant="Variant.Text"
+                           Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="@AddFirstExpression"
+                           Style="text-transform:none">
+                    добавить условие
+                </MudButton>
+            }
+            else
+            {
+                <KescoFilterGroup Node="@_draft"
+                                  Columns="@Columns"
+                                  LookupOptions="@LookupOptions"
+                                  IsRoot="true"
+                                  OnChanged="@OnDraftChanged" />
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@Reset"
+                   Variant="Variant.Text"
+                   StartIcon="@Icons.Material.Filled.ClearAll"
+                   Style="text-transform:none">
+            Сбросить
+        </MudButton>
+        <MudSpacer />
+        <MudButton OnClick="@Cancel" Variant="Variant.Text">Отмена</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="@Apply">
+            Применить
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .mud-dialog-content { overflow: visible; }
+</style>

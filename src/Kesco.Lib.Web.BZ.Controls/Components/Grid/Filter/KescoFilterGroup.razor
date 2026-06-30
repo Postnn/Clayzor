@@ -1,0 +1,88 @@
+@using Kesco.Lib.Web.BZ.Controls.Components.Grid
+@using Kesco.Lib.Web.BZ.Controls.Components.Grid.ColumnTypes
+
+@* Рекурсивный узел-группа составного фильтра.
+   Может содержать листья (KescoFilterExpression) и вложенные группы (KescoFilterGroup). *@
+
+<div style="display:flex;flex-direction:column;gap:8px;padding:8px 8px 8px 12px;border-left:3px solid var(--mud-palette-primary)">
+
+    @* ── Заголовок группы: переключатель И/ИЛИ + кнопка удаления ── *@
+    <div style="display:flex;align-items:center;gap:8px">
+        <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+            <MudButton Color="@(Node.Logic == LogicalOperator.And ? Color.Primary : Color.Default)"
+                       Variant="@(Node.Logic == LogicalOperator.And ? Variant.Filled : Variant.Outlined)"
+                       Disabled="@(Node.Nodes.Count < 2)"
+                       OnClick="@(() => SetLogic(LogicalOperator.And))">И</MudButton>
+            <MudButton Color="@(Node.Logic == LogicalOperator.Or ? Color.Primary : Color.Default)"
+                       Variant="@(Node.Logic == LogicalOperator.Or ? Variant.Filled : Variant.Outlined)"
+                       Disabled="@(Node.Nodes.Count < 2)"
+                       OnClick="@(() => SetLogic(LogicalOperator.Or))">ИЛИ</MudButton>
+        </MudButtonGroup>
+
+        <MudSpacer />
+
+        @if (!IsRoot)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                           Size="Size.Small"
+                           OnClick="@OnRemove"
+                           title="Удалить группу" />
+        }
+    </div>
+
+    @* ── Дочерние узлы ────────────────────────────────────────────── *@
+    @for (int i = 0; i < Node.Nodes.Count; i++)
+    {
+        var node = Node.Nodes[i];
+        var capturedIndex = i;
+
+        @if (node is ColumnFilter leaf)
+        {
+            @if (leaf.Source == KescoFilterSource.ColumnDialog)
+            {
+                @* Условия из диалога колонки — не редактируются здесь *@
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
+                            border:1px solid var(--mud-palette-lines-default);border-radius:4px;
+                            color:var(--mud-palette-text-secondary);font-size:var(--kesco-font-size)">
+                    <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">Редактируется в диалоге колонки: @GetLeafDescription(leaf)</MudText>
+                </div>
+            }
+            else
+            {
+                <KescoFilterExpression Node="@leaf"
+                                       Columns="@Columns"
+                                       LookupOptions="@LookupOptions"
+                                       OnChanged="@NotifyChanged"
+                                       OnRemove="@(() => RemoveNode(capturedIndex))" />
+            }
+        }
+        else if (node is KescoFilterGroupNode group)
+        {
+            <KescoFilterGroup Node="@group"
+                              Columns="@Columns"
+                              LookupOptions="@LookupOptions"
+                              IsRoot="false"
+                              OnChanged="@NotifyChanged"
+                              OnRemove="@(() => RemoveNode(capturedIndex))" />
+        }
+    }
+
+    @* ── Кнопки добавления ────────────────────────────────────────── *@
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <MudButton Variant="Variant.Text"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@AddExpression"
+                   Style="text-transform:none">
+            добавить условие
+        </MudButton>
+        <MudButton Variant="Variant.Text"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.CreateNewFolder"
+                   OnClick="@AddGroup"
+                   Style="text-transform:none">
+            добавить группу
+        </MudButton>
+    </div>
+</div>

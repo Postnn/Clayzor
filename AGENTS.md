@@ -179,7 +179,11 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoGridPrintStyles** — символы для печатных форм: иконки групп (`▸`/`▾` — аналог MudBlazor ChevronRight/ExpandMore), булевы значения (`✓`/`✗` — аналог CheckCircle/Cancel) | — |
 | **KescoColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами. Использует `KescoFilterValueEditor` для редакторов значений | [docs/kesco-column-filter-dialog.md](docs/kesco-column-filter-dialog.md) |
 | **KescoFilterOption** — класс варианта для выпадающего списка значения фильтра: `Value` (object?), `Label` (string) | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoFilterValueEditor** — единый редактор значения фильтра по типу колонки (Text/Number/Decimal/Date/Boolean/lookup). Скрывается при операторах без значения. Переиспользуется в `KescoColumnFilterDialog` и будущем диалоге составного фильтра | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterValueEditor** — единый редактор значения фильтра по типу колонки (Text/Number/Decimal/Date/Boolean/lookup). Скрывается при операторах без значения. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterOperatorLabels** — статический хелпер: читаемые русские метки операторов фильтрации. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | — |
+| **KescoFilterExpression** — редактор одного листового условия составного фильтра: выбор колонки, оператора и значения через `KescoFilterValueEditor` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterGroup** — рекурсивный узел-группа составного фильтра с переключателем И/ИЛИ, кнопками добавления условия/группы и удаления | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterDialog** — диалог настраиваемого (составного) фильтра в стиле Telerik Filter. Работает с глубокой копией дерева, возвращает результат через `DialogResult.Ok(KescoFilterGroupNode)` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnSettingsDialog** — диалог настройки порядка, видимости и сортировки колонок (jQuery UI Sortable drag-and-drop с авто-прокруткой) | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
 | **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
