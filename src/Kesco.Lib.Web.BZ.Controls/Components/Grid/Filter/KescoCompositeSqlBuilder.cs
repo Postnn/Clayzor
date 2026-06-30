@@ -1,0 +1,122 @@
+using Dapper;
+
+namespace Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
+
+/// <summary>
+/// Строит фрагмент WHERE (без слова WHERE) из дерева <see cref="KescoFilterGroupNode"/>.
+/// </summary>
+/// <remarks>
+/// Безопасность:
+/// <list type="bullet">
+///   <item>Имя колонки подставляется в SQL только если оно присутствует в <c>knownColumns</c> (белый список из реестра).
+///   Листовой узел с неизвестной колонкой молча отбрасывается.</item>
+///   <item>Значения передаются исключительно через Dapper-параметры — без конкатенации в SQL.</item>
+///   <item>Имена параметров назначаются сквозным счётчиком (<c>p0, p1, …</c>),
+///   что гарантирует уникальность даже при повторном использовании одной колонки в дереве.</item>
+/// </list>
+/// </remarks>
+public static class KescoCompositeSqlBuilder
+{
+    /// <summary>
+    /// Строит фрагмент WHERE из дерева фильтра.
+    /// </summary>
+    /// <param name="root">Корень дерева фильтра. null или пустое дерево → возвращает null.</param>
+    /// <param name="parameters">Dapper-параметры; метод добавляет в них параметры условий.</param>
+    /// <param name="knownColumns">
+    /// Белый список SQL-имён колонок (из реестра грида).
+    /// Листовые узлы с колонкой вне этого множества отбрасываются.
+    /// </param>
+    /// <param name="columnNameMap">
+    /// Необязательный маппинг имён: ключ — SqlName из реестра,
+    /// значение — имя для подстановки в SQL (аналог <c>BuildColumnFilterClause</c>).
+    /// </param>
+    /// <returns>Строка для вставки в WHERE без ключевого слова WHERE, либо null.</returns>
+    public static string? Build(
+        KescoFilterGroupNode? root,
+        DynamicParameters parameters,
+        ISet<string> knownColumns,
+        IReadOnlyDictionary<string, string>? columnNameMap = null)
+    {
+        if (root is null) return null;
+        int counter = 0;
+        return BuildGroup(root, parameters, knownColumns, columnNameMap, ref counter);
+    }
+
+    /// <summary>
+    /// Рекурсивно строит SQL-фрагмент для группового узла.
+    /// Дочерние ненулевые фрагменты объединяются через AND/OR и оборачиваются в скобки.
+    /// Если ни один дочерний узел не дал фрагмента — возвращает null.
+    /// </summary>
+    private static string? BuildGroup(
+        KescoFilterGroupNode group,
+        DynamicParameters parameters,
+        ISet<string> knownColumns,
+        IReadOnlyDictionary<string, string>? columnNameMap,
+        ref int counter)
+    {
+        var parts = new List<string>();
+
+        foreach (var node in group.Nodes)
+        {
+            string? fragment = node switch
+            {
+                KescoFilterGroupNode nestedGroup
+                    => BuildGroup(nestedGroup, parameters, knownColumns, columnNameMap, ref counter),
+                ColumnFilter leaf
+                    => BuildLeaf(leaf, parameters, knownColumns, columnNameMap, ref counter),
+                _ => null,
+            };
+
+            if (fragment is not null)
+                parts.Add(fragment);
+        }
+
+        if (parts.Count == 0) return null;
+        if (parts.Count == 1) return parts[0];
+
+        var logic = group.Logic == LogicalOperator.Or ? "OR" : "AND";
+        return "(" + string.Join($" {logic} ", parts) + ")";
+    }
+
+    /// <summary>
+    /// Строит SQL-фрагмент для листового условия (<see cref="ColumnFilter"/>).
+    /// Колонка проверяется по белому списку; неизвестные колонки → null.
+    /// Имена параметров назначаются через сквозной счётчик.
+    /// </summary>
+    private static string? BuildLeaf(
+        ColumnFilter cf,
+        DynamicParameters parameters,
+        ISet<string> knownColumns,
+        IReadOnlyDictionary<string, string>? columnNameMap,
+        ref int counter)
+    {
+        // Белый список: колонка должна быть зарегистрирована в гриде
+        if (!knownColumns.Contains(cf.Column))
+            return null;
+
+        if (!cf.HasValue)
+            return null;
+
+        // Применяем маппинг имени если задан
+        var colName = columnNameMap is not null && columnNameMap.TryGetValue(cf.Column, out var mapped)
+            ? mapped
+            : cf.Column;
+
+        // Первое условие — уникальное имя параметра через счётчик
+        var p1 = $"p{counter++}";
+        var clause1 = KescoDataQuery.BuildSingleClause(colName, p1, cf.Operator, cf.Value, parameters);
+        if (clause1 is null) return null;
+
+        if (!cf.HasSecondClause)
+            return clause1;
+
+        // Второе условие
+        var p2 = $"p{counter++}";
+        var clause2 = KescoDataQuery.BuildSingleClause(colName, p2, cf.SecondOperator, cf.SecondValue, parameters);
+        if (clause2 is null)
+            return clause1;
+
+        var logic = cf.LogicalOperator == LogicalOperator.Or ? "OR" : "AND";
+        return $"({clause1} {logic} {clause2})";
+    }
+}

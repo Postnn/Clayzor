@@ -349,6 +349,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `IKescoFilterNode` — интерфейс узла дерева фильтра: `Clone()` (рекурсивное глубокое копирование)
 - `KescoFilterGroupNode` — группа И/ИЛИ (`LogicalOperator Logic` + `List<IKescoFilterNode> Nodes` + рекурсивный `Clone()`). Переиспользует существующий `LogicalOperator`
 - `ColumnFilter` реализует `IKescoFilterNode` — листовой узел дерева. `ColumnFilter.Source` (`KescoFilterSource`) — происхождение: `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
+- `KescoCompositeSqlBuilder` — статический SQL-билдер (задача 07 мастер-плана). `Build(root, parameters, knownColumns, columnNameMap?)` рекурсивно обходит дерево `KescoFilterGroupNode` и возвращает фрагмент WHERE (без слова WHERE). Безопасность: имя колонки — только из белого списка `knownColumns`; значения — только Dapper-параметры; уникальные имена параметров через сквозной счётчик (`p0, p1, …`). Листовые узлы с неизвестной колонкой отбрасываются. Переиспользует `KescoDataQuery.BuildSingleClause` (теперь `internal`)
 
 ### Filter tray
 - Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)

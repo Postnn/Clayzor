@@ -329,7 +329,7 @@ public sealed class KescoDataQuery
     /// Строит SQL-выражение для одного условия фильтрации.
     /// Возвращает null, если значение отсутствует (для операторов, требующих значение).
     /// </summary>
-    private static string? BuildSingleClause(string colName, string paramName, ColumnFilterOperator op, object? value, DynamicParameters dp)
+    internal static string? BuildSingleClause(string colName, string paramName, ColumnFilterOperator op, object? value, DynamicParameters dp)
     {
         switch (op)
         {

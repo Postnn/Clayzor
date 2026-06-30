@@ -269,9 +269,12 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `IKescoFilterNode` — интерфейс узла дерева с рекурсивным `Clone()`
 - `KescoFilterGroupNode` — группа: `Logic` (And/Or), `Nodes` (List\<IKescoFilterNode\>), `Clone()`. Переиспользует существующий `LogicalOperator`
 - `ColumnFilter` реализует `IKescoFilterNode` — листовой узел. `Source` (`KescoFilterSource`) — `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
+- `KescoCompositeSqlBuilder` — статический SQL-билдер для дерева фильтра. `Build(root, parameters, knownColumns, columnNameMap?)` рекурсивно обходит дерево `KescoFilterGroupNode` → фрагмент WHERE (без слова WHERE). Безопасность: колонка только из белого списка `knownColumns`, значения — Dapper-параметры, имена параметров — сквозной счётчик. Переиспользует `KescoDataQuery.BuildSingleClause`
 
 ### SQL-генерация
 - `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`
+- `KescoDataQuery.BuildSingleClause(colName, paramName, op, value, dp)` — строит SQL-выражение для одного условия фильтрации (`internal`). Вызывается из `KescoCompositeSqlBuilder` для листовых узлов
+- `KescoCompositeSqlBuilder.Build(root, parameters, knownColumns, columnNameMap?)` — строит WHERE из дерева фильтра. Группы → скобки + `AND`/`OR`; листья → `BuildSingleClause` с проверкой белого списка колонок
 - `columnNameMap` — опциональный маппинг имён для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима
 
 ### Filter tray
