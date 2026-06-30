@@ -270,9 +270,17 @@ public sealed class KescoDataQuery
     public int TotalCount { get; set; }
 
     /// <summary>
+    /// Дерево условий составного фильтра.
+    /// Единый источник истины фильтрации; заменяет прежний словарь <c>ColumnFilters</c>.
+    /// null или пустой корень — без фильтрации.
+    /// </summary>
+    public Filter.KescoFilterGroupNode? CompositeFilter { get; set; }
+
+    /// <summary>
     /// Условия фильтрации по отдельным колонкам. Ключ — SQL-имя колонки, значение — условие фильтра.
     /// Управляется страницей; KescoGrid не изменяет этот словарь.
     /// </summary>
+    [Obsolete("Используйте CompositeFilter. ColumnFilters упраздняется в задаче 10.")]
     public Dictionary<string, ColumnFilter> ColumnFilters { get; set; } = [];
 
     /// <summary>
@@ -289,6 +297,8 @@ public sealed class KescoDataQuery
     /// (например, <c>"TestTypeName"</c> → <c>"t.ТипМедицинскогоАнализа"</c>).
     /// </param>
     /// <returns>Строка для вставки в WHERE (без ключевого слова WHERE), либо null.</returns>
+    [Obsolete("Используйте KescoCompositeSqlBuilder.Build с CompositeFilter.")]
+#pragma warning disable CS0618
     public string? BuildColumnFilterClause(DynamicParameters parameters,
         Dictionary<string, string>? columnNameMap = null)
     {
@@ -324,6 +334,7 @@ public sealed class KescoDataQuery
         }
         return parts.Count > 0 ? string.Join(" AND ", parts) : null;
     }
+#pragma warning restore CS0618
 
     /// <summary>
     /// Строит SQL-выражение для одного условия фильтрации.

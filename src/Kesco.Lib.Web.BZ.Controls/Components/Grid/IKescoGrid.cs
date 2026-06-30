@@ -1,3 +1,4 @@
+using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 using Microsoft.AspNetCore.Components;
 
 namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
@@ -161,6 +162,18 @@ public interface IKescoGrid
     /// </summary>
     /// <param name="sqlName">SQL-имя колонки.</param>
     Task AddFilterAsync(string sqlName);
+
+    /// <summary>
+    /// Текущий корень дерева составного фильтра.
+    /// null или пустой узел — фильтрация не активна.
+    /// </summary>
+    KescoFilterGroupNode? ActiveCompositeFilter { get; }
+
+    /// <summary>
+    /// Открывает диалог настраиваемого (составного) фильтра.
+    /// UI-реализация — задача 11; здесь может быть заглушка.
+    /// </summary>
+    Task OpenCompositeFilterDialog();
 
     /// <summary>
     /// Регистрирует колонку в порядке отображения.

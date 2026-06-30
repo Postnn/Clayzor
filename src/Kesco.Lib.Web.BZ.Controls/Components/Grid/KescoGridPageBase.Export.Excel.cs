@@ -86,8 +86,8 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         var searchWhere    = _query.BuildWhereClause(searchColumns);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
 
         var groupCols = _query.GroupColumns.ToList();
 
@@ -190,8 +190,8 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         var searchWhere    = _query.BuildWhereClause(searchColumns);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
         var detailOrder    = KescoGroupingEngine.BuildDetailOrder(
             _query.BuildOrderBy(defaultOrder), _query.GroupColumns, defaultOrder);
 

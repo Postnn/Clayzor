@@ -227,15 +227,14 @@
 
     @if (_filterTrayExpanded)
     {
-        <div class="filter-tray @(_activeFilters.Count > 0 ? "filter-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
+        <div class="filter-tray @(ColumnDialogLeaves.Any() ? "filter-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnFilterTrayDragOver"
              @ondragover:preventDefault="true"
              @ondrop="OnFilterTrayDrop">
             <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Class="filter-tray-icon" />
-            @foreach (var kv in _activeFilters)
+            @foreach (var filter in ColumnDialogLeaves)
             {
-                var sqlName  = kv.Key;
-                var filter   = kv.Value;
+                var sqlName  = filter.Column;
                 var dispName = _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName;
                 var desc = KescoColumnFilterDialog.GetFilterDescription(filter, dispName);
                 <div class="filter-chip">
@@ -251,7 +250,7 @@
                                    Style="width:18px;height:18px" />
                 </div>
             }
-            @if (_activeFilters.Count == 0)
+            @if (!ColumnDialogLeaves.Any())
             {
                 <span class="filter-tray-hint">Перетащите заголовок колонки сюда для фильтрации</span>
             }

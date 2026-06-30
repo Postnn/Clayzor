@@ -126,8 +126,9 @@ public static class KescoDragState
 - `PageNumber` — номер текущей страницы (1-based)
 - `PageSize` — размер страницы
 - `TotalCount` — общее число записей (заполняется страницей после загрузки)
-- `ColumnFilters` — `Dictionary<string, ColumnFilter>` — фильтры по колонкам, ключ = SQL-имя колонки
-- `BuildColumnFilterClause(DynamicParameters, columnNameMap?)` — строит `WHERE` из `ColumnFilters`, добавляет параметры в `DynamicParameters`
+- `ColumnFilters` — `[Obsolete]` `Dictionary<string, ColumnFilter>` — заменён на `CompositeFilter`
+- `CompositeFilter` — `KescoFilterGroupNode?` — дерево составного фильтра, единый источник истины фильтрации. `null` или пустой корень — без фильтрации
+- `BuildColumnFilterClause(DynamicParameters, columnNameMap?)` — `[Obsolete]`. Заменён на `BuildCompositeFilterClause` / `KescoCompositeSqlBuilder.Build`
 - `BuildOrderBy(defaultOrder)` — строит `ORDER BY`; при включённой группировке все `GroupColumns` идут первыми
 - `BuildWhereClause(searchColumns)` — строит `WHERE ... LIKE @search`
 - `CombineWhere(string?, string?)` — объединяет два WHERE-фрагмента через `AND`
@@ -159,6 +160,8 @@ public static class KescoDragState
 | `IsFilterTrayExpanded` | `bool` | Открыта ли панель фильтрации |
 | `AddGroupAsync(sqlName)` | `Task` | Добавить колонку в трей группировки |
 | `AddFilterAsync(sqlName)` | `Task` | Открыть диалог фильтра для колонки |
+| `ActiveCompositeFilter` | `KescoFilterGroupNode?` | Текущее дерево фильтра (null/пустой — без фильтрации) |
+| `OpenCompositeFilterDialog()` | `Task` | Открыть диалог составного фильтра (UI — задача 11) |
 
 ## KescoColumnMeta
 
@@ -252,7 +255,8 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `ColumnFilterOperator` — оператор сравнения: все 14 значений + `IsNull`, `IsNotNull`
 - `LogicalOperator` — `And` / `Or` для объединения двух условий на одной колонке
 - `ColumnFilter` — условие фильтра: `Column` (SQL-имя), `ParamName` (имя Dapper-параметра), `Operator`, `Value` + опциональные `LogicalOperator`, `SecondOperator`, `SecondValue`, `SecondParamName` (до двух условий на колонку). `HasValue` учитывает `IsNull`/`IsNotNull`
-- `KescoDataQuery.ColumnFilters` — `Dictionary<string, ColumnFilter>` — ключ = SQL-имя колонки
+- `KescoDataQuery.ColumnFilters` — `[Obsolete]` — заменён на `CompositeFilter`
+- `KescoDataQuery.CompositeFilter` — `KescoFilterGroupNode?` — единый источник истины фильтрации. `null` или пустой корень — без фильтрации
 - `KescoFilterOption` — вариант значения для выпадающего списка в диалоге фильтра (`Value`, `Label`)
 - `KescoGridPageBase.FilterLookupOptions` — virtual-словарь (SqlName → список `KescoFilterOption`) для замены текстового/числового редактора на `MudSelect`
 
@@ -271,8 +275,15 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `ColumnFilter` реализует `IKescoFilterNode` — листовой узел. `Source` (`KescoFilterSource`) — `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
 - `KescoCompositeSqlBuilder` — статический SQL-билдер для дерева фильтра. `Build(root, parameters, knownColumns, columnNameMap?)` рекурсивно обходит дерево `KescoFilterGroupNode` → фрагмент WHERE (без слова WHERE). Безопасность: колонка только из белого списка `knownColumns`, значения — Dapper-параметры, имена параметров — сквозной счётчик. Переиспользует `KescoDataQuery.BuildSingleClause`
 
+### Хранение в гриде и интеграция с данными (задача 10)
+- `KescoGrid._filterRoot` (`KescoFilterGroupNode`, `Logic=And`) — приватный корень дерева, единый источник истины. Заменяет `_activeFilters` (словарь, неявное AND)
+- Колоночные фильтры (`KescoColumnFilterDialog`) — листья с `Source=ColumnDialog`, добавляются/заменяются в `_filterRoot.Nodes`; отображаются чипами в трее через `ColumnDialogLeaves`
+- Составной фильтр (`KescoFilterDialog`) — поддерево с `Source=CompositeDialog` (весь `_filterRoot` синхронизируется в `query.CompositeFilter`)
+- При выключении панели фильтрации: `_filterRoot = new()` (полный сброс)
+- `KescoGridPageBase.BuildCompositeFilterClause(CompositeFilter?, dp, columnNameMap?)` — обёртка над `KescoCompositeSqlBuilder.Build`, вызывает `BuildKnownColumns()` (белый список из `_inferredColumnTypes.Keys`). Заменяет старый `_query.BuildColumnFilterClause(dp)` во **всех** путях загрузки (7 мест): `LoadFlatData`, `LoadGroupedData`, `GetGroupLeafRows`, экспорт в Excel (плоский + сгруппированный), печать (плоская + сгруппированная), экспорт/печать выбранных (плоский + сгруппированный)
+
 ### SQL-генерация
-- `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`
+- `KescoDataQuery.BuildColumnFilterClause(...)` — `[Obsolete]`. Заменён на `BuildCompositeFilterClause` / `KescoCompositeSqlBuilder.Build`
 - `KescoDataQuery.BuildSingleClause(colName, paramName, op, value, dp)` — строит SQL-выражение для одного условия фильтрации (`internal`). Вызывается из `KescoCompositeSqlBuilder` для листовых узлов
 - `KescoCompositeSqlBuilder.Build(root, parameters, knownColumns, columnNameMap?)` — строит WHERE из дерева фильтра. Группы → скобки + `AND`/`OR`; листья → `BuildSingleClause` с проверкой белого списка колонок
 - `columnNameMap` — опциональный маппинг имён для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима
@@ -282,8 +293,9 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Добавление фильтра: перетаскивание заголовка колонки (KescoColumn автоматически поддерживает drag) на панель → открывается `KescoColumnFilterDialog`
 - Редактирование: клик по чипу фильтра → повторно открывается диалог с текущими значениями
 - Удаление: клик по × на чипе
-- При выключении панели все фильтры сбрасываются, данные перезагружаются
+- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`), данные перезагружаются
 - Чип показывает читаемое описание: `«Название содержит «грипп»»` или для двух условий `«Название: содержит «грипп» И не содержит «ковид»»` (через `KescoColumnFilterDialog.GetFilterDescription`)
+- Чипы отрисовываются через `ColumnDialogLeaves` — листья `_filterRoot` с `Source=ColumnDialog` (дерево фильтра, а не словарь)
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице
@@ -301,7 +313,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
            ... >
 ```
 
-В плоском и группированном режимах используются одни и те же `SearchColumns` — выходные имена колонок видны в подзапросе `ROW_NUMBER()`. `FilterColumnTypes` вычисляется автоматически через рефлексию.
+В плоском и группированном режимах используются одни и те же `SearchColumns` — выходные имена колонок видны в подзапросе `ROW_NUMBER()`. `FilterColumnTypes` вычисляется автоматически через рефлексию. Фильтрация во всех путях загрузки — через `BuildCompositeFilterClause(_query.CompositeFilter, dp)` (дерево `KescoFilterGroupNode`), заменившую `BuildColumnFilterClause` (словарь-AND).
 
 ## KescoGridPageBase\<T>
 

@@ -392,23 +392,24 @@ public partial class KescoGrid<TEntity> where TEntity : class
         ClearGroupChildCache();
         var query = new KescoDataQuery
         {
-            SearchText    = _searchText,
-            GroupEnabled  = _groupColumns.Count > 0,
-            GroupColumns  = _groupColumns.ToList(),
-            SortColumns   = _sortState.ToList(),
-            PageNumber    = _pageNumber,
-            PageSize      = _pageSize,
-            ColumnFilters = _activeFilters.ToDictionary(kv => kv.Key, kv => kv.Value),
+            SearchText      = _searchText,
+            GroupEnabled    = _groupColumns.Count > 0,
+            GroupColumns    = _groupColumns.ToList(),
+            SortColumns     = _sortState.ToList(),
+            PageNumber      = _pageNumber,
+            PageSize        = _pageSize,
+            CompositeFilter = _filterRoot,
         };
 
         if (_selectMode && _lastQuery.PageNumber != 0)
         {
+            var prevLeafCount = _lastQuery.CompositeFilter?.Nodes.Count ?? 0;
+            var curLeafCount  = query.CompositeFilter?.Nodes.Count ?? 0;
             var essenceChanged =
-                _lastQuery.SearchText    != query.SearchText ||
+                _lastQuery.SearchText != query.SearchText ||
                 !_lastQuery.GroupColumns.SequenceEqual(query.GroupColumns) ||
                 !_lastQuery.SortColumns.SequenceEqual(query.SortColumns) ||
-                _lastQuery.ColumnFilters.Count != query.ColumnFilters.Count ||
-                !_lastQuery.ColumnFilters.Keys.SequenceEqual(query.ColumnFilters.Keys);
+                prevLeafCount != curLeafCount;
             if (essenceChanged)
             {
                 _selectedIds.Clear();
@@ -515,6 +516,10 @@ public partial class KescoGrid<TEntity> where TEntity : class
         => _cellTemplates[columnId] = template;
 
     bool IKescoGrid.IsColumnHidden(string sqlName) => _hiddenSqlNames.Contains(sqlName);
+
+    Filter.KescoFilterGroupNode? IKescoGrid.ActiveCompositeFilter => ActiveCompositeFilter;
+
+    Task IKescoGrid.OpenCompositeFilterDialog() => OpenCompositeFilterDialog();
 
     IReadOnlyList<KescoColumnMeta> IKescoGrid.GetVisibleColumns()
         => _columnOrder

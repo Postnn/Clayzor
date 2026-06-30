@@ -1,5 +1,6 @@
 using Dapper;
 using Kesco.Lib.Entities;
+using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 
 namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
@@ -30,8 +31,8 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         var orderBy        = _query.BuildOrderBy(defaultOrder);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
 
         var sql = $"SELECT * FROM ({selectSql}) _src";
         if (!string.IsNullOrWhiteSpace(where))
@@ -57,8 +58,8 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         var orderBy        = _query.BuildOrderBy(defaultOrder);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
 
         var exprs = _query.GroupColumns.ToList();
 

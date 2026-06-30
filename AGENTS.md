@@ -220,7 +220,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | `KescoGrid.Search.cs` | 18 | `_searchText`, `DebounceTimer`, обработчики поиска |
 | `KescoGrid.Sorting.cs` | 66 | `_sortState`, `ToggleSort`, `HandleSortClick`, `GetSortBadge` |
 | `KescoGrid.Grouping.cs` | 217 | `_groupColumns`, `_trayExpanded`, `AddGroupColumn`, `RemoveGroupColumn`, `OnChipDragStart/End`, `OnTrayDragOver/Drop`, `GroupColumns`, `OnGroupTriToggle`, `OnHeaderTriToggle`, `_groupChildIds` |
-| `KescoGrid.Filtering.cs` | 112 | `_activeFilters`, `_filterTrayExpanded`, `OpenFilterDialog`, `AddFilterAsync`, `RemoveFilter`, `OnFilterTrayDragOver`, `OnFilterTrayDrop`, `BuildFilterDescription` |
+| `KescoGrid.Filtering.cs` | 155 | `_filterRoot` (KescoFilterGroupNode), `_filterTrayExpanded`, `ColumnDialogLeaves`, `OpenFilterDialog`, `AddFilterAsync`, `RemoveFilter`, `OnFilterTrayDragOver`, `OnFilterTrayDrop`, `BuildFilterDescription`, `ActiveCompositeFilter`, `OpenCompositeFilterDialog` |
 | `KescoGrid.DragDrop.cs` | 86 | `_dragSourceIndex`, drag-and-drop чипов группировки (перемещение/перестановка в трее) |
 | `KescoGrid.Selection.cs` | 113 | `_selectMode`, `_selectAllChecked`, `_selectedIds`, `OnRowSelectAsync`, `SelectAllAsync`, `DeselectAllAsync`, `ToggleSelectMode`, персистентность выделения |
 | `KescoGrid.ExportMenu.cs` | 141 | `_isExporting`, `_openSubGroups`, `ToggleSubGroup`, `Print{CurrentPage,Selected,All}Internal`, `Excel{CurrentPage,Selected,All}Internal` |
@@ -319,21 +319,25 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 ## Server-side column filtering
 
-Фильтрация по колонкам выполняется **на стороне SQL Server** через `BuildColumnFilterClause`.
-UI — панель фильтров (filter tray) с drag-and-drop заголовков и диалогом `KescoColumnFilterDialog` для настройки условий.
+Фильтрация по колонкам выполняется **на стороне SQL Server** через `KescoCompositeSqlBuilder.Build`.
+Единый источник истины — дерево `KescoFilterGroupNode` (см. «Типы составного фильтра» ниже).
+UI — панель фильтров (filter tray) с drag-and-drop заголовков и диалогом `KescoColumnFilterDialog` для настройки условий;
+диалог составного фильтра `KescoFilterDialog` (задача 11 — панель и маршрутизация).
 
 ### Модель данных
 - `ColumnType` — тип данных колонки: `Text` (10 операторов: Contains/NotContains/Equals/NotEquals/StartsWith/NotStartsWith/EndsWith/NotEndsWith/IsEmpty/IsNotEmpty), `Number` (равенство + сравнения >/</>=/<=), `Boolean` (Equals)
-- `ColumnFilterOperator` — оператор сравнения: `Contains`, `NotContains`, `Equals`, `NotEquals`, `StartsWith`, `NotStartsWith`, `EndsWith`, `NotEndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `IsEmpty`, `IsNotEmpty`
-- `LogicalOperator` — `And` / `Or` для объединения двух условий на одной колонке
-- `ColumnFilter` — условие фильтра: `Column`, `ParamName`, `Operator`, `Value` + опциональные `LogicalOperator`, `SecondOperator`, `SecondValue`, `SecondParamName` (до двух условий на колонку)
-- `KescoDataQuery.ColumnFilters` — `Dictionary<string, ColumnFilter>` — ключ = SQL-имя колонки
+- `ColumnFilterOperator` — оператор сравнения: `Contains`, `NotContains`, `Equals`, `NotEquals`, `StartsWith`, `NotStartsWith`, `EndsWith`, `NotEndsWith`, `GreaterThan`, `GreaterThanOrEqual`, `LessThan`, `LessThanOrEqual`, `IsEmpty`, `IsNotEmpty`, `IsNull`, `IsNotNull`
+- `LogicalOperator` — `And` / `Or` для объединения узлов в группе
+- `ColumnFilter` — условие фильтра: `Column`, `ParamName`, `Operator`, `Value` + опциональные `LogicalOperator`, `SecondOperator`, `SecondValue`, `SecondParamName` (до двух условий на колонку). Реализует `IKescoFilterNode`. Свойство `Source` (`KescoFilterSource`) — происхождение: `ColumnDialog` или `CompositeDialog`
+- `KescoFilterGroupNode` — группа И/ИЛИ (`LogicalOperator Logic` + `List<IKescoFilterNode> Nodes`). Реализует `IKescoFilterNode`
+- `KescoDataQuery.CompositeFilter` — `KescoFilterGroupNode?` — единый источник истины фильтрации. Заменил `ColumnFilters` (словарь помечен `[Obsolete]`)
+- `KescoGrid._filterRoot` — приватный корень дерева фильтра в гриде. Колоночные фильтры — листья с `Source=ColumnDialog`. Составной фильтр — `Source=CompositeDialog`
 
 ### SQL-генерация
-- `KescoDataQuery.BuildColumnFilterClause(DynamicParameters parameters, Dictionary<string, string>? columnNameMap)` — генерирует WHERE-фрагмент (`col LIKE @p` / `col = @p` / `col > @p` и т.д.) и добавляет параметры в `DynamicParameters`
-- `columnNameMap` — опциональный маппинг имён (например, `"TestTypeName"` → `"t.ТипМедицинскогоАнализа"`) для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима
-- `IsNull`/`IsNotNull` → `IS NULL` / `IS NOT NULL` без параметра; `IsEmpty`/`IsNotEmpty` → `(col IS NULL OR col = '')` / `(col IS NOT NULL AND col <> '')`
-- LIKE-операторы (`Contains`, `StartsWith`, `EndsWith` и их Not-варианты) используют `ESCAPE '\'` с экранированием спецсимволов: `\` → `\\`, `[` → `[[]`, `%` → `\%`, `_` → `\_`. Значения параметризованы через Dapper
+- `KescoCompositeSqlBuilder.Build(root, parameters, knownColumns, columnNameMap?)` — рекурсивно обходит дерево `KescoFilterGroupNode` и возвращает фрагмент WHERE (без слова WHERE). Безопасность: имя колонки — только из белого списка `knownColumns`; значения — только Dapper-параметры
+- `KescoGridPageBase.BuildCompositeFilterClause(CompositeFilter?, dp, columnNameMap?)` — обёртка над `KescoCompositeSqlBuilder.Build`, добавляет параметры в `DynamicParameters`. Используется во всех путях загрузки (страница, группировка, экспорт, печать, выбранные)
+- `KescoGridPageBase.BuildKnownColumns()` — возвращает `ISet<string>` из ключей `_inferredColumnTypes`
+- `KescoDataQuery.BuildColumnFilterClause` и `BuildSingleClause` — помечены `[Obsolete]` (заменены на `KescoCompositeSqlBuilder`). `BuildSingleClause` сделан `internal`
 
 ### Типы данных фильтрации (`ColumnType`)
 - `Text` — строки: Contains, NotContains, Equals, NotEquals, StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsEmpty, IsNotEmpty
@@ -362,8 +366,9 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Добавление фильтра: перетаскивание заголовка колонки на панель → открывается `KescoColumnFilterDialog`
 - Редактирование: клик по чипу фильтра → повторно открывается диалог с текущими значениями
 - Удаление: клик по × на чипе
-- При выключении панели все фильтры сбрасываются, данные перезагружаются
+- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`), данные перезагружаются
 - Чип показывает читаемое описание: `«Название содержит «грипп»»` или для двух условий `«Название: содержит «грипп» И не содержит «ковид»»` (через `KescoColumnFilterDialog.GetFilterDescription`)
+- Чипы отрисовываются через `ColumnDialogLeaves` — `IEnumerable<ColumnFilter>` листьев с `Source=ColumnDialog` из `_filterRoot`
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице (через KescoGridPageBase\<T>)
@@ -376,7 +381,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
            DefaultOrder="Порядок, НазваниеАнализа"
            ... >
 ```
-`KescoGridPageBase<T>` автоматически читает `SelectSql`, `SearchColumns`, `DefaultOrder` из `IKescoGrid`, строит WHERE через `BuildWhereClause`/`BuildColumnFilterClause` и вызывает `Entity.GetPagedAsync`/`Entity.GetCountAsync`. В плоском и группированном режимах `SearchColumns` одни и те же — используются выходные имена колонок (видимые в подзапросе `ROW_NUMBER()`).
+`KescoGridPageBase<T>` автоматически читает `SelectSql`, `SearchColumns`, `DefaultOrder` из `IKescoGrid`, строит WHERE через `BuildWhereClause`/`BuildCompositeFilterClause` и вызывает `Entity.GetPagedAsync`/`Entity.GetCountAsync`. Во всех путях загрузки (страница, группировка, экспорт, печать, выбранные) фильтрация идёт через единый вызов `BuildCompositeFilterClause(_query.CompositeFilter, dp)`, который делегирует в `KescoCompositeSqlBuilder.Build`. В плоском и группированном режимах `SearchColumns` одни и те же — используются выходные имена колонок (видимые в подзапросе `ROW_NUMBER()`).
 
 `FilterColumnTypes` вычисляется автоматически через рефлексию по `[Column]`-атрибутам и C#-типам свойств сущности.
 Страница просто передаёт `FilterColumnTypes="@FilterColumnTypes"` в `<KescoGrid>`. Маппинг: `bool` → `Boolean`, числовые типы → `Number`, остальные → `Text`.
@@ -409,7 +414,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Data grid header row must be fixed (not scroll with data) — `KescoGrid` does this automatically
 - При вызове `Db.ExecuteAsync()` с сырым SQL обязательно передавать `commandType: CommandType.Text` — по умолчанию `ExecuteAsync` использует `CommandType.StoredProcedure`
 - `DapperColumnMapper` делает fallback на имя свойства, если `[Column]`-атрибут не совпал с колонкой результата — это позволяет использовать SQL-алиасы (`SELECT КодТипа AS Id`) даже при наличии `[Column("КодТипа")]` на свойстве `Id`
-- **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере. `ExpandedGroups` управляется страницей и **не перезаписывается** из query. `ColumnFilters` копируется из query целиком (словарь)
+- **OnQueryChanged**: обновлять свойства `_query`, а не переприсваивать объект — иначе `TotalCount` сбрасывается в 0 при async-рендере. `ExpandedGroups` управляется страницей и **не перезаписывается** из query. `CompositeFilter` копируется из query целиком (дерево)
 - **KescoGridPageBase**: SQL-конфигурация передаётся через параметры `<KescoGrid>` (`SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`), а не через abstract-свойства. База читает их из `Grid?.SelectSql` и т.д. Страница переопределяет `protected override IKescoGrid? Grid => _dataGrid;` и передаёт `DataLoader="this"`
 - **Запрещено** подставлять значения параметров в SQL-строку — все параметры передаются через Dapper (`@param`). Параметры пагинации передаются как `@__start`/`@__end` через `DynamicParameters`
 - **Обработка ошибок БД**: `DbManager` автоматически перехватывает `SqlException` и вызывает `ISqlErrorHandler.HandleSqlError()`. Страницам **не нужно** вызывать `ErrorService.Report()` вручную — только `try/finally` для `_loading = false`. Баннер `KescoErrorBar` в `MainLayout` показывает ошибку со строкой подключения, SQL и параметрами

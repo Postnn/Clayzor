@@ -1,6 +1,7 @@
 using Dapper;
 using Kesco.Lib.DALC;
 using Kesco.Lib.Entities;
+using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 using Kesco.Lib.Web.BZ.Controls.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -165,13 +166,13 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
     /// </summary>
     async Task IKescoGridDataLoader.OnQueryChangedAsync(KescoDataQuery query)
     {
-        _query.SearchText    = query.SearchText;
-        _query.GroupEnabled  = query.GroupEnabled;
-        _query.GroupColumns  = query.GroupColumns;
-        _query.SortColumns   = query.SortColumns;
-        _query.PageNumber    = query.PageNumber;
-        _query.PageSize      = query.PageSize;
-        _query.ColumnFilters = query.ColumnFilters;
+        _query.SearchText      = query.SearchText;
+        _query.GroupEnabled    = query.GroupEnabled;
+        _query.GroupColumns    = query.GroupColumns;
+        _query.SortColumns     = query.SortColumns;
+        _query.PageNumber      = query.PageNumber;
+        _query.PageSize        = query.PageSize;
+        _query.CompositeFilter = query.CompositeFilter;
         await LoadData();
     }
 
@@ -197,8 +198,8 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         var searchWhere    = query.BuildWhereClause(searchColumns);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{query.SearchText}%");
-        var colFilterWhere = query.BuildColumnFilterClause(dp);
-        var baseWhere      = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(query.CompositeFilter, dp);
+        var baseWhere      = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
         var groupExprs     = query.GroupColumns;
 
         foreach (var fullKey in groupFullKeys)
@@ -333,6 +334,27 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         }
     }
 
+    // ── Вспомогательные методы фильтрации ────────────────────────────────────────
+
+    /// <summary>
+    /// Возвращает множество известных SQL-имён колонок для белого списка
+    /// <see cref="KescoCompositeSqlBuilder.Build"/>.
+    /// Берётся из ключей <see cref="_inferredColumnTypes"/>.
+    /// </summary>
+    private static ISet<string> BuildKnownColumns()
+        => new HashSet<string>(_inferredColumnTypes.Keys, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Строит фрагмент WHERE составного фильтра через <see cref="KescoCompositeSqlBuilder"/>
+    /// и добавляет параметры в <paramref name="dp"/>.
+    /// Возвращает null если дерево пустое.
+    /// </summary>
+    private static string? BuildCompositeFilterClause(
+        KescoFilterGroupNode? filter,
+        DynamicParameters dp,
+        IReadOnlyDictionary<string, string>? columnNameMap = null)
+        => KescoCompositeSqlBuilder.Build(filter, dp, BuildKnownColumns(), columnNameMap);
+
     // ── Загрузка данных ──────────────────────────────────────────────────────────
 
     /// <summary>
@@ -347,12 +369,12 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         var searchColumns = Grid?.SearchColumns ?? [];
         var defaultOrder  = Grid?.DefaultOrder  ?? string.Empty;
 
-        var searchWhere    = _query.BuildWhereClause(searchColumns);
-        var orderBy        = _query.BuildOrderBy(defaultOrder);
-        var dp             = new DynamicParameters();
+        var searchWhere       = _query.BuildWhereClause(searchColumns);
+        var orderBy           = _query.BuildOrderBy(defaultOrder);
+        var dp                = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere    = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where             = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
 
         _query.TotalCount = await Entity.GetCountAsync<T>(Db, selectSql, where, dp);
         var items         = await Entity.GetPagedAsync<T>(Db, selectSql, where, orderBy, dp, _query.PageNumber, _query.PageSize);
@@ -374,8 +396,8 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         var orderBy        = _query.BuildOrderBy(defaultOrder);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
 
         var exprs = _query.GroupColumns.ToList();
 

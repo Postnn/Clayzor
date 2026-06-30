@@ -1,5 +1,6 @@
 using Dapper;
 using Kesco.Lib.Entities;
+using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 using Kesco.Lib.Web.BZ.Controls.Services;
 
 namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
@@ -42,8 +43,8 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         var searchWhere    = _query.BuildWhereClause(searchColumns);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
 
         var idParams = new List<string>();
         int idx = 0;
@@ -78,8 +79,8 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         var searchWhere    = _query.BuildWhereClause(searchColumns);
         var dp             = new DynamicParameters();
         dp.Add("search", $"%{_query.SearchText}%");
-        var colFilterWhere = _query.BuildColumnFilterClause(dp);
-        var where          = KescoDataQuery.CombineWhere(searchWhere, colFilterWhere);
+        var compositeWhere = BuildCompositeFilterClause(_query.CompositeFilter, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
         var groupCols      = _query.GroupColumns.ToList();
 
         // Шаг 1: GROUP BY агрегаты (полная структура групп)
