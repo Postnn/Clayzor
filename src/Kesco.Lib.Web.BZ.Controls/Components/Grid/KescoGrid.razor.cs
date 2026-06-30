@@ -1,6 +1,5 @@
 using Kesco.Lib.Entities;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.JSInterop;
 using MudBlazor;
 using MudBlazor.Extensions;
@@ -10,35 +9,7 @@ namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
 public partial class KescoGrid<TEntity> where TEntity : class
 {
-    private string? _searchText;
-    private bool _trayExpanded = false;
-    private bool _filterTrayExpanded = false;
-    private List<string> _groupColumns = [];
-    private int _dragSourceIndex = -1;
-
-    /// <summary>
-    /// Состояние сортировки: <c>Column</c> содержит <see cref="KescoColumnMeta.SortName"/>
-    /// (реальное выражение для ORDER BY), а не SqlName колонки.
-    /// </summary>
-    private List<SortColumn> _sortState = [];
-
-    private bool _selectMode;
-    private bool _selectAllChecked;
-    private HashSet<int> _selectedIds = [];
     private KescoDataQuery _lastQuery = new();
-    private Dictionary<string, bool> _openSubGroups = [];
-    private bool _isExporting;
-
-    /// <summary>
-    /// Кеш: FullKey группы → ID дочерних сущностей.
-    /// Заполняется лениво при первом взаимодействии с чекбоксом группы в grouped-режиме.
-    /// Сбрасывается при деактивации режима выбора и при перезагрузке данных.
-    /// </summary>
-    private Dictionary<string, HashSet<int>> _groupChildIds = [];
-
-    private Dictionary<string, ColumnFilter> _activeFilters = [];
-    private int _pageNumber = 1;
-    private int _pageSize;
     private int _dataKey;
     private const string ServiceEditColumnKey = "__kesco_edit";
     private const string SelectColumnKey = "__kesco_select";
@@ -215,14 +186,6 @@ public partial class KescoGrid<TEntity> where TEntity : class
     /// </summary>
     [Parameter] public IReadOnlyList<BatchOperationGroup>? CustomBatchGroups { get; set; }
 
-    /// <summary>SQL-имена колонок текущей группировки.</summary>
-    public IReadOnlyList<string> GroupColumns => _groupColumns.AsReadOnly();
-
-    /// <summary>ID выбранных сущностей (персистентно между страницами).</summary>
-    public IReadOnlyCollection<int> SelectedIds => _selectedIds;
-
-    private int _totalPages => _pageSize > 0 && TotalCount > 0 ? (int)Math.Ceiling((double)TotalCount / _pageSize) : 1;
-
     // ── Lifecycle ────────────────────────────────────────────────────────────────
     /// <inheritdoc/>
     protected override void OnInitialized()
@@ -253,11 +216,9 @@ public partial class KescoGrid<TEntity> where TEntity : class
         }
         else if (_columnsReady && !string.IsNullOrEmpty(Id))
         {
-            // Реинициализируем drag после каждого ре-рендера динамических колонок.
             _dotnetRef ??= DotNetObjectReference.Create(this);
             await JS.InvokeVoidAsync("kescoGridColumnDrag.init", Id, _dotnetRef);
 
-            // Eager load group-child IDs so group checkboxes reflect selection state
             if (_selectMode && DataLoader is not null && !_loadingChildIds)
             {
                 var missingKeys = new List<string>();
@@ -284,13 +245,6 @@ public partial class KescoGrid<TEntity> where TEntity : class
     }
 
     /// <summary>
-    /// Вызывается из JS после завершения drag-and-drop заголовка колонки.
-    /// Обновляет <see cref="_columnOrder"/> через insert (не swap).
-    /// </summary>
-    /// <param name="srcSql">SQL-имя перетаскиваемой колонки.</param>
-    /// <param name="targetSql">SQL-имя целевой колонки (относительно которой вставляем).</param>
-    /// <param name="insertBefore"><c>true</c> — вставить перед <paramref name="targetSql"/>, <c>false</c> — после.</param>
-    /// <summary>
     /// Вызывается из JS при начале drag заголовка колонки.
     /// Устанавливает <see cref="KescoDragState.DraggedColumn"/> для tray-drop обработчиков.
     /// </summary>
@@ -298,6 +252,13 @@ public partial class KescoGrid<TEntity> where TEntity : class
     public void SetDraggedColumn(string? sqlName)
         => KescoDragState.DraggedColumn = sqlName;
 
+    /// <summary>
+    /// Вызывается из JS после завершения drag-and-drop заголовка колонки.
+    /// Обновляет <see cref="_columnOrder"/> через insert (не swap).
+    /// </summary>
+    /// <param name="srcSql">SQL-имя перетаскиваемой колонки.</param>
+    /// <param name="targetSql">SQL-имя целевой колонки (относительно которой вставляем).</param>
+    /// <param name="insertBefore"><c>true</c> — вставить перед <paramref name="targetSql"/>, <c>false</c> — после.</param>
     [JSInvokable]
     public void OnColumnDrop(string srcSql, string targetSql, bool insertBefore)
     {
@@ -312,7 +273,6 @@ public partial class KescoGrid<TEntity> where TEntity : class
         if (srcIdx < 0 || tgtIdx < 0 || srcIdx == tgtIdx) return;
 
         _columnOrder.RemoveAt(srcIdx);
-        // После удаления источника пересчитываем целевой индекс
         tgtIdx = _columnOrder.IndexOf(tgtId);
         var insertAt = insertBefore ? tgtIdx : tgtIdx + 1;
         insertAt = Math.Clamp(insertAt, 0, _columnOrder.Count);
@@ -332,411 +292,11 @@ public partial class KescoGrid<TEntity> where TEntity : class
         _dotnetRef?.Dispose();
     }
 
-    private void ToggleSelectMode()
-    {
-        _selectMode = !_selectMode;
-        if (!_selectMode)
-        {
-            _selectedIds.Clear();
-            _groupChildIds.Clear();
-            _selectAllChecked = false;
-        }
-        _dataKey++;
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// true — некоторые (но не все) сущности на текущей странице выбраны.
-    /// Учитывает как DetailRow, так и дочерние сущности GroupHeaderRow.
-    /// </summary>
-    private bool IsHeaderIndeterminate()
-    {
-        if (Items is null) return false;
-        bool anySelected = false;
-        bool allSelected = true;
-        bool anyItem = false;
-
-        foreach (var row in Items)
-        {
-            if (row is IDetailRow dr && dr.Item is Entity e)
-            {
-                anyItem = true;
-                if (_selectedIds.Contains(e.Id)) anySelected = true;
-                else allSelected = false;
-            }
-            else if (row is GroupHeaderRow gh)
-            {
-                var childIds = GetChildIdsForGroup(gh.FullKey);
-                if (childIds is not null && childIds.Count > 0)
-                {
-                    anyItem = true;
-                    bool groupAllSelected = true;
-                    foreach (var id in childIds)
-                    {
-                        if (_selectedIds.Contains(id)) anySelected = true;
-                        else groupAllSelected = false;
-                    }
-                    if (!groupAllSelected) allSelected = false;
-                }
-            }
-        }
-
-        return anyItem && anySelected && !allSelected;
-    }
-
-    /// <summary>
-    /// Вычисляет состояние чекбокса в заголовке: все ли сущности на текущей странице выбраны.
-    /// Учитывает как DetailRow, так и дочерние сущности GroupHeaderRow.
-    /// </summary>
-    private bool ComputeSelectAllState()
-    {
-        if (Items is null) return false;
-        bool anyItem = false;
-
-        foreach (var row in Items)
-        {
-            if (row is IDetailRow dr && dr.Item is Entity e)
-            {
-                anyItem = true;
-                if (!_selectedIds.Contains(e.Id)) return false;
-            }
-            else if (row is GroupHeaderRow gh)
-            {
-                var childIds = GetChildIdsForGroup(gh.FullKey);
-                if (childIds is not null && childIds.Count > 0)
-                {
-                    anyItem = true;
-                    foreach (var id in childIds)
-                        if (!_selectedIds.Contains(id)) return false;
-                }
-            }
-        }
-
-        return anyItem;
-    }
-
-    /// <summary>
-    /// Tri-state чекбокса для группового заголовка.
-    /// Все потомки выбраны → (true, false), ни одного → (false, false), часть → (false, true).
-    /// </summary>
-    private (bool Checked, bool Indeterminate) ComputeGroupCheckState(GroupHeaderRow gh)
-    {
-        var childIds = GetChildIdsForGroup(gh.FullKey);
-        if (childIds is null || childIds.Count == 0)
-            return (false, false);
-
-        int selectedCount = 0;
-        foreach (var id in childIds)
-            if (_selectedIds.Contains(id))
-                selectedCount++;
-
-        if (selectedCount == 0) return (false, false);
-        if (selectedCount == childIds.Count) return (true, false);
-        return (false, true);
-    }
-
-    /// <summary>
-    /// Возвращает ID всех дочерних сущностей группы (из кеша или null).
-    /// При первом обращении кеш заполняется через DataLoader.
-    /// </summary>
-    private HashSet<int>? GetChildIdsForGroup(string fullKey)
-    {
-        if (_groupChildIds.TryGetValue(fullKey, out var ids))
-            return ids;
-        return null;
-    }
-
-    /// <summary>
-    /// Ленивая загрузка ID дочерних сущностей группы через DataLoader.
-    /// Вызывается при первом клике по чекбоксу группы.
-    /// </summary>
-    private async Task LoadChildIdsForGroupsAsync(List<string> fullKeys)
-    {
-        if (DataLoader is null || fullKeys.Count == 0) return;
-        var batch = await DataLoader.LoadGroupChildIdsAsync(fullKeys, _lastQuery);
-        foreach (var kv in batch)
-            _groupChildIds[kv.Key] = kv.Value;
-    }
-
-    /// <summary>
-    /// Сбрасывает кеш дочерних ID групп (вызывается перед перезагрузкой данных).
-    /// </summary>
-    private void ClearGroupChildCache()
-    {
-        if (_selectMode)
-            _groupChildIds.Clear();
-    }
-
-    /// <summary>
-    /// Обработчик клика по tri-state иконке в заголовке колонки выбора.
-    /// Если есть выделенные (хотя бы один) → снимаем всё, иначе → выделяем всё.
-    /// Обрабатывает как DetailRow, так и GroupHeaderRow (через дочерние ID).
-    /// </summary>
-    private async Task OnHeaderTriToggle()
-    {
-        bool anySelected = IsHeaderIndeterminate() || _selectAllChecked;
-        _selectAllChecked = !anySelected;
-
-        // Убедимся, что дочерние ID всех видимых групп загружены
-        var missingKeys = new List<string>();
-        foreach (var row in Items ?? [])
-        {
-            if (row is GroupHeaderRow gh && GetChildIdsForGroup(gh.FullKey) is null)
-                missingKeys.Add(gh.FullKey);
-        }
-        if (missingKeys.Count > 0)
-            await LoadChildIdsForGroupsAsync(missingKeys);
-
-        foreach (var row in Items ?? [])
-        {
-            if (row is IDetailRow dr && dr.Item is Entity entity)
-            {
-                if (!anySelected) _selectedIds.Add(entity.Id);
-                else _selectedIds.Remove(entity.Id);
-            }
-            else if (row is GroupHeaderRow gh)
-            {
-                var childIds = GetChildIdsForGroup(gh.FullKey);
-                if (childIds is not null)
-                {
-                    foreach (var id in childIds)
-                    {
-                        if (!anySelected) _selectedIds.Add(id);
-                        else _selectedIds.Remove(id);
-                    }
-                }
-            }
-        }
-
-        StateHasChanged();
-    }
-
-    // ── Selection event handlers ─────────────────────────────────────────────────
-
-    /// <summary>
-    /// Обработчик клика по чекбоксу строки детализации — добавляет/удаляет ID сущности.
-    /// </summary>
-    private async Task OnRowSelectAsync(int entityId, bool selected)
-    {
-        if (selected)
-            _selectedIds.Add(entityId);
-        else
-            _selectedIds.Remove(entityId);
-        _selectAllChecked = ComputeSelectAllState();
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Обработчик клика по tri-state иконке группы.
-    /// Если все потомки выбраны → снимаем всё; иначе → выделяем всё.
-    /// </summary>
-    private async Task OnGroupTriToggle(GroupHeaderRow gh)
-    {
-        var childIds = GetChildIdsForGroup(gh.FullKey);
-        if (childIds is null)
-        {
-            await LoadChildIdsForGroupsAsync([gh.FullKey]);
-            childIds = GetChildIdsForGroup(gh.FullKey);
-        }
-        if (childIds is null || childIds.Count == 0) return;
-
-        bool allSelected = true;
-        foreach (var id in childIds)
-        {
-            if (!_selectedIds.Contains(id)) { allSelected = false; break; }
-        }
-
-        foreach (var id in childIds)
-        {
-            if (allSelected) _selectedIds.Remove(id);
-            else _selectedIds.Add(id);
-        }
-        _selectAllChecked = ComputeSelectAllState();
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Обработчик клика по чекбоксу группы — выделяет/снимает всех потомков.
-    /// При первом обращении лениво загружает ID дочерних сущностей через DataLoader.
-    /// </summary>
-    private async Task OnGroupSelectAsync(GroupHeaderRow gh, bool selected)
-    {
-        var childIds = GetChildIdsForGroup(gh.FullKey);
-        if (childIds is null)
-        {
-            // Ленивая загрузка при первом клике
-            await LoadChildIdsForGroupsAsync([gh.FullKey]);
-            childIds = GetChildIdsForGroup(gh.FullKey);
-        }
-        if (childIds is null) return;
-
-        foreach (var id in childIds)
-        {
-            if (selected)
-                _selectedIds.Add(id);
-            else
-                _selectedIds.Remove(id);
-        }
-        _selectAllChecked = ComputeSelectAllState();
-        StateHasChanged();
-    }
-
-    private void ToggleSubGroup(string label)
-    {
-        if (_openSubGroups.TryGetValue(label, out var isOpen))
-            _openSubGroups[label] = !isOpen;
-        else
-            _openSubGroups[label] = true;
-    }
-
-    private bool IsSubGroupOpen(string label)
-        => _openSubGroups.TryGetValue(label, out var isOpen) && isOpen;
-
-    private async Task PrintCurrentPageInternal()    => await JS.InvokeVoidAsync("kescoGridPrint.printCurrentPage", Id);
-
-    private async Task PrintAllInternal()
-    {
-        if (DataLoader is null) return;
-        // JS-спиннер — не трогает Blazor-рендер, грид не перерендеривается
-        var spinnerId = Id + "-print-spinner";
-        _ = JS.InvokeVoidAsync("kescoGridPrint.showSpinner", spinnerId);
-        try
-        {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
-            var html = await DataLoader.BuildPrintHtmlAsync(
-                columns, Title, BuildFilterDescription(), BuildGroupDescription());
-            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
-            await JS.InvokeAsync<object>("kescoGridPrint.printHtml", html);
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
-            Snackbar.Add($"Ошибка печати: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task PrintSelectedInternal()
-    {
-        if (DataLoader is null || _selectedIds.Count == 0) return;
-        var spinnerId = Id + "-print-spinner";
-        _ = JS.InvokeVoidAsync("kescoGridPrint.showSpinner", spinnerId);
-        try
-        {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
-            var html = await DataLoader.BuildPrintHtmlForSelectedAsync(
-                columns, Title, _selectedIds.ToList(),
-                BuildFilterDescription(), BuildGroupDescription());
-            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
-            await JS.InvokeAsync<object>("kescoGridPrint.printHtml", html);
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
-            Snackbar.Add($"Ошибка печати: {ex.Message}", Severity.Error);
-        }
-    }
-    private string? BuildFilterDescription()
-    {
-        if (_activeFilters.Count == 0) return null;
-        var parts = new List<string>();
-        foreach (var kv in _activeFilters)
-        {
-            var sqlName     = kv.Key;
-            var filter      = kv.Value;
-            var displayName = _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName;
-            parts.Add(KescoColumnFilterDialog.GetFilterDescription(filter, displayName));
-        }
-        return $"Фильтр: {string.Join("; ", parts)}";
-    }
-
-    private string? BuildGroupDescription()
-    {
-        if (_groupColumns.Count == 0) return null;
-        var names = _groupColumns
-            .Select(c => _columnBySqlName.TryGetValue(c, out var m) ? m.DisplayName : c);
-        return $"Группировка: {string.Join(" → ", names)}";
-    }
-
-    private async Task ExcelCurrentPageInternal()
-    {
-        if (DataLoader is null) return;
-        _isExporting = true;
-        StateHasChanged();
-        try
-        {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
-            await DataLoader.ExcelExportAsync(new ExcelExportRequest
-            {
-                Mode = ExcelExportMode.CurrentPage,
-                Title = Title,
-                VisibleColumns = columns,
-                FilterDescription = BuildFilterDescription(),
-                GroupDescription = BuildGroupDescription(),
-            });
-        }
-        finally
-        {
-            _isExporting = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ExcelAllInternal()
-    {
-        if (DataLoader is null) return;
-        _isExporting = true;
-        StateHasChanged();
-        try
-        {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
-            await DataLoader.ExcelExportAsync(new ExcelExportRequest
-            {
-                Mode = ExcelExportMode.All,
-                Title = Title,
-                VisibleColumns = columns,
-                FilterDescription = BuildFilterDescription(),
-                GroupDescription = BuildGroupDescription(),
-            });
-        }
-        finally
-        {
-            _isExporting = false;
-            StateHasChanged();
-        }
-    }
-
-    private async Task ExcelSelectedInternal()
-    {
-        if (DataLoader is null || _selectedIds.Count == 0) return;
-        _isExporting = true;
-        StateHasChanged();
-        try
-        {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
-            await DataLoader.ExcelExportAsync(new ExcelExportRequest
-            {
-                Mode = ExcelExportMode.Selected,
-                Title = Title,
-                VisibleColumns = columns,
-                SelectedIds = _selectedIds.ToList(),
-                FilterDescription = BuildFilterDescription(),
-                GroupDescription = BuildGroupDescription(),
-            });
-        }
-        finally
-        {
-            _isExporting = false;
-            StateHasChanged();
-        }
-    }
-
     private bool _menuVisible(KescoColumnMeta meta) =>
         meta is not null
         && ColumnMenuMode != ColumnMenuMode.Hidden
         && ((_trayExpanded && meta.Groupable)
             || (_filterTrayExpanded && meta.Filterable));
-
-    private void HandleSortClick(string sqlName) => _ = ToggleSort(sqlName);
 
     /// <summary>
     /// Открывает диалог редактирования для строки детализации.
@@ -825,302 +385,6 @@ public partial class KescoGrid<TEntity> where TEntity : class
         }
     }
 
-    // ── Public API ───────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Возвращает порядок группировки для указанной SQL-колонки.
-    /// Меньшее значение = внешний уровень группировки.
-    /// </summary>
-    public int GetGroupByOrder(string sqlColumn)
-    {
-        var idx = _groupColumns.IndexOf(sqlColumn);
-        return idx < 0 ? 0 : idx;
-    }
-
-    /// <summary>
-    /// Переключает сортировку по колонке: нет → ASC → DESC → нет.
-    /// Принимает SqlName; реальное выражение ORDER BY берётся из
-    /// <see cref="KescoColumnMeta.SortName"/> зарегистрированной колонки.
-    /// </summary>
-    public async Task ToggleSort(string sqlName)
-    {
-        // Резолвим имя для ORDER BY: если зарегистрирован SortName — используем его
-        var sortName = _columnBySqlName.TryGetValue(sqlName, out var meta)
-            ? meta.SortName
-            : sqlName;
-
-        var idx = _sortState.FindIndex(s => s.Column == sortName);
-        if (idx >= 0)
-        {
-            if (_sortState[idx].Desc)
-                _sortState.RemoveAt(idx);
-            else
-                _sortState[idx] = _sortState[idx] with { Desc = true };
-        }
-        else
-        {
-            _sortState.Insert(0, new SortColumn(sortName, false));
-            if (_sortState.Count > 2)
-                _sortState.RemoveAt(2);
-        }
-
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Возвращает бейдж сортировки для колонки: номер приоритета + стрелка направления.
-    /// Принимает SqlName; поиск в состоянии сортировки ведётся по резолвленному SortName.
-    /// </summary>
-    public RenderFragment GetSortBadge(string sqlName) => builder =>
-    {
-        var sortName = _columnBySqlName.TryGetValue(sqlName, out var meta)
-            ? meta.SortName
-            : sqlName;
-
-        var idx = _sortState.FindIndex(s => s.Column == sortName);
-        if (idx < 0) return;
-        var arrow = _sortState[idx].Desc ? "\u2193" : "\u2191";
-        var label = (idx + 1).ToString() + arrow;
-        builder.OpenElement(0, "span");
-        builder.AddAttribute(1, "class", "chip-sort-badge");
-        builder.AddContent(2, label);
-        builder.CloseElement();
-    };
-
-    // ── Grouping tray ────────────────────────────────────────────────────────────
-    private async Task ToggleTray()
-    {
-        _trayExpanded = !_trayExpanded;
-        TrayStateChanged?.Invoke();
-        if (!_trayExpanded)
-        {
-            _groupColumns.Clear();
-            _pageNumber = 1;
-            await NotifyQueryChanged();
-        }
-        else
-        {
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnSearchTextChanged(string? value)
-    {
-        _searchText = value;
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
-    private async Task AddGroupColumn(string column)
-    {
-        if (_groupColumns.Contains(column))
-            return;
-        _groupColumns.Add(column);
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
-    private async Task RemoveGroupColumn(string column)
-    {
-        _groupColumns.Remove(column);
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
-    /// <summary>
-    /// Переключает развёрнутость всех групп на заданной глубине через DataLoader.
-    /// </summary>
-    private async Task ToggleLevel(int depth)
-    {
-        if (DataLoader is not null)
-        {
-            await DataLoader.ToggleLevelExpandedAsync(depth);
-            StateHasChanged();
-        }
-    }
-
-    private void OnChipDragStart(DragEventArgs e, int index)
-    {
-        e.DataTransfer.EffectAllowed = "move";
-        _dragSourceIndex = index;
-        KescoDragState.DraggedColumn = _groupColumns[index];
-    }
-
-    private void OnChipDragEnd()
-    {
-        _dragSourceIndex = -1;
-        KescoDragState.DraggedColumn = null;
-    }
-
-    private void OnTrayDragOver(DragEventArgs e)
-    {
-        e.DataTransfer.DropEffect = "move";
-    }
-
-    private async Task OnTrayDrop(DragEventArgs e, int targetIndex)
-    {
-        var draggedData = KescoDragState.DraggedColumn;
-        KescoDragState.DraggedColumn = null;
-
-        if (!string.IsNullOrEmpty(draggedData)
-            && _columnBySqlName.TryGetValue(draggedData, out var m) && m.Groupable
-            && !_groupColumns.Contains(draggedData))
-        {
-            _groupColumns.Add(draggedData);
-            _dragSourceIndex = -1;
-            _pageNumber = 1;
-            StateHasChanged();
-            await NotifyQueryChanged();
-            return;
-        }
-
-        if (_dragSourceIndex < 0 || _dragSourceIndex >= _groupColumns.Count)
-            return;
-
-        var item = _groupColumns[_dragSourceIndex];
-        _groupColumns.RemoveAt(_dragSourceIndex);
-
-        if (targetIndex < 0 || targetIndex >= _groupColumns.Count + 1)
-            _groupColumns.Add(item);
-        else if (targetIndex > _dragSourceIndex)
-            _groupColumns.Insert(targetIndex - 1, item);
-        else
-            _groupColumns.Insert(targetIndex, item);
-
-        _dragSourceIndex = -1;
-        _pageNumber = 1;
-        StateHasChanged();
-        await NotifyQueryChanged();
-    }
-
-    // ── Pagination ───────────────────────────────────────────────────────────────
-    private async Task OnPageSizeChangedAsync(int value)
-    {
-        _pageSize = value;
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
-    /// <summary>
-    /// Сбрасывает номер страницы на 1 и инициирует перезагрузку данных.
-    /// </summary>
-    public async Task RefreshAsync()
-    {
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
-    private async Task GoToFirstPageAsync()
-    {
-        if (_pageNumber <= 1) return;
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
-    private async Task GoToPrevPageAsync()
-    {
-        if (_pageNumber <= 1) return;
-        _pageNumber--;
-        await NotifyQueryChanged();
-    }
-
-    private async Task GoToNextPageAsync()
-    {
-        if (_pageNumber >= _totalPages) return;
-        _pageNumber++;
-        await NotifyQueryChanged();
-    }
-
-    private async Task GoToLastPageAsync()
-    {
-        if (_pageNumber >= _totalPages) return;
-        _pageNumber = _totalPages;
-        await NotifyQueryChanged();
-    }
-
-    // ── Filter tray ──────────────────────────────────────────────────────────────
-    /// <summary>
-    /// Включает/выключает панель фильтрации.
-    /// При выключении сбрасывает все активные фильтры и перезагружает данные.
-    /// </summary>
-    private async Task ToggleFilterTray()
-    {
-        _filterTrayExpanded = !_filterTrayExpanded;
-        TrayStateChanged?.Invoke();
-        if (!_filterTrayExpanded)
-        {
-            _activeFilters.Clear();
-            _pageNumber = 1;
-            await NotifyQueryChanged();
-        }
-        else
-        {
-            StateHasChanged();
-        }
-    }
-
-    private void OnFilterTrayDragOver(DragEventArgs e)
-    {
-        e.DataTransfer.DropEffect = "move";
-    }
-
-    private async Task OnFilterTrayDrop(DragEventArgs e)
-    {
-        var draggedSqlName = KescoDragState.DraggedColumn;
-        KescoDragState.DraggedColumn = null;
-
-        if (string.IsNullOrEmpty(draggedSqlName))
-            return;
-        if (!_columnBySqlName.TryGetValue(draggedSqlName, out var cm) || !cm.Filterable)
-            return;
-
-        await OpenFilterDialog(draggedSqlName, cm.DisplayName);
-    }
-
-    /// <summary>
-    /// Открывает диалог настройки фильтра для указанной колонки.
-    /// При подтверждении сохраняет фильтр и перезагружает данные.
-    /// </summary>
-    private async Task OpenFilterDialog(string sqlName, string displayName)
-    {
-        var colType = FilterColumnTypes.TryGetValue(sqlName, out var t) ? t : ColumnType.Text;
-        _activeFilters.TryGetValue(sqlName, out var existing);
-
-        var parameters = new DialogParameters<KescoColumnFilterDialog>
-        {
-            { x => x.ColumnDisplayName, displayName },
-            { x => x.ColumnSqlName,     sqlName },
-            { x => x.ColumnType,        colType },
-            { x => x.ExistingFilter,    existing },
-            { x => x.LookupOptions,     FilterLookupOptions?.GetValueOrDefault(sqlName) },
-        };
-        var options = new DialogOptionsEx
-        {
-            MaxWidth = MaxWidth.ExtraSmall,
-            FullWidth = true,
-            DragMode = MudDialogDragMode.Simple,
-        };
-        var dialog = await DialogService.ShowExAsync<KescoColumnFilterDialog>(
-            $"Фильтр: {displayName}", parameters, options);
-        var result = await dialog.Result;
-
-        if (result is not null && !result.Canceled && result.Data is ColumnFilter colFilter)
-        {
-            _activeFilters[sqlName] = colFilter;
-            _pageNumber = 1;
-            await NotifyQueryChanged();
-        }
-    }
-
-    private async Task RemoveFilter(string sqlName)
-    {
-        _activeFilters.Remove(sqlName);
-        _pageNumber = 1;
-        await NotifyQueryChanged();
-    }
-
     // ── Core notification ────────────────────────────────────────────────────────
     private async Task NotifyQueryChanged()
     {
@@ -1137,9 +401,6 @@ public partial class KescoGrid<TEntity> where TEntity : class
             ColumnFilters = _activeFilters.ToDictionary(kv => kv.Key, kv => kv.Value),
         };
 
-        // Если изменилась суть запроса (фильтр, поиск, группировка, сортировка) —
-        // сбрасываем выделение, т.к. набор данных поменялся.
-        // При смене только номера страницы или размера страницы — выделение сохраняется.
         if (_selectMode && _lastQuery.PageNumber != 0)
         {
             var essenceChanged =
@@ -1181,11 +442,7 @@ public partial class KescoGrid<TEntity> where TEntity : class
     string IKescoGrid.DefaultOrder     => DefaultOrder;
     Type? IKescoGrid.EditDialogType    => EditDialogType;
 
-    /// <summary>
-    /// Возвращает <c>true</c> если колонка участвует в текущей группировке.
-    /// </summary>
-    public bool IsGrouped(string sqlName)      => _groupColumns.Contains(sqlName);
-    bool IKescoGrid.IsGrouped(string sqlName)  => IsGrouped(sqlName);
+    bool IKescoGrid.IsGrouped(string sqlName) => IsGrouped(sqlName);
 
     Task IKescoGrid.ToggleSort(string sqlName)             => ToggleSort(sqlName);
     RenderFragment IKescoGrid.GetSortBadge(string sqlName) => GetSortBadge(sqlName);
@@ -1231,7 +488,6 @@ public partial class KescoGrid<TEntity> where TEntity : class
 
     /// <summary>
     /// Отменяет регистрацию колонки при уничтожении <see cref="KescoColumnDef"/>.
-    /// Удаляет из обоих индексов.
     /// </summary>
     void IKescoGrid.UnregisterColumn(int columnId, string sqlName)
     {
@@ -1240,12 +496,11 @@ public partial class KescoGrid<TEntity> where TEntity : class
         ColumnsChanged?.Invoke();
     }
 
-    ColumnMenuMode IKescoGrid.ColumnMenuMode => ColumnMenuMode;
+    ColumnMenuMode IKescoGrid.ColumnMenuMode       => ColumnMenuMode;
+    bool IKescoGrid.IsGroupingTrayExpanded         => _trayExpanded;
+    bool IKescoGrid.IsFilterTrayExpanded           => _filterTrayExpanded;
 
-    bool IKescoGrid.IsGroupingTrayExpanded => _trayExpanded;
-    bool IKescoGrid.IsFilterTrayExpanded   => _filterTrayExpanded;
-
-    Task IKescoGrid.AddGroupAsync(string sqlName) => AddGroupColumn(sqlName);
+    Task IKescoGrid.AddGroupAsync(string sqlName)  => AddGroupColumn(sqlName);
 
     Task IKescoGrid.AddFilterAsync(string sqlName)
         => OpenFilterDialog(sqlName, _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName);

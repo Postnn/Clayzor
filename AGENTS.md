@@ -169,7 +169,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Компонент | Документация |
 |---|---|
-| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Разметка в `.razor`, логика в `.razor.cs` (partial class). При `EditDialogType != null` автоматически добавляет сервисную колонку (первой) с иконкой карандаша для открытия диалога редактирования. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Разметка в `KescoGrid.razor`, логика в 9 partial class-файлах (1 основной + 8 по темам, см. «Codebehind-структура» ниже). При `EditDialogType != null` автоматически добавляет сервисную колонку (первой) с иконкой карандаша для открытия диалога редактирования. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPageBase\<T>** — базовый класс страниц с гридом. Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumn\<T>** — колонка грида с авто-заголовком. Получает Title/SortName/Drag&Drop из `KescoColumnDef` по `ColumnId`. Скрывается при группировке. Кнопка меню ⋮ для мобильных | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnDef** — невидимый регистратор метаданных колонки: `ColumnId` (EditorRequired), `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
@@ -202,6 +202,29 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 |---|---|
 | **KescoErrorService** (Scoped) — хранит состояние последней ошибки SQL, реализует `ISqlErrorHandler`. Используется `KescoErrorBar` |
 | **ISqlErrorHandler** (DALC) — интерфейс, вызываемый `DbManager` при `SqlException`. Регистрируется в DI |
+
+### Codebehind-структура KescoGrid
+
+После рефакторинга (задачи 04–05 мастер-плана) логика `KescoGrid<TEntity>` разнесена по partial-файлам. Все файлы объявляют `public partial class KescoGrid<TEntity> where TEntity : class` в namespace `Kesco.Lib.Web.BZ.Controls.Components.Grid`. Базовый класс (`ComponentBase`) и реализуемые интерфейсы (`IKescoGrid`, `IDisposable`, `IAsyncDisposable`) — только в основном файле.
+
+| Файл | Строк | Содержание |
+|---|---|---|
+| `KescoGrid.razor` | ~640 | Разметка грида (MudDataGrid, тулбар, панели, колонки) |
+| `KescoGrid.razor.cs` | 526 | Основа: интерфейсы, параметры, поля (`_lastQuery`, `_columnById`, `_columnBySqlName`, `_columnOrder`, `_hiddenSqlNames`), инициализация, регистрация колонок, `RegisterCellTemplate`, `NotifyQueryChanged`, высота грида, `DisposeAsync`, `ColumnMenuMode` |
+| `KescoGrid.Search.cs` | 18 | `_searchText`, `DebounceTimer`, обработчики поиска |
+| `KescoGrid.Sorting.cs` | 66 | `_sortState`, `ToggleSort`, `HandleSortClick`, `GetSortBadge` |
+| `KescoGrid.Grouping.cs` | 217 | `_groupColumns`, `_trayExpanded`, `AddGroupColumn`, `RemoveGroupColumn`, `OnChipDragStart/End`, `OnTrayDragOver/Drop`, `GroupColumns`, `OnGroupTriToggle`, `OnHeaderTriToggle`, `_groupChildIds` |
+| `KescoGrid.Filtering.cs` | 112 | `_activeFilters`, `_filterTrayExpanded`, `OpenFilterDialog`, `AddFilterAsync`, `RemoveFilter`, `OnFilterTrayDragOver`, `OnFilterTrayDrop`, `BuildFilterDescription` |
+| `KescoGrid.DragDrop.cs` | 86 | `_dragSourceIndex`, drag-and-drop чипов группировки (перемещение/перестановка в трее) |
+| `KescoGrid.Selection.cs` | 113 | `_selectMode`, `_selectAllChecked`, `_selectedIds`, `OnRowSelectAsync`, `SelectAllAsync`, `DeselectAllAsync`, `ToggleSelectMode`, персистентность выделения |
+| `KescoGrid.ExportMenu.cs` | 141 | `_isExporting`, `_openSubGroups`, `ToggleSubGroup`, `Print{CurrentPage,Selected,All}Internal`, `Excel{CurrentPage,Selected,All}Internal` |
+| `KescoGrid.Paging.cs` | 59 | `_pageSize`, `OnPageSizeChanged`, `PrevPage`, `NextPage`, `LastPage` |
+
+**Правила модификации:**
+- Новые поля/методы добавлять в соответствующий тематический файл, а не в `KescoGrid.razor.cs`
+- `KescoGrid.Filtering.cs` будет переписан задачами 10–11 (переход на дерево фильтра), поэтому изолирован
+- При добавлении using — в тот файл, где используется тип
+- Базовый класс и интерфейсы — только в `KescoGrid.razor.cs`
 
 ## Server-side grouping architecture
 
