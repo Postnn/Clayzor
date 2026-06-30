@@ -295,8 +295,15 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `Decimal` — дробные (decimal/double/float): те же что Number, редактор `MudNumericField<decimal?>`
 - `Date` — даты (DateTime/DateTimeOffset/DateOnly): сравнения + IsNull/IsNotNull, редактор `MudDatePicker`
 - `Boolean` — булевы: Equals, IsNull, IsNotNull
-- `KescoGridPageBase.MapClrTypeToColumnType` — авто-маппинг CLR-типов в `ColumnType`
+- `KescoGridPageBase.MapClrTypeToColumnType` — делегирует в `ColumnTypeRegistry.FromClr(type).Kind`
 - `KescoGridPageBase.FilterLookupOptions` — необязательный virtual-словарь (SqlName → список `KescoFilterOption`) для выпадающего выбора значений в диалоге фильтра. Страница может переопределить. Грид пробрасывает в `KescoColumnFilterDialog.LookupOptions`
+
+### Дескрипторы типов колонок (`Components/Grid/ColumnTypes/`)
+- `ColumnTypeDescriptor` — абстрактный базовый класс: `Kind`, `ClrType`, `Operators`, `DefaultOperator`, `OperatorTakesValue(op)`, `Parse(string?)`, `Format(object?)`, `ToParameter(object?)`. Единая точка типозависимого поведения
+- `TextColumnType`, `NumberColumnType`, `DecimalColumnType`, `BooleanColumnType`, `DateColumnType` — конкретные дескрипторы
+- `ColumnTypeRegistry` — `FromClr(Type)` (CLR→дескриптор), `FromKind(ColumnType)` (enum→дескриптор), синглтоны
+- `KescoColumnMeta.Type` — дескриптор, заполняемый при регистрации колонки; единственный источник операторов/парсинга/формата
+- `KescoColumnFilterDialog` получает операторы и DefaultOperator из дескриптора, парсинг/формат — через `_descriptor.Parse/Format`
 
 ### Типы составного фильтра (`Components/Grid/Filter/`)
 - `IKescoFilterNode` — интерфейс узла дерева фильтра: `Clone()` (рекурсивное глубокое копирование)

@@ -28,6 +28,9 @@ public sealed class KescoColumnMeta
 
     /// <summary>Разрешена ли фильтрация по колонке.</summary>
     public bool Filterable { get; init; }
+
+    /// <summary>Дескриптор типа — единый источник операторов, парсинга и формата.</summary>
+    public ColumnTypes.ColumnTypeDescriptor Type { get; init; } = null!;
 }
 
 /// <summary>

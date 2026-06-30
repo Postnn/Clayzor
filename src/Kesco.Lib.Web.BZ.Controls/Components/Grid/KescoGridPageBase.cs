@@ -255,21 +255,7 @@ public abstract class KescoGridPageBase<T> : ComponentBase, IKescoGridDataLoader
     /// <c>Nullable&lt;T&gt;</c> обрабатывается через <see cref="Nullable.GetUnderlyingType"/>.
     /// </summary>
     private static ColumnType MapClrTypeToColumnType(Type clrType)
-    {
-        var t = Nullable.GetUnderlyingType(clrType) ?? clrType;
-        if (t == typeof(bool))               return ColumnType.Boolean;
-        if (t == typeof(DateTime)            ||
-            t == typeof(DateTimeOffset)      ||
-            t == typeof(DateOnly))           return ColumnType.Date;
-        if (t == typeof(decimal)             ||
-            t == typeof(double)              ||
-            t == typeof(float))              return ColumnType.Decimal;
-        if (t == typeof(int)    || t == typeof(long)    ||
-            t == typeof(short)  || t == typeof(byte)    ||
-            t == typeof(uint)   || t == typeof(ulong)   ||
-            t == typeof(ushort))             return ColumnType.Number;
-        return ColumnType.Text;
-    }
+        => ColumnTypes.ColumnTypeRegistry.FromClr(clrType).Kind;
 
     /// <summary>
     /// Необязательный источник вариантов для выпадающего списка значений фильтра.

@@ -280,10 +280,10 @@
     /// </summary>
     public static string GetFilterDescription(ColumnFilter filter, string displayName)
     {
-        var first = DescribeClause(filter.Operator, filter.Value);
+        var first = DescribeClauseStatic(filter.Operator, filter.Value, FormatFilterValue);
         if (filter.HasSecondClause)
         {
-            var second = DescribeClause(filter.SecondOperator, filter.SecondValue);
+            var second = DescribeClauseStatic(filter.SecondOperator, filter.SecondValue, FormatFilterValue);
             var logic = filter.LogicalOperator == LogicalOperator.Or ? "ИЛИ" : "И";
             return $"{displayName}: {first} {logic} {second}";
         }
@@ -293,42 +293,40 @@
     private static string FormatFilterValue(object? value) =>
         value is DateTime dt ? dt.ToString("dd.MM.yyyy") : value?.ToString() ?? "";
 
-    private static string DescribeClause(ColumnFilterOperator op, object? value) => op switch
+    private string DescribeClause(ColumnFilterOperator op, object? value)
+        => DescribeClauseStatic(op, value, _descriptor.Format);
+
+    /// <summary>Статическая версия для вызова из GetFilterDescription (вне диалога).</summary>
+    private static string DescribeClauseStatic(ColumnFilterOperator op, object? value, Func<object?, string> format) => op switch
     {
-        ColumnFilterOperator.Contains           => $"содержит «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.NotContains        => $"не содержит «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.Equals             => $"= «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.NotEquals          => $"≠ «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.StartsWith         => $"начинается с «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.NotStartsWith      => $"не начинается с «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.EndsWith           => $"заканчивается на «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.NotEndsWith        => $"не заканчивается на «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.GreaterThan        => $"> «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.GreaterThanOrEqual => $"≥ «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.LessThan           => $"< «{FormatFilterValue(value)}»",
-        ColumnFilterOperator.LessThanOrEqual    => $"≤ «{FormatFilterValue(value)}»",
+        ColumnFilterOperator.Contains           => $"содержит «{format(value)}»",
+        ColumnFilterOperator.NotContains        => $"не содержит «{format(value)}»",
+        ColumnFilterOperator.Equals             => $"= «{format(value)}»",
+        ColumnFilterOperator.NotEquals          => $"≠ «{format(value)}»",
+        ColumnFilterOperator.StartsWith         => $"начинается с «{format(value)}»",
+        ColumnFilterOperator.NotStartsWith      => $"не начинается с «{format(value)}»",
+        ColumnFilterOperator.EndsWith           => $"заканчивается на «{format(value)}»",
+        ColumnFilterOperator.NotEndsWith        => $"не заканчивается на «{format(value)}»",
+        ColumnFilterOperator.GreaterThan        => $"> «{format(value)}»",
+        ColumnFilterOperator.GreaterThanOrEqual => $"≥ «{format(value)}»",
+        ColumnFilterOperator.LessThan           => $"< «{format(value)}»",
+        ColumnFilterOperator.LessThanOrEqual    => $"≤ «{format(value)}»",
         ColumnFilterOperator.IsEmpty            => "пустая строка",
         ColumnFilterOperator.IsNotEmpty         => "не пустая строка",
         ColumnFilterOperator.IsNull             => "пусто (NULL)",
         ColumnFilterOperator.IsNotNull          => "не пусто (NOT NULL)",
-        _ => $"= «{FormatFilterValue(value)}»"
+        _ => $"= «{format(value)}»"
     };
 
-    private static bool IsNoValueOperator(ColumnFilterOperator op)
-        => op is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
-            or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull;
+    private bool IsNoValueOperator(ColumnFilterOperator op)
+        => !_descriptor.OperatorTakesValue(op);
+
+    private ColumnTypes.ColumnTypeDescriptor _descriptor = null!;
 
     protected override void OnParametersSet()
     {
-        _availableOperators = ColumnType switch
-        {
-            ColumnType.Text    => ColumnFilterOperatorList.TextOperators,
-            ColumnType.Number  => ColumnFilterOperatorList.NumberOperators,
-            ColumnType.Decimal => ColumnFilterOperatorList.DecimalOperators,
-            ColumnType.Date    => ColumnFilterOperatorList.DateOperators,
-            ColumnType.Boolean => ColumnFilterOperatorList.BooleanOperators,
-            _ => ColumnFilterOperatorList.TextOperators
-        };
+        _descriptor = ColumnTypes.ColumnTypeRegistry.FromKind(ColumnType);
+        _availableOperators = (IReadOnlyList<ColumnFilterOperator>)_descriptor.Operators;
 
         _lookupOptions1 = LookupOptions;
         _lookupOptions2 = LookupOptions;
@@ -352,7 +350,7 @@
         }
         else
         {
-            _op1 = _availableOperators[0];
+            _op1 = _descriptor.DefaultOperator;
             _showSecond = false;
         }
     }
@@ -360,23 +358,25 @@
     private void RestoreValue1(object? value)
     {
         (_text1, _num1, _dec1, _date1, _bool1, _lookup1) = ((string?)null, (int?)null, (decimal?)null, (DateTime?)null, (bool?)null, null);
-        if (_lookupOptions1 is not null)     _lookup1 = value;
-        else if (ColumnType == ColumnType.Text)    _text1 = value?.ToString();
-        else if (ColumnType == ColumnType.Number)  _num1 = value is int i ? i : value is not null ? (int?)Convert.ToInt32(value) : null;
-        else if (ColumnType == ColumnType.Decimal) _dec1 = value is decimal d ? d : value is not null ? (decimal?)Convert.ToDecimal(value) : null;
-        else if (ColumnType == ColumnType.Date)    _date1 = value is DateTime dt ? dt : null;
-        else if (ColumnType == ColumnType.Boolean) _bool1 = value is bool b ? b : null;
+        if (_lookupOptions1 is not null) { _lookup1 = value; return; }
+        var parsed = _descriptor.Parse(value?.ToString());
+        if (ColumnType == ColumnType.Text)    _text1 = parsed as string;
+        else if (ColumnType == ColumnType.Number)  _num1 = parsed as int?;
+        else if (ColumnType == ColumnType.Decimal) _dec1 = parsed as decimal?;
+        else if (ColumnType == ColumnType.Date)    _date1 = parsed is DateTime dt ? dt : null;
+        else if (ColumnType == ColumnType.Boolean) _bool1 = parsed as bool?;
     }
 
     private void RestoreValue2(object? value)
     {
         (_text2, _num2, _dec2, _date2, _bool2, _lookup2) = ((string?)null, (int?)null, (decimal?)null, (DateTime?)null, (bool?)null, null);
-        if (_lookupOptions2 is not null)     _lookup2 = value;
-        else if (ColumnType == ColumnType.Text)    _text2 = value?.ToString();
-        else if (ColumnType == ColumnType.Number)  _num2 = value is int i ? i : value is not null ? (int?)Convert.ToInt32(value) : null;
-        else if (ColumnType == ColumnType.Decimal) _dec2 = value is decimal d ? d : value is not null ? (decimal?)Convert.ToDecimal(value) : null;
-        else if (ColumnType == ColumnType.Date)    _date2 = value is DateTime dt ? dt : null;
-        else if (ColumnType == ColumnType.Boolean) _bool2 = value is bool b ? b : null;
+        if (_lookupOptions2 is not null) { _lookup2 = value; return; }
+        var parsed = _descriptor.Parse(value?.ToString());
+        if (ColumnType == ColumnType.Text)    _text2 = parsed as string;
+        else if (ColumnType == ColumnType.Number)  _num2 = parsed as int?;
+        else if (ColumnType == ColumnType.Decimal) _dec2 = parsed as decimal?;
+        else if (ColumnType == ColumnType.Date)    _date2 = parsed is DateTime dt ? dt : null;
+        else if (ColumnType == ColumnType.Boolean) _bool2 = parsed as bool?;
     }
 
     private object? GetValue1() => _lookupOptions1 is not null ? _lookup1 : ColumnType switch

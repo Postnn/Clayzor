@@ -256,6 +256,13 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `KescoFilterOption` — вариант значения для выпадающего списка в диалоге фильтра (`Value`, `Label`)
 - `KescoGridPageBase.FilterLookupOptions` — virtual-словарь (SqlName → список `KescoFilterOption`) для замены текстового/числового редактора на `MudSelect`
 
+### Дескрипторы типов (`Components/Grid/ColumnTypes/`)
+- `ColumnTypeDescriptor` — абстрактный дескриптор: `Kind`, `ClrType`, `Operators`, `DefaultOperator`, `OperatorTakesValue(op)`, `Parse(string?)`, `Format(object?)`
+- Конкретные: `TextColumnType`, `NumberColumnType` (int), `DecimalColumnType` (decimal), `BooleanColumnType`, `DateColumnType` (DateTime)
+- `ColumnTypeRegistry` — `FromClr(Type)` / `FromKind(ColumnType)`, синглтоны
+- `KescoColumnMeta.Type` — дескриптор заполняется при регистрации колонки
+- Новый тип колонки = один класс-дескриптор + строка в реестре
+
 ### Составной фильтр (дерево И/ИЛИ)
 
 Типы в `Components/Grid/Filter/`:

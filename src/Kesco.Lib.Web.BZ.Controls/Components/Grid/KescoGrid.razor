@@ -1658,6 +1658,7 @@
     void IKescoGrid.RegisterColumn(int columnId, string sqlName, string displayName, bool groupable, bool filterable, string? sortName)
     {
         if (string.IsNullOrEmpty(sqlName)) return;
+        var colType = FilterColumnTypes.TryGetValue(sqlName, out var t) ? t : ColumnType.Text;
         var meta = new KescoColumnMeta
         {
             ColumnId    = columnId,
@@ -1666,6 +1667,7 @@
             SortName    = string.IsNullOrEmpty(sortName) ? sqlName : sortName,
             Groupable   = groupable,
             Filterable  = filterable,
+            Type        = ColumnTypes.ColumnTypeRegistry.FromKind(colType),
         };
         _columnById[columnId]     = meta;
         _columnBySqlName[sqlName] = meta;
