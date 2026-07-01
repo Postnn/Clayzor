@@ -365,7 +365,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 ### Filter tray (задача 11)
 - Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)
-- При активной панели показывается кнопка «Настроить фильтр» (`FilterList`) — открывает `OpenCompositeFilterDialog()`
+- Иконка `FilterList` в левой части панели (`filter-tray-icon`) — кликабельный `KescoButton`, открывает `OpenCompositeFilterDialog()` → `KescoFilterDialog`
 - Добавление колоночного фильтра: перетаскивание заголовка на панель → `KescoColumnFilterDialog` → лист `Source=ColumnDialog` в `_filterRoot`
 - Редактирование: клик по сегменту колоночного условия → `OpenFilterDialog(sqlName, displayName)` с `ExistingFilter`; клик по сегменту составного фильтра → `OpenCompositeFilterDialog()`
 - Удаление колоночного фильтра: клик по × на чипе → `RemoveFilter(sqlName)`. Удаление составного фильтра: × на чипе → `RemoveCompositeNodes()` (удаляет все узлы кроме `Source=ColumnDialog`)

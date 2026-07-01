@@ -290,7 +290,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 ### Filter tray
 - Панель включается кнопкой `FilterAlt`, скрыта по умолчанию. Кнопка появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Filterable="true"`
-- При активной панели показывается кнопка «Настроить фильтр» (`FilterList`) — открывает `OpenCompositeFilterDialog()` → `KescoFilterDialog`
+- Иконка `FilterList` в левой части панели — кликабельный `KescoButton` (с классом `filter-tray-icon`), открывает `OpenCompositeFilterDialog()` → `KescoFilterDialog`. Заменяет декоративный `MudIcon`, который был в задаче 11
 - Добавление колоночного фильтра: перетаскивание заголовка колонки (KescoColumn автоматически поддерживает drag) на панель → открывается `KescoColumnFilterDialog` → лист `Source=ColumnDialog` в `_filterRoot`
 - Редактирование: клик по сегменту колоночного условия → `OpenFilterDialog(sqlName, displayName)` с `ExistingFilter`; клик по сегменту составного фильтра → `OpenCompositeFilterDialog()`
 - Удаление колоночного фильтра: × на чипе → `RemoveFilter(sqlName)`. Удаление составного фильтра: × на чипе → `RemoveCompositeNodes()`
@@ -488,8 +488,8 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 |---|---|---|
 | Панель группировки | `.grouping-tray` | `border-left: 3px solid var(--mud-palette-primary)`, `border-bottom: 2px solid var(--lh-gold)`, фон `var(--mud-palette-background-gray)`, обводка `var(--mud-palette-lines-default)` |
 | Панель фильтрации | `.filter-tray` | **Идентично** `.grouping-tray` |
-| Иконка (неактивна) | `.grouping-tray-icon`, `.filter-tray-icon` | `color: var(--mud-palette-text-secondary)`, `opacity: 0.45` |
-| Иконка (активна) | `.grouping-tray:has(.grouping-chip) .grouping-tray-icon`, `.filter-tray:has(.filter-chip) .filter-tray-icon` | `color: var(--mud-palette-primary)`, `opacity: 1` — когда в трее есть хотя бы один чип |
+| Иконка (неактивна) | `.grouping-tray-icon`, `.filter-tray-icon` (на `KescoButton` / `MudIconButton`) | `color: var(--mud-palette-text-secondary)`, `opacity: 0.45` |
+| Иконка (активна) | `.grouping-tray:has(.grouping-chip) .grouping-tray-icon`, `.filter-tray:has(.filter-chip) .filter-tray-icon` | `color: var(--mud-palette-primary)`, `opacity: 1` — когда в трее есть хотя бы один чип. `KescoButton` применяет класс к внутреннему `MudIconButton`, селекторы продолжают работать |
 | Hover / drag-over | `:has(...:hover)`, `.drag-over` | `background: var(--mud-palette-surface)`, `border-left-color: var(--lh-gold)` |
 | Чип группировки | `.grouping-chip` | `background: var(--lh-navy)`, белый текст, `border-bottom: 2px solid transparent`; hover: фон `#0A1D6B` + золотой border-bottom |
 | Чип фильтрации | `.filter-chip` | **Идентично** `.grouping-chip` (сплошной navy фон, hover с золотым подчёркиванием), но `cursor: default` |

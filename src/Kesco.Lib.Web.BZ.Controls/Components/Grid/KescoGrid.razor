@@ -51,13 +51,7 @@
                              Icon="@Icons.Material.Filled.FilterAlt"
                              Class="@(_filterTrayExpanded ? "filter-toggle-btn filter-toggle-btn--active" : "filter-toggle-btn")"
                              OnClick="@ToggleFilterTray" />
-                @if (_filterTrayExpanded)
-                {
-                    <KescoButton Text="Настроить фильтр"
-                                 Icon="@Icons.Material.Filled.FilterList"
-                                 Class="filter-composite-btn"
-                                 OnClick="@OpenCompositeFilterDialog" />
-                }
+
             }
             @if (ShowAddButton)
             {
@@ -242,7 +236,10 @@
              @ondragover="OnFilterTrayDragOver"
              @ondragover:preventDefault="true"
              @ondrop="OnFilterTrayDrop">
-            <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" Class="filter-tray-icon" />
+            <KescoButton Text="Настроить фильтр"
+                         Icon="@Icons.Material.Filled.FilterList"
+                         Class="filter-tray-icon"
+                         OnClick="@OpenCompositeFilterDialog" />
 
             @* ── Чипы по листьям ColumnDialog (один чип на колонку) ── *@
             @foreach (var leaf in ColumnDialogLeaves.ToList())
