@@ -92,9 +92,11 @@ public partial class KescoFilterGroup : ComponentBase
     /// Возвращает краткое читаемое описание листового условия для отображения
     /// в блоке «редактируется в диалоге колонки».
     /// </summary>
-    private static string GetLeafDescription(ColumnFilter leaf)
+    private string GetLeafDescription(ColumnFilter leaf)
     {
-        var colPart = string.IsNullOrEmpty(leaf.Column) ? "" : $"{leaf.Column}: ";
+        var dn = Columns.FirstOrDefault(c => c.SqlName == leaf.Column)?.DisplayName
+                 ?? leaf.Column;
+        var colPart = string.IsNullOrEmpty(leaf.Column) ? "" : $"{dn}: ";
         var opLabel = KescoFilterOperatorLabels.Get(leaf.Operator);
         return leaf.Value is not null
             ? $"{colPart}{opLabel} «{leaf.Value}»"

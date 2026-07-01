@@ -9,28 +9,18 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <div style="min-width:480px;max-width:700px">
-            @if (_draft.Nodes.Count == 0)
+        <div style="min-width:480px;max-width:700px;max-height:60vh;overflow-y:auto">
+            @if (!string.IsNullOrEmpty(_draftDescription))
             {
-                <MudText Typo="Typo.body2" Style="color:var(--mud-palette-text-secondary);padding:8px 0">
-                    Нет условий. Нажмите «добавить условие», чтобы начать.
-                </MudText>
-                <MudButton Variant="Variant.Text"
-                           Size="Size.Small"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="@AddFirstExpression"
-                           Style="text-transform:none">
-                    добавить условие
-                </MudButton>
+                <MudPaper Elevation="0" Class="pa-2 mb-2" Style="background:var(--mud-palette-background-grey)">
+                    <MudText Typo="Typo.body2">@_draftDescription</MudText>
+                </MudPaper>
             }
-            else
-            {
-                <KescoFilterGroup Node="@_draft"
-                                  Columns="@Columns"
-                                  LookupOptions="@LookupOptions"
-                                  IsRoot="true"
-                                  OnChanged="@OnDraftChanged" />
-            }
+            <KescoFilterGroup Node="@_draft"
+                              Columns="@Columns"
+                              LookupOptions="@LookupOptions"
+                              IsRoot="true"
+                              OnChanged="@OnDraftChanged" />
         </div>
     </DialogContent>
     <DialogActions>
@@ -49,7 +39,3 @@
         </MudButton>
     </DialogActions>
 </MudDialog>
-
-<style>
-    .mud-dialog-content { overflow: visible; }
-</style>

@@ -4,7 +4,9 @@
 @* Рекурсивный узел-группа составного фильтра.
    Может содержать листья (KescoFilterExpression) и вложенные группы (KescoFilterGroup). *@
 
-<div style="display:flex;flex-direction:column;gap:8px;padding:8px 8px 8px 12px;border-left:3px solid var(--mud-palette-primary)">
+<div style="@(IsRoot
+    ? "display:flex;flex-direction:column;gap:8px;padding:8px 0"
+    : "display:flex;flex-direction:column;gap:8px;padding:8px 8px 8px 12px;border-left:3px solid var(--mud-palette-primary)")">
 
     @* ── Заголовок группы: переключатель И/ИЛИ + кнопка удаления ── *@
     <div style="display:flex;align-items:center;gap:8px">

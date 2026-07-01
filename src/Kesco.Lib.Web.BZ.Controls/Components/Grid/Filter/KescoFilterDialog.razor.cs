@@ -42,6 +42,13 @@ public partial class KescoFilterDialog : ComponentBase
     /// <summary>Глубокая копия входного корня — черновик редактирования.</summary>
     private KescoFilterGroupNode _draft = null!;
 
+    /// <summary>Текстовое описание текущего черновика фильтра.</summary>
+    private string _draftDescription = "";
+
+    /// <summary>Резолвит отображаемое имя колонки по её SQL-имени.</summary>
+    private Func<string, string> DisplayNameOf => sql =>
+        Columns.FirstOrDefault(c => c.SqlName == sql)?.DisplayName ?? sql;
+
     // ── Жизненный цикл ────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
@@ -50,33 +57,23 @@ public partial class KescoFilterDialog : ComponentBase
         // Создаём копию при первичной инициализации параметров.
         // Повторные изменения Root снаружи игнорируются — диалог изолирован.
         _draft ??= (KescoFilterGroupNode)Root.Clone();
+        RecalcDescription();
     }
 
     // ── Обработчики ───────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Добавляет первое пустое условие при пустом черновике.
-    /// </summary>
-    private void AddFirstExpression()
-    {
-        var firstCol = Columns.FirstOrDefault();
-        _draft.Nodes.Add(new ColumnFilter
-        {
-            Column    = firstCol?.SqlName ?? "",
-            ParamName = "",
-            Operator  = firstCol?.Type.DefaultOperator ?? ColumnFilterOperator.Contains,
-            Source    = KescoFilterSource.CompositeDialog,
-        });
-        StateHasChanged();
-    }
 
     /// <summary>
     /// Обрабатывает любые изменения в дереве черновика — вызывает перерисовку.
     /// </summary>
     private void OnDraftChanged()
     {
+        RecalcDescription();
         StateHasChanged();
     }
+
+    /// <summary>Пересчитывает текстовое описание черновика фильтра.</summary>
+    private void RecalcDescription() =>
+        _draftDescription = KescoFilterDescriptionBuilder.BuildText(_draft, DisplayNameOf) ?? "";
 
     /// <summary>
     /// Применяет фильтр: закрывает диалог и возвращает черновик как результат.
