@@ -229,8 +229,6 @@
     @if (_filterTrayExpanded)
     {
         var _filterSegments   = BuildFilterSegments();
-        var _hasComposite     = _filterRoot.Nodes.Any(n =>
-            n is not ColumnFilter cf || cf.Source != KescoFilterSource.ColumnDialog);
         var _hasAnyFilter     = _filterSegments.Count > 0;
         <div class="filter-tray @(_hasAnyFilter ? "filter-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnFilterTrayDragOver"
@@ -241,62 +239,49 @@
                          Class="filter-tray-icon"
                          OnClick="@OpenCompositeFilterDialog" />
 
-            @* ── Чипы по листьям ColumnDialog (один чип на колонку) ── *@
-            @foreach (var leaf in ColumnDialogLeaves.ToList())
+            @if (HasComposite)
             {
-                var leafSqlName  = leaf.Column;
-                var leafDispName = _columnBySqlName.TryGetValue(leafSqlName, out var lm) ? lm.DisplayName : leafSqlName;
-                var leafSegments = _filterSegments
-                    .Where(s => s.Source == KescoFilterSource.ColumnDialog && s.Column == leafSqlName)
-                    .ToList();
-                <div class="filter-chip">
-                    @foreach (var seg in leafSegments)
-                    {
-                        var segText = seg.Text;
-                        <span class="chip-label chip-label-clickable"
-                              @onclick="async () => await OpenFilterDialog(leafSqlName, leafDispName)"
-                              @onclick:stopPropagation="true">
-                            @segText
-                        </span>
-                    }
-                    <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                   Size="Size.Small"
-                                   OnClick="async () => await RemoveFilter(leafSqlName)"
-                                   Class="chip-remove-btn pa-0"
-                                   Style="width:18px;height:18px" />
+                @* ── Есть составные условия: только текст всего фильтра, без чипов/сегментов ── *@
+                <div class="filter-chip filter-chip--composite" style="cursor:pointer"
+                     @onclick="@OpenCompositeFilterDialog">
+                    <span class="chip-label">@BuildFilterDescription()</span>
+                    <span @onclick:stopPropagation="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Size="Size.Small"
+                                       OnClick="@ClearAllFilters"
+                                       Class="chip-remove-btn pa-0"
+                                       Style="width:18px;height:18px"
+                                       title="Очистить фильтр" />
+                    </span>
                 </div>
             }
-
-            @* ── Чип составного фильтра (если есть CompositeDialog-узлы) ── *@
-            @if (_hasComposite)
+            else
             {
-                var compositeSegments = _filterSegments
-                    .Where(s => s.Source == KescoFilterSource.CompositeDialog)
-                    .ToList();
-                <div class="filter-chip filter-chip--composite">
-                    @foreach (var seg in compositeSegments)
-                    {
-                        var segText = seg.Text;
-                        <span class="chip-label chip-label-clickable"
-                              @onclick="async () => await OpenCompositeFilterDialog()"
-                              @onclick:stopPropagation="true">
-                            @segText
-                        </span>
-                    }
-                    @if (compositeSegments.Count == 0)
-                    {
-                        <span class="chip-label chip-label-clickable"
-                              @onclick="async () => await OpenCompositeFilterDialog()"
-                              @onclick:stopPropagation="true">
-                            Настраиваемый фильтр
-                        </span>
-                    }
-                    <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                   Size="Size.Small"
-                                   OnClick="async () => await RemoveCompositeNodes()"
-                                   Class="chip-remove-btn pa-0"
-                                   Style="width:18px;height:18px" />
-                </div>
+                @* ── Нет составных условий: чипы по листьям ColumnDialog (один чип на колонку) ── *@
+                @foreach (var leaf in ColumnDialogLeaves.ToList())
+                {
+                    var leafSqlName  = leaf.Column;
+                    var leafDispName = _columnBySqlName.TryGetValue(leafSqlName, out var lm) ? lm.DisplayName : leafSqlName;
+                    var leafSegments = _filterSegments
+                        .Where(s => s.Source == KescoFilterSource.ColumnDialog && s.Column == leafSqlName)
+                        .ToList();
+                    <div class="filter-chip">
+                        @foreach (var seg in leafSegments)
+                        {
+                            var segText = seg.Text;
+                            <span class="chip-label chip-label-clickable"
+                                  @onclick="async () => await OpenFilterDialog(leafSqlName, leafDispName)"
+                                  @onclick:stopPropagation="true">
+                                @segText
+                            </span>
+                        }
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Size="Size.Small"
+                                       OnClick="async () => await RemoveFilter(leafSqlName)"
+                                       Class="chip-remove-btn pa-0"
+                                       Style="width:18px;height:18px" />
+                    </div>
+                }
             }
 
             @if (!_hasAnyFilter)
@@ -500,4 +485,12 @@
     }
 </MudPaper>
 </CascadingValue>
+
+<style>
+    /* Печатная шапка (описание группировки/фильтра) — скрыта на экране, видна только при печати */
+    .kesco-grid-print-descriptions { display: none; }
+    @@media print {
+        .kesco-grid-print-descriptions { display: block; }
+    }
+</style>
 

@@ -26,24 +26,20 @@ public partial class KescoGrid<TEntity> where TEntity : class
         _filterRoot.Nodes.OfType<ColumnFilter>()
                          .Where(f => f.Source == KescoFilterSource.ColumnDialog);
 
+    /// <summary>Есть ли в дереве хотя бы один узел составного фильтра (не лист ColumnDialog).</summary>
+    private bool HasComposite =>
+        _filterRoot.Nodes.Any(n => n is not ColumnFilter cf || cf.Source != KescoFilterSource.ColumnDialog);
+
     /// <summary>
-    /// Включает/выключает панель фильтрации.
-    /// При выключении сбрасывает всё дерево фильтра и перезагружает данные.
+    /// Включает/выключает панель фильтрации. Настроенный фильтр при сворачивании
+    /// панели сохраняется — сброс выполняется только явной кнопкой очистки.
     /// </summary>
-    private async Task ToggleFilterTray()
+    private Task ToggleFilterTray()
     {
         _filterTrayExpanded = !_filterTrayExpanded;
         TrayStateChanged?.Invoke();
-        if (!_filterTrayExpanded)
-        {
-            _filterRoot = new();
-            _pageNumber = 1;
-            await NotifyQueryChanged();
-        }
-        else
-        {
-            StateHasChanged();
-        }
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private void OnFilterTrayDragOver(DragEventArgs e)
@@ -61,7 +57,41 @@ public partial class KescoGrid<TEntity> where TEntity : class
         if (!_columnBySqlName.TryGetValue(draggedSqlName, out var cm) || !cm.Filterable)
             return;
 
-        await OpenFilterDialog(draggedSqlName, cm.DisplayName);
+        if (HasComposite)
+            await OpenCompositeFilterDialog(BuildTreeWithColumnAnded(draggedSqlName));
+        else
+            await OpenFilterDialog(draggedSqlName, cm.DisplayName);
+    }
+
+    /// <summary>
+    /// Строит копию дерева фильтра с новым условием по колонке, приклеенным через И
+    /// на верхнем уровне (сужает выборку). Если корень был <c>ИЛИ</c> — оборачивает
+    /// старое дерево и новый лист в новый корень <c>И</c>, чтобы не расширить фильтр.
+    /// </summary>
+    private KescoFilterGroupNode BuildTreeWithColumnAnded(string sqlName)
+    {
+        var clone = (KescoFilterGroupNode)_filterRoot.Clone();
+        var meta  = _columnBySqlName[sqlName];
+        var leaf  = new ColumnFilter
+        {
+            Column   = sqlName,
+            Operator = meta.Type.DefaultOperator,
+            Source   = KescoFilterSource.CompositeDialog,
+            IsNew    = true,
+        };
+
+        if (clone.Nodes.Count == 0 || clone.Logic == LogicalOperator.And)
+        {
+            clone.Logic = LogicalOperator.And;
+            clone.Nodes.Add(leaf);
+            return clone;
+        }
+
+        return new KescoFilterGroupNode
+        {
+            Logic = LogicalOperator.And,
+            Nodes = { clone, leaf },
+        };
     }
 
     /// <summary>
@@ -112,14 +142,10 @@ public partial class KescoGrid<TEntity> where TEntity : class
         }
     }
 
-    /// <summary>
-    /// Удаляет все узлы составного фильтра (<c>Source=CompositeDialog</c> и группы)
-    /// из корня дерева, оставляя только листья <c>Source=ColumnDialog</c>.
-    /// </summary>
-    private async Task RemoveCompositeNodes()
+    /// <summary>Полностью очищает дерево фильтра и перезагружает данные.</summary>
+    private async Task ClearAllFilters()
     {
-        _filterRoot.Nodes.RemoveAll(n =>
-            n is not ColumnFilter cf || cf.Source != KescoFilterSource.ColumnDialog);
+        _filterRoot = new();
         _pageNumber = 1;
         await NotifyQueryChanged();
     }
@@ -158,7 +184,15 @@ public partial class KescoGrid<TEntity> where TEntity : class
     public KescoFilterGroupNode? ActiveCompositeFilter => _filterRoot;
 
     /// <inheritdoc cref="IKescoGrid.OpenCompositeFilterDialog"/>
-    public async Task OpenCompositeFilterDialog()
+    public async Task OpenCompositeFilterDialog() => await OpenCompositeFilterDialog(null);
+
+    /// <summary>
+    /// Открывает диалог настраиваемого фильтра. Если передан <paramref name="seedRoot"/>
+    /// (например, кандидат-дерево с добавленным перетаскиванием колонки условием) —
+    /// диалог открывается на нём вместо действующего <see cref="_filterRoot"/>;
+    /// отмена диалога не меняет действующий фильтр.
+    /// </summary>
+    private async Task OpenCompositeFilterDialog(KescoFilterGroupNode? seedRoot)
     {
         // Фильтруемые колонки — только зарегистрированные Filterable в текущем порядке
         var filterableCols = ((IKescoGrid)this).GetVisibleColumns()
@@ -171,14 +205,15 @@ public partial class KescoGrid<TEntity> where TEntity : class
 
         var parameters = new DialogParameters<KescoFilterDialog>
         {
-            { x => x.Root,         _filterRoot },
+            { x => x.Root,         seedRoot ?? _filterRoot },
             { x => x.Columns,      (IReadOnlyList<KescoColumnMeta>)filterableCols },
             { x => x.LookupOptions, FilterLookupOptions },
         };
         var options = new DialogOptionsEx
         {
-            MaxWidth  = MaxWidth.Medium,
-            FullWidth = true,
+            MaxWidth  = MaxWidth.Small,
+            FullWidth = false,
+            CloseOnEscapeKey = true,
             DragMode  = MudDialogDragMode.Simple,
         };
         var dialog = await DialogService.ShowExAsync<KescoFilterDialog>(

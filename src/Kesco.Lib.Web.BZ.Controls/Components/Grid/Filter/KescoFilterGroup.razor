@@ -5,21 +5,21 @@
    Может содержать листья (KescoFilterExpression) и вложенные группы (KescoFilterGroup). *@
 
 <div style="@(IsRoot
-    ? "display:flex;flex-direction:column;gap:8px;padding:8px 0"
-    : "display:flex;flex-direction:column;gap:8px;padding:8px 8px 8px 12px;border-left:3px solid var(--mud-palette-primary)")">
+    ? "display:flex;flex-direction:column;gap:6px;padding:6px 0"
+    : "display:flex;flex-direction:column;gap:6px;padding:6px 6px 6px 8px;border-left:2px solid var(--mud-palette-primary)")">
 
     @* ── Заголовок группы: переключатель И/ИЛИ + кнопка удаления ── *@
-    <div style="display:flex;align-items:center;gap:8px">
-        <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
-            <MudButton Color="@(Node.Logic == LogicalOperator.And ? Color.Primary : Color.Default)"
-                       Variant="@(Node.Logic == LogicalOperator.And ? Variant.Filled : Variant.Outlined)"
-                       Disabled="@(Node.Nodes.Count < 2)"
-                       OnClick="@(() => SetLogic(LogicalOperator.And))">И</MudButton>
-            <MudButton Color="@(Node.Logic == LogicalOperator.Or ? Color.Primary : Color.Default)"
-                       Variant="@(Node.Logic == LogicalOperator.Or ? Variant.Filled : Variant.Outlined)"
-                       Disabled="@(Node.Nodes.Count < 2)"
-                       OnClick="@(() => SetLogic(LogicalOperator.Or))">ИЛИ</MudButton>
-        </MudButtonGroup>
+    <div style="display:flex;align-items:center;gap:6px">
+        <MudToggleGroup T="LogicalOperator"
+                        Value="@Node.Logic"
+                        ValueChanged="@SetLogic"
+                        Color="Color.Primary"
+                        Size="Size.Small"
+                        CheckMark="false"
+                        SelectionMode="SelectionMode.SingleSelection">
+            <MudToggleItem Value="@LogicalOperator.And" Text="И" />
+            <MudToggleItem Value="@LogicalOperator.Or" Text="ИЛИ" />
+        </MudToggleGroup>
 
         <MudSpacer />
 
@@ -42,12 +42,18 @@
         {
             @if (leaf.Source == KescoFilterSource.ColumnDialog)
             {
-                @* Условия из диалога колонки — не редактируются здесь *@
+                @* Условия из диалога колонки — не редактируются здесь, только удаляются *@
                 <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
                             border:1px solid var(--mud-palette-lines-default);border-radius:4px;
                             color:var(--mud-palette-text-secondary);font-size:var(--kesco-font-size)">
                     <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" />
-                    <MudText Typo="Typo.body2">Редактируется в диалоге колонки: @GetLeafDescription(leaf)</MudText>
+                    <MudText Typo="Typo.body2" Style="flex:1 1 auto">
+                        Редактируется в диалоге колонки: @GetLeafDescription(leaf)
+                    </MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                   Size="Size.Small"
+                                   OnClick="@(() => RemoveNode(capturedIndex))"
+                                   title="Удалить условие" Style="flex:0 0 auto" />
                 </div>
             }
             else
@@ -71,7 +77,7 @@
     }
 
     @* ── Кнопки добавления ────────────────────────────────────────── *@
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
         <MudButton Variant="Variant.Text"
                    Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Add"

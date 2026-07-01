@@ -149,6 +149,14 @@ public sealed class ColumnFilter : Filter.IKescoFilterNode
         or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull
         || (SecondValue is not null && SecondValue.ToString() is { Length: > 0 });
 
+    /// <summary>
+    /// Транзиентный UI-флаг: свежедобавленное условие (например, перетаскиванием колонки
+    /// в составной фильтр) → редактор сразу фокусирует поле значения. Не сериализуется
+    /// и не копируется в <see cref="Clone"/>.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsNew { get; set; }
+
     /// <summary>Глубокое копирование листового условия (оба значения и Source).</summary>
     public Filter.IKescoFilterNode Clone() => new ColumnFilter
     {

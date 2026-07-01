@@ -272,14 +272,14 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 Типы в `Components/Grid/Filter/`:
 - `IKescoFilterNode` — интерфейс узла дерева с рекурсивным `Clone()`
 - `KescoFilterGroupNode` — группа: `Logic` (And/Or), `Nodes` (List\<IKescoFilterNode\>), `Clone()`. Переиспользует существующий `LogicalOperator`
-- `ColumnFilter` реализует `IKescoFilterNode` — листовой узел. `Source` (`KescoFilterSource`) — `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
+- `ColumnFilter` реализует `IKescoFilterNode` — листовой узел. `Source` (`KescoFilterSource`) — `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр). `IsNew` (`[JsonIgnore]`, не копируется) — транзиентный флаг для автофокуса на «Значение»
 - `KescoCompositeSqlBuilder` — статический SQL-билдер для дерева фильтра. `Build(root, parameters, knownColumns, columnNameMap?)` рекурсивно обходит дерево `KescoFilterGroupNode` → фрагмент WHERE (без слова WHERE). Безопасность: колонка только из белого списка `knownColumns`, значения — Dapper-параметры, имена параметров — сквозной счётчик. Переиспользует `KescoDataQuery.BuildSingleClause`
 
 ### Хранение в гриде и интеграция с данными (задача 10)
 - `KescoGrid._filterRoot` (`KescoFilterGroupNode`, `Logic=And`) — приватный корень дерева, единый источник истины. Заменяет `_activeFilters` (словарь, неявное AND)
 - Колоночные фильтры (`KescoColumnFilterDialog`) — листья с `Source=ColumnDialog`, добавляются/заменяются в `_filterRoot.Nodes`; отображаются чипами в трее через `ColumnDialogLeaves`
 - Составной фильтр (`KescoFilterDialog`) — поддерево с `Source=CompositeDialog` (весь `_filterRoot` синхронизируется в `query.CompositeFilter`)
-- При выключении панели фильтрации: `_filterRoot = new()` (полный сброс)
+- `ToggleFilterTray()` **не сбрасывает** фильтр при сворачивании панели. Сброс — только явной кнопкой `ClearAllFilters()` (обнуляет `_filterRoot` целиком)
 - `KescoGridPageBase.BuildCompositeFilterClause(CompositeFilter?, dp, columnNameMap?)` — обёртка над `KescoCompositeSqlBuilder.Build`, вызывает `BuildKnownColumns()` (белый список из `_inferredColumnTypes.Keys`). Заменяет старый `_query.BuildColumnFilterClause(dp)` во **всех** путях загрузки (7 мест): `LoadFlatData`, `LoadGroupedData`, `GetGroupLeafRows`, экспорт в Excel (плоский + сгруппированный), печать (плоская + сгруппированная), экспорт/печать выбранных (плоский + сгруппированный)
 
 ### SQL-генерация
@@ -287,16 +287,20 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - `KescoDataQuery.BuildSingleClause(colName, paramName, op, value, dp)` — строит SQL-выражение для одного условия фильтрации (`internal`). Вызывается из `KescoCompositeSqlBuilder` для листовых узлов
 - `KescoCompositeSqlBuilder.Build(root, parameters, knownColumns, columnNameMap?)` — строит WHERE из дерева фильтра. Группы → скобки + `AND`/`OR`; листья → `BuildSingleClause` с проверкой белого списка колонок
 - `columnNameMap` — опциональный маппинг имён для плоского режима, где имена колонок в SELECT отличаются от подзапросного режима
+- `ColumnFilter.IsNew` — транзиентный UI-флаг (`[JsonIgnore]`, не копируется в `Clone()`): свежедобавленное перетаскиванием условие → автофокус на «Значение»
 
 ### Filter tray
 - Панель включается кнопкой `FilterAlt`, скрыта по умолчанию. Кнопка появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Filterable="true"`
-- Иконка `FilterList` в левой части панели — кликабельный `KescoButton` (с классом `filter-tray-icon`), открывает `OpenCompositeFilterDialog()` → `KescoFilterDialog`. Заменяет декоративный `MudIcon`, который был в задаче 11
-- Добавление колоночного фильтра: перетаскивание заголовка колонки (KescoColumn автоматически поддерживает drag) на панель → открывается `KescoColumnFilterDialog` → лист `Source=ColumnDialog` в `_filterRoot`
-- Редактирование: клик по сегменту колоночного условия → `OpenFilterDialog(sqlName, displayName)` с `ExistingFilter`; клик по сегменту составного фильтра → `OpenCompositeFilterDialog()`
-- Удаление колоночного фильтра: × на чипе → `RemoveFilter(sqlName)`. Удаление составного фильтра: × на чипе → `RemoveCompositeNodes()`
-- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`)
-- **Два типа чипов:** колоночные (один на колонку, каждое условие — отдельный сегмент) и составной (один чип для всего поддерева `CompositeDialog`). Сегменты — кликабельные `<span>` с маршрутизацией по `FilterSegment.Source`
-- Сегменты/описание строятся через `KescoFilterDescriptionBuilder`: `BuildSegments(root, getDisplayName)` → `IReadOnlyList<FilterSegment>`; `BuildText(root, getDisplayName)` → строка для экспорта/печати (группы в скобках, И/ИЛИ)
+- Иконка `FilterList` в левой части панели — кликабельный `KescoButton` (с классом `filter-tray-icon`), открывает `OpenCompositeFilterDialog()` → `KescoFilterDialog`
+- **Два взаимоисключающих режима** отображения чипов (свойство `HasComposite` — любой узел не-ColumnDialog):
+  - **Есть составные условия** → единый текстовый чип со строкой `BuildFilterDescription()`. Клик → `OpenCompositeFilterDialog()`. Крестик → `ClearAllFilters()`. Чипов колонок нет
+  - **Нет составных условий** → чипы по листьям `ColumnDialog` (один чип на колонку, сегменты кликабельны → `OpenFilterDialog`)
+- **Перетаскивание колонки на панель** (`OnFilterTrayDrop`):
+  - Нет составных условий → `OpenFilterDialog(sqlName)` (диалог колонки), лист `Source=ColumnDialog`
+  - Есть составные условия → `BuildTreeWithColumnAnded(sqlName)` строит копию дерева с новым условием через `И` на верхнем уровне. Если корень `ИЛИ` — оборачивает в `И(Старое, Новое)`. Открывает диалог на `seedRoot`; отмена не меняет действующий фильтр. У нового листа `IsNew=true` → автофокус на «Значение»
+- Удаление колоночного фильтра: × на чипе → `RemoveFilter(sqlName)`. Колоночные условия можно удалить и из формы `KescoFilterDialog` (крестик в `KescoFilterGroup`)
+- **Печатная шапка** (`.kesco-grid-print-descriptions`) скрыта на экране (`display:none`), видна только при печати (`@media print { display:block }`) — дублирования текста фильтра на экране нет
+- Сегменты/описание строятся через `KescoFilterDescriptionBuilder`: `BuildSegments(root, getDisplayName)` → `IReadOnlyList<FilterSegment>` (для колоночных чипов); `BuildText(root, getDisplayName)` → строка для составного чипа и экспорта/печати
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице

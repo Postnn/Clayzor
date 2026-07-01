@@ -2,57 +2,63 @@
 @using Kesco.Lib.Web.BZ.Controls.Components.Grid.ColumnTypes
 
 @* Редактор одного листового условия составного фильтра.
-   Колонка, оператор и значение — в одну строку. Кнопка удаления справа. *@
+   Колонка, оператор, значение и кнопка удаления — в одну строку с переносом. *@
 
-<div style="display:flex;flex-direction:column;gap:8px;padding:8px;border:1px solid var(--mud-palette-lines-default);border-radius:4px">
-    <div style="display:flex;gap:8px;align-items:flex-start">
+<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+            padding:6px;border:1px solid var(--mud-palette-lines-default);border-radius:4px">
 
-        @* ── Выбор колонки ────────────────────────────────────────── *@
-        <MudSelect T="string"
-                   Label="Поле"
-                   Value="@Node.Column"
-                   ValueChanged="@OnColumnChanged"
-                   Variant="Variant.Outlined"
-                   Margin="Margin.Dense"
-                   AnchorOrigin="Origin.BottomLeft"
-                   Style="min-width:160px;flex:1">
-            @foreach (var col in Columns)
-            {
-                <MudSelectItem Value="@col.SqlName">@col.DisplayName</MudSelectItem>
-            }
-        </MudSelect>
+    @* ── Выбор колонки ────────────────────────────────────────── *@
+    <MudSelect T="string"
+               Label="Поле"
+               Value="@Node.Column"
+               ValueChanged="@OnColumnChanged"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               Dense="true"
+               AnchorOrigin="Origin.BottomLeft"
+               Style="flex:1 1 130px;min-width:120px">
+        @foreach (var col in Columns)
+        {
+            <MudSelectItem Value="@col.SqlName">@col.DisplayName</MudSelectItem>
+        }
+    </MudSelect>
 
-        @* ── Выбор оператора ──────────────────────────────────────── *@
-        <MudSelect T="ColumnFilterOperator"
-                   Label="Условие"
-                   Value="@Node.Operator"
-                   ValueChanged="@OnOperatorChanged"
-                   Variant="Variant.Outlined"
-                   Margin="Margin.Dense"
-                   AnchorOrigin="Origin.BottomLeft"
-                   Style="min-width:160px;flex:1"
-                   Disabled="@(_descriptor is null)">
-            @foreach (var op in _availableOperators)
-            {
-                <MudSelectItem Value="@op">@KescoFilterOperatorLabels.Get(op)</MudSelectItem>
-            }
-        </MudSelect>
-
-        @* ── Кнопка удаления ──────────────────────────────────────── *@
-        <MudIconButton Icon="@Icons.Material.Filled.Close"
-                       Size="Size.Small"
-                       OnClick="@OnRemove"
-                       Style="margin-top:4px"
-                       title="Удалить условие" />
-    </div>
+    @* ── Выбор оператора ──────────────────────────────────────── *@
+    <MudSelect T="ColumnFilterOperator"
+               Label="Условие"
+               Value="@Node.Operator"
+               ValueChanged="@OnOperatorChanged"
+               Variant="Variant.Outlined"
+               Margin="Margin.Dense"
+               Dense="true"
+               AnchorOrigin="Origin.BottomLeft"
+               RelativeWidth="DropdownWidth.Adaptive"
+               Style="flex:1 1 120px;min-width:110px"
+               Disabled="@(_descriptor is null)">
+        @foreach (var op in _availableOperators)
+        {
+            <MudSelectItem Value="@op" Style="white-space:nowrap">@KescoFilterOperatorLabels.Get(op)</MudSelectItem>
+        }
+    </MudSelect>
 
     @* ── Редактор значения ────────────────────────────────────────── *@
     @if (_descriptor is not null)
     {
-        <KescoFilterValueEditor Type="@_descriptor"
-                                Value="@Node.Value"
-                                ValueChanged="@OnValueChanged"
-                                Options="@_options"
-                                Operator="@Node.Operator" />
+        <div style="flex:1 1 130px;min-width:120px">
+            <KescoFilterValueEditor @key="_valueKey"
+                                    Type="@_descriptor"
+                                    Value="@Node.Value"
+                                    ValueChanged="@OnValueChanged"
+                                    Options="@_options"
+                                    Operator="@Node.Operator"
+                                    AutoFocus="@_focusValue" />
+        </div>
     }
+
+    @* ── Кнопка удаления ──────────────────────────────────────── *@
+    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                   Size="Size.Small"
+                   OnClick="@OnRemove"
+                   Style="flex:0 0 auto"
+                   title="Удалить условие" />
 </div>

@@ -181,9 +181,9 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoFilterOption** — класс варианта для выпадающего списка значения фильтра: `Value` (object?), `Label` (string) | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterValueEditor** — единый редактор значения фильтра по типу колонки (Text/Number/Decimal/Date/Boolean/lookup). Скрывается при операторах без значения. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterOperatorLabels** — статический хелпер: читаемые русские метки операторов фильтрации. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | — |
-| **KescoFilterExpression** — редактор одного листового условия составного фильтра: выбор колонки, оператора и значения через `KescoFilterValueEditor` | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoFilterGroup** — рекурсивный узел-группа составного фильтра с переключателем И/ИЛИ, кнопками добавления условия/группы и удаления. Корневая группа (`IsRoot=true`) рендерится плоско (без левой рамки/отступа). `GetLeafDescription` резолвит `DisplayName` через параметр `Columns` | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoFilterDialog** — диалог настраиваемого (составного) фильтра в стиле Telerik Filter. Всегда рендерит корневую группу (без условной ветки пустого состояния). Вверху — живое текстовое описание черновика (`KescoFilterDescriptionBuilder.BuildText`), обновляемое при каждом изменении. Контент скроллится (`max-height:60vh;overflow-y:auto`), глобальные стили `.mud-dialog-content` не переопределяются. Работает с глубокой копией дерева, возвращает результат через `DialogResult.Ok(KescoFilterGroupNode)` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterExpression** — редактор одного листового условия составного фильтра. Компактная однорядная раскладка (`flex-wrap:wrap`, `Dense="true"`): Поле / Условие / Значение / ✕. Автофокус на «Значение» после смены колонки/оператора (через `@key` ремоунт + `AutoFocus`). При `Node.IsNew` (условие добавлено перетаскиванием) сразу фокусирует значение | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterGroup** — рекурсивный узел-группа составного фильтра с `MudToggleGroup` И/ИЛИ, кнопками добавления условия/группы и удаления. Корневая группа (`IsRoot=true`) рендерится плоско (без рамки/отступа). Не-корневые — компактно (`gap:6px`, `border-left:2px`). `GetLeafDescription` резолвит `DisplayName` через `Columns`. Условия `ColumnDialog` отображаются read-only с кнопкой удаления (крестик) | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoFilterDialog** — диалог настраиваемого (составного) фильтра. Фиксированная высота через скоупленный `ContentClass` (`width:600px; height:min(460px,80vh); overflow:hidden; flex column`). Описание — фиксировано сверху (`flex:0 0 auto`), дерево условий — единственная прокручиваемая зона (`flex:1; overflow-y:auto; min-height:0`). `DragMode=Simple` (перетаскивается). Всегда рендерит корневую группу, работает с глубокой копией дерева, возвращает результат через `DialogResult.Ok(KescoFilterGroupNode)` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **FilterSegment** — кликабельный сегмент в панели фильтра: `Text`, `Source` (ColumnDialog/CompositeDialog), `Column` (маршрутизация клика) | — |
 | **KescoFilterDescriptionBuilder** — статический построитель: `BuildSegments(root, getDisplayName)` → список кликабельных сегментов; `BuildText(root, getDisplayName)` → строка описания для экспорта/печати | — |
 | **KescoColumnSettingsDialog** — диалог настройки порядка, видимости и сортировки колонок (jQuery UI Sortable drag-and-drop с авто-прокруткой) | [docs/kesco-grid.md](docs/kesco-grid.md) |
@@ -360,21 +360,22 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 ### Типы составного фильтра (`Components/Grid/Filter/`)
 - `IKescoFilterNode` — интерфейс узла дерева фильтра: `Clone()` (рекурсивное глубокое копирование)
 - `KescoFilterGroupNode` — группа И/ИЛИ (`LogicalOperator Logic` + `List<IKescoFilterNode> Nodes` + рекурсивный `Clone()`). Переиспользует существующий `LogicalOperator`
-- `ColumnFilter` реализует `IKescoFilterNode` — листовой узел дерева. `ColumnFilter.Source` (`KescoFilterSource`) — происхождение: `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр)
+- `ColumnFilter` реализует `IKescoFilterNode` — листовой узел дерева. `ColumnFilter.Source` (`KescoFilterSource`) — происхождение: `ColumnDialog` (диалог колонки) или `CompositeDialog` (настраиваемый фильтр). `IsNew` — транзиентный UI-флаг (`[JsonIgnore]`, не копируется в `Clone()`): свежедобавленное перетаскиванием условие → автофокус на «Значение»
 - `KescoCompositeSqlBuilder` — статический SQL-билдер (задача 07 мастер-плана). `Build(root, parameters, knownColumns, columnNameMap?)` рекурсивно обходит дерево `KescoFilterGroupNode` и возвращает фрагмент WHERE (без слова WHERE). Безопасность: имя колонки — только из белого списка `knownColumns`; значения — только Dapper-параметры; уникальные имена параметров через сквозной счётчик (`p0, p1, …`). Листовые узлы с неизвестной колонкой отбрасываются. Переиспользует `KescoDataQuery.BuildSingleClause` (теперь `internal`)
 
-### Filter tray (задача 11)
-- Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`)
+### Filter tray
+- Панель включается кнопкой `FilterAlt` (`ShowFilterTray="true"`), скрыта по умолчанию (`_filterTrayExpanded = false`). Кнопка появляется автоматически при наличии хотя бы одного `KescoColumnDef` с `Filterable="true"`
 - Иконка `FilterList` в левой части панели (`filter-tray-icon`) — кликабельный `KescoButton`, открывает `OpenCompositeFilterDialog()` → `KescoFilterDialog`
-- Добавление колоночного фильтра: перетаскивание заголовка на панель → `KescoColumnFilterDialog` → лист `Source=ColumnDialog` в `_filterRoot`
-- Редактирование: клик по сегменту колоночного условия → `OpenFilterDialog(sqlName, displayName)` с `ExistingFilter`; клик по сегменту составного фильтра → `OpenCompositeFilterDialog()`
-- Удаление колоночного фильтра: клик по × на чипе → `RemoveFilter(sqlName)`. Удаление составного фильтра: × на чипе → `RemoveCompositeNodes()` (удаляет все узлы кроме `Source=ColumnDialog`)
-- При выключении панели сбрасывается всё дерево фильтра (`_filterRoot = new()`)
-- **Два типа чипов в панели:**
-  - **Колоночные** — по одному чипу на колонку. Каждое условие (клауза) — отдельный `<span class="chip-label chip-label-clickable">`, маршрутизация → `KescoColumnFilterDialog`
-  - **Составной** — один чип для всего поддерева `CompositeDialog`. Сегменты кликабельны, маршрутизация → `KescoFilterDialog`. При отсутствии сегментов — текст-заглушка «Настраиваемый фильтр»
-- Сегменты строятся через `KescoFilterDescriptionBuilder.BuildSegments(_filterRoot, getDisplayName)` → `IReadOnlyList<FilterSegment>`: каждый `FilterSegment` содержит `Text`, `Source`, `Column`
-- Описание для экспорта/печати — `KescoFilterDescriptionBuilder.BuildText(_filterRoot, getDisplayName)`: группы в скобках, условия через И/ИЛИ
+- `ToggleFilterTray()` — **не сбрасывает** фильтр при сворачивании панели. Сброс только явной кнопкой «Очистить фильтр» (`ClearAllFilters()` — обнуляет `_filterRoot` целиком)
+- **Два взаимоисключающих режима** отображения чипов (свойство `HasComposite` — любой узел не-ColumnDialog):
+  - **Есть составные условия** (`HasComposite == true`) → единый текстовый чип со строкой `BuildFilterDescription()` (весь фильтр одним текстом). Клик по чипу → `OpenCompositeFilterDialog()`. Крестик → `ClearAllFilters()`. Чипов колонок нет
+  - **Нет составных условий** (`HasComposite == false`) → чипы по листьям `ColumnDialog` (один чип на колонку, сегменты кликабельны → `OpenFilterDialog`)
+- **Перетаскивание колонки на панель** (`OnFilterTrayDrop`):
+  - Нет составных условий → `OpenFilterDialog(sqlName)` (диалог колонки), лист `Source=ColumnDialog`
+  - Есть составные условия → `BuildTreeWithColumnAnded(sqlName)` строит копию дерева с новым условием через `И` на верхнем уровне (если корень `ИЛИ` — оборачивает в `И(Старое, Новое)`), открывает диалог на `seedRoot`. Отмена не меняет действующий фильтр. У нового листа `IsNew=true` → автофокус на «Значение»
+- Удаление колоночного фильтра: × на чипе → `RemoveFilter(sqlName)`. Колоночные условия также можно удалить из формы настраиваемого фильтра (крестик в `KescoFilterGroup`)
+- Сегменты/описание строятся через `KescoFilterDescriptionBuilder`: `BuildSegments(root, getDisplayName)` → `IReadOnlyList<FilterSegment>` (для колоночных чипов); `BuildText(root, getDisplayName)` → строка для составного чипа и экспорта/печати
+- **Печатная шапка** (`.kesco-grid-print-descriptions`) скрыта на экране (`display:none`), видна только при печати (`@media print { display:block }`) — дублирования текста фильтра на экране нет
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице (через KescoGridPageBase\<T>)
