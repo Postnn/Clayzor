@@ -183,8 +183,8 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
 
     /// <summary>
     /// Строит список строк для экспорта текущей страницы. Если активна группировка —
-    /// для каждой развёрнутой группы загружает ВСЕ детальные строки (игнорируя пагинацию).
-    /// На грид это не влияет — данные загружаются отдельным запросом.
+    /// для каждой группы (листовой или промежуточной) загружает ВСЕ детальные строки
+    /// (игнорируя пагинацию). На грид это не влияет — данные загружаются отдельным запросом.
     /// </summary>
     private async Task<List<IKescoGridRow>> BuildExportRows()
     {
@@ -211,10 +211,11 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         {
             if (row is GroupHeaderRow header)
             {
-                result.Add(header);
-
                 if (header.GroupKeys.Count == groupCols.Count)
                 {
+                    // ── Листовая группа: один запрос детальных строк ──
+                    result.Add(header);
+
                     var detailParams = new DynamicParameters();
                     detailParams.AddDynamicParams(dp);
 
@@ -240,6 +241,82 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
                         Item  = item,
                         Depth = header.Depth
                     }));
+                }
+                else
+                {
+                    // ── Не-листовая (промежуточная) группа: загружаем ВСЕ строки
+                    //     под частичным ключом, с GROUP BY для ItemCount ──
+                    var partialKeyWhere = new List<string>();
+                    for (int i = 0; i < header.GroupKeys.Count && i < groupCols.Count; i++)
+                        partialKeyWhere.Add($"{groupCols[i]} = @pk{i}");
+
+                    var pkWhere = string.Join(" AND ", partialKeyWhere);
+                    var subtreeWhere = KescoDataQuery.CombineWhere(where, pkWhere);
+
+                    // GROUP BY для поддерева → ItemCount
+                    var subtreeGroupSql = KescoGroupingEngine.BuildGroupAggregateSql(
+                        selectSql, groupCols.ToList(), subtreeWhere, _query.SortColumns);
+
+                    var subtreeParams = new DynamicParameters();
+                    subtreeParams.AddDynamicParams(dp);
+                    for (int i = 0; i < header.GroupKeys.Count && i < groupCols.Count; i++)
+                        subtreeParams.Add($"pk{i}", header.GroupKeys[i]);
+
+                    var subtreeGroupRows = await Db.QueryAsync<GridGroupRow>(subtreeGroupSql, subtreeParams);
+                    var subtreeAggregates = KescoGroupingEngine.BuildAggregates(subtreeGroupRows);
+                    var subtreeRoots      = KescoGroupingEngine.BuildTree(subtreeAggregates);
+                    KescoGroupingEngine.ComputeParentCounts(subtreeRoots);
+
+                    var countLookup = new Dictionary<string, int>();
+                    CollectCounts(subtreeRoots, countLookup);
+
+                    // SELECT * для поддерева → C# interleaving
+                    var orderBy = _query.BuildOrderBy(defaultOrder);
+                    var subtreeItemsSql = $"SELECT * FROM ({selectSql}) _src";
+                    if (!string.IsNullOrWhiteSpace(subtreeWhere))
+                        subtreeItemsSql += $" WHERE {subtreeWhere}";
+                    if (!string.IsNullOrWhiteSpace(orderBy))
+                        subtreeItemsSql += $" ORDER BY {orderBy}";
+
+                    var subtreeItems = await Db.QueryAsync<T>(subtreeItemsSql, subtreeParams);
+
+                    string?[]? previousKeys = null;
+                    foreach (var item in subtreeItems)
+                    {
+                        var currentKeys = groupCols
+                            .Select(c => _propertyMap.TryGetValue(c, out var p)
+                                ? p.GetValue(item)?.ToString()
+                                : null)
+                            .ToArray();
+
+                        int firstDiff = 0;
+                        if (previousKeys is not null)
+                        {
+                            while (firstDiff < previousKeys.Length
+                                   && firstDiff < currentKeys.Length
+                                   && string.Equals(previousKeys[firstDiff], currentKeys[firstDiff]))
+                                firstDiff++;
+                        }
+
+                        for (int depth = firstDiff; depth < groupCols.Count; depth++)
+                        {
+                            var keys         = currentKeys.Take(depth + 1).ToList();
+                            var displayValue = keys[depth] ?? "(пусто)";
+                            var fullKey      = string.Join("", keys);
+
+                            result.Add(new GroupHeaderRow
+                            {
+                                DisplayValue = displayValue,
+                                FullKey      = fullKey,
+                                ItemCount    = countLookup.TryGetValue(fullKey, out var cnt) ? cnt : 0,
+                                Depth        = depth,
+                                GroupKeys    = keys!,
+                            });
+                        }
+
+                        result.Add(new DetailRow<T> { Item = item });
+                        previousKeys = currentKeys;
+                    }
                 }
             }
         }
