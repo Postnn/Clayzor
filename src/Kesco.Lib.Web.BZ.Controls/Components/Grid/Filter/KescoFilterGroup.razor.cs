@@ -93,13 +93,7 @@ public partial class KescoFilterGroup : ComponentBase
     /// в блоке «редактируется в диалоге колонки».
     /// </summary>
     private string GetLeafDescription(ColumnFilter leaf)
-    {
-        var dn = Columns.FirstOrDefault(c => c.SqlName == leaf.Column)?.DisplayName
-                 ?? leaf.Column;
-        var colPart = string.IsNullOrEmpty(leaf.Column) ? "" : $"{dn}: ";
-        var opLabel = KescoFilterOperatorLabels.Get(leaf.Operator);
-        return leaf.Value is not null
-            ? $"{colPart}{opLabel} «{leaf.Value}»"
-            : $"{colPart}{opLabel}";
-    }
+        => KescoFilterDescriptionBuilder.DescribeLeaf(
+            leaf,
+            sql => Columns.FirstOrDefault(c => c.SqlName == sql)?.DisplayName ?? sql);
 }

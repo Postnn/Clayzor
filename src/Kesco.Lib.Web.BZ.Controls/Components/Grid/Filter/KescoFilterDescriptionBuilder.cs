@@ -61,6 +61,11 @@ public static class KescoFilterDescriptionBuilder
         return string.IsNullOrWhiteSpace(text) ? null : $"Фильтр: {text}";
     }
 
+    /// <summary>Текст одного листа с обоими условиями (клаузами), напр.
+    /// «Тип: содержит «прот» И содержит «моч»».</summary>
+    public static string DescribeLeaf(ColumnFilter leaf, Func<string, string> getDisplayName)
+        => BuildLeafText(leaf, getDisplayName);
+
     // ── Внутренние методы ─────────────────────────────────────────────────────
 
     private static void CollectSegments(
