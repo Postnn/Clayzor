@@ -32,6 +32,7 @@
 | `ShowExcel` | `bool` | `false` | Показать группу «Выгрузка в Excel» в меню групповых операций. При экспорте рядом с заголовком показывается спиннер |
 | `CustomBatchGroups` | `IReadOnlyList<BatchOperationGroup>?` | `null` | Кастомные группы операций (рендерятся после стандартных) |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
+| `OnGroupToggle` | `EventCallback<GroupHeaderRow>` | — | Обработчик раскрытия/сворачивания группы. Страница подписывается через `OnGroupToggle="ToggleGroup"` — вручную вставлять `<KescoGroupHeader>` в `CellTemplate` больше не нужно, грид рендерит его сам в вычисленной хост-колонке (`GroupRowHostKey`) |
 | `EditSuccessMessage` | `string` | `"Запись обновлена"` | Текст уведомления после успешного сохранения через сервисную колонку |
 | `AllowColumnReorder` | `bool` | `true` | Разрешить перетаскивание колонок грида мышью |
 
@@ -97,6 +98,8 @@
 ## KescoGroupHeader
 
 Стандартный заголовок строки группировки. Отображает иконку раскрытия/сворачивания, название группы и количество элементов.
+`KescoGrid` рендерит его сам в вычисленной хост-колонке (см. «Рендеринг групп» ниже) — страница-потребитель
+компонент напрямую не вызывает.
 
 | Параметр | Тип | Описание |
 |---|---|---|
@@ -192,22 +195,29 @@ public static class KescoDragState
 
 ### Рендеринг групп
 
-Колонки используют `<KescoColumn>` с проверкой типа в `CellTemplate`:
+Грид сам рендерит `<KescoGroupHeader>` для строк `GroupHeaderRow` — выбирает единственную
+«хост-колонку» (`GroupRowHostKey`/`IsGroupRowHost` в `KescoGrid.Grouping.cs`, приоритет: колонка
+редактирования → первая видимая колонка данных, не скрытая группировкой) и вызывает его сам.
+Страница-потребитель ничего не пишет в `CellTemplate` — только подписывается на событие:
 
 ```razor
-<KescoColumn TEntity="IKescoGridRow" ColumnId="2">
-    <CellTemplate>
-        @if (context.Item is GroupHeaderRow header)
-        {
-            <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
-        }
-        else if (context.Item is DetailRow<MedicalTest> detail)
-        {
-            <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
-        }
-    </CellTemplate>
-</KescoColumn>
+<KescoGrid TEntity="IKescoGridRow" ...
+           OnGroupToggle="ToggleGroup">
+    ...
+    <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
+        <CellTemplate>
+            @if (context.Item is DetailRow<MedicalTest> detail)
+            {
+                <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
+            }
+        </CellTemplate>
+    </KescoColumn>
+</KescoGrid>
 ```
+
+Проверять `is GroupHeaderRow` внутри `CellTemplate` колонки данных больше не нужно — грид туда не
+заходит для строк-заголовков групп. Хост-колонка не зависит от того, какая колонка сейчас скрыта
+группировкой, поэтому группировка по «первой» колонке больше не приводит к пропаданию заголовка.
 
 **Запрещено** использовать `PropertyColumn` с `Groupable`/`Grouping`/`GroupBy`/`GroupTemplate` — эти атрибуты удалены.
 
@@ -389,7 +399,8 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
             TotalCount="@_query.TotalCount"
             PageNumber="@_query.PageNumber"
             ShowPagination="true"
-            OnAdd="OpenAddDialog">
+            OnAdd="OpenAddDialog"
+            OnGroupToggle="ToggleGroup">
 
     <ColumnDefs>
         <KescoColumnDef ColumnId="1" SqlName="TestTypeName"            DisplayName="Тип"      Groupable="true" Filterable="true" />
@@ -401,11 +412,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
         <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
             <CellTemplate>
-                @if (context.Item is GroupHeaderRow header)
-                {
-                    <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
-                }
-                else if (context.Item is DetailRow<MyEntity> detail)
+                @if (context.Item is DetailRow<MyEntity> detail)
                 {
                     <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
                 }

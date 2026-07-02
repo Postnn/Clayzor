@@ -399,9 +399,17 @@
                                     Title=""
                                     Sortable="false"
                                     DragAndDropEnabled="false"
+                                    CellClassFunc="@(item => item is GroupHeaderRow && GroupRowHostKey == "__edit__" ? "group-header-cell" : "")"
                                     Style="width:44px;min-width:44px;max-width:44px">
                         <CellTemplate>
-                            @if (context.Item is IDetailRow detail)
+                            @if (context.Item is GroupHeaderRow gh)
+                            {
+                                @if (GroupRowHostKey == "__edit__")
+                                {
+                                    <KescoGroupHeader Header="gh" OnToggle="OnGroupToggle" />
+                                }
+                            }
+                            else if (context.Item is IDetailRow detail)
                             {
                                 <KescoButton Icon="@Icons.Material.Filled.Edit"
                                              Text="Редактировать"
@@ -422,7 +430,8 @@
                                     Title="@dispName"
                                     Sortable="false"
                                     Hidden="@IsGrouped(sqlName)"
-                                    DragAndDropEnabled="false">
+                                    DragAndDropEnabled="false"
+                                    CellClassFunc="@(item => item is GroupHeaderRow && IsGroupRowHost(sqlName) ? "group-header-cell" : "")">
                         <HeaderTemplate>
                             <div style="display:flex;align-items:center;width:100%">
                                  <div style="flex:1;display:flex;align-items:center;cursor:grab"
@@ -455,10 +464,18 @@
                             </div>
                         </HeaderTemplate>
                         <CellTemplate>
-                            @{
-                                var cellTemplate = (RenderFragment<CellContext<TEntity>>)templateObj;
+                            @if (context.Item is GroupHeaderRow gh)
+                            {
+                                @if (IsGroupRowHost(sqlName))
+                                {
+                                    <KescoGroupHeader Header="gh" OnToggle="OnGroupToggle" />
+                                }
                             }
-                            @cellTemplate(context)
+                            else
+                            {
+                                var cellTemplate = (RenderFragment<CellContext<TEntity>>)templateObj;
+                                @cellTemplate(context)
+                            }
                         </CellTemplate>
                     </TemplateColumn>
                 }

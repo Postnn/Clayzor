@@ -152,7 +152,8 @@ public static void Initialize()
             TotalCount="@_query.TotalCount"
             PageNumber="@_query.PageNumber"
             ShowPagination="true"
-            OnAdd="OpenAddDialog">
+            OnAdd="OpenAddDialog"
+            OnGroupToggle="ToggleGroup">
 
 
     <ColumnDefs>
@@ -164,11 +165,7 @@ public static void Initialize()
 
         <KescoColumn TEntity="IKescoGridRow" ColumnId="1">
             <CellTemplate>
-                @if (context.Item is GroupHeaderRow header)
-                {
-                    <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
-                }
-                else if (context.Item is DetailRow<NewEntity> detail)
+                @if (context.Item is DetailRow<NewEntity> detail)
                 {
                     <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
                 }

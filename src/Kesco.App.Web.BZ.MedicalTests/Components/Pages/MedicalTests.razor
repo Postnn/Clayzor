@@ -26,7 +26,8 @@
             SelectVisible="true"
             ShowPrint="true"
             ShowExcel="true"
-            OnAdd="OpenAddDialog">
+            OnAdd="OpenAddDialog"
+            OnGroupToggle="ToggleGroup">
 
     <ColumnDefs>
         <KescoColumnDef ColumnId="1" SqlName="TestTypeName"            DisplayName="Тип"         Groupable="true" Filterable="true" />
@@ -41,11 +42,7 @@
 
         <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
             <CellTemplate>
-                @if (context.Item is GroupHeaderRow header)
-                {
-                    <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
-                }
-                else if (context.Item is DetailRow<MedicalTest> detail)
+                @if (context.Item is DetailRow<MedicalTest> detail)
                 {
                     <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
                 }

@@ -1,9 +1,40 @@
 using Kesco.Lib.Entities;
+using Microsoft.AspNetCore.Components;
 
 namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
 public partial class KescoGrid<TEntity> where TEntity : class
 {
+    /// <summary>
+    /// Событие переключения раскрытия/сворачивания группы.
+    /// Страница-потребитель подписывается через <c>OnGroupToggle="ToggleGroup"</c> на теге &lt;KescoGrid&gt;.
+    /// Больше не нужно вручную встраивать &lt;KescoGroupHeader&gt; в CellTemplate конкретной колонки.
+    /// </summary>
+    [Parameter] public EventCallback<GroupHeaderRow> OnGroupToggle { get; set; }
+
+    /// <summary>
+    /// SqlName колонки, которая должна отображать заголовок группы (шеврон + подпись + счётчик).
+    /// "__edit__" — колонка редактирования. Никогда не совпадает с колонкой, скрытой текущей
+    /// группировкой или пользовательскими настройками — вычисляется заново на каждый рендер.
+    /// </summary>
+    private string GroupRowHostKey
+    {
+        get
+        {
+            if (EditDialogType is not null) return "__edit__";
+            foreach (var colId in _columnOrder)
+            {
+                if (!_columnById.TryGetValue(colId, out var meta)) continue;
+                if (_hiddenSqlNames.Contains(meta.SqlName)) continue;
+                if (IsGrouped(meta.SqlName)) continue;
+                return meta.SqlName;
+            }
+            return "";
+        }
+    }
+
+    private bool IsGroupRowHost(string sqlName) => GroupRowHostKey == sqlName;
+
     /// <summary>SQL-имена колонок текущей группировки.</summary>
     private List<string> _groupColumns = [];
 

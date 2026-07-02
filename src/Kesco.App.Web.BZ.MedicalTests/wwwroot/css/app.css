@@ -593,7 +593,13 @@ body {
     border-bottom-color: var(--lh-gold);
 }
 
-/* ── Group Header Rows (server-side grouping) ── */
+/* ── Group Header Rows: полная ширина в интерактивном гриде ──
+   width:0 вместо position:absolute (см. G4/G5) — обёртка остаётся в
+   нормальном потоке, поэтому по-прежнему задаёт высоту строки, но явная
+   width:0 перекрывает intrinsic-ширину переполняющих потомков при расчёте
+   ширины колонки. position:relative + z-index поднимают её в порядке
+   отрисовки над последующими (пустыми) ячейками той же строки. */
+
 .mud-table-row:has(.group-header-cell) {
     background-color: rgba(5, 22, 77, 0.04) !important;
     border-top: 2px solid var(--lh-navy) !important;
@@ -607,6 +613,23 @@ body {
 .group-header-cell {
     font-weight: 600;
     color: var(--lh-navy);
+}
+
+.mud-table-row:has(.group-header-cell) > .mud-table-cell {
+    background-color: transparent !important;
+    border-right: none !important;
+}
+
+.mud-table-row:has(.group-header-cell) .group-header-cell {
+    overflow: visible;
+}
+
+.mud-table-row:has(.group-header-cell) .group-header-cell > div {
+    width: 0;
+    overflow: visible;
+    white-space: nowrap;
+    position: relative;
+    z-index: 1;
 }
 
 /* ── Column header menu (mobile) ── */

@@ -169,11 +169,11 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Компонент | Документация |
 |---|---|
-| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Разметка в `KescoGrid.razor`, логика в 9 partial class-файлах (1 основной + 8 по темам, см. «Codebehind-структура» ниже). При `EditDialogType != null` автоматически добавляет сервисную колонку (первой) с иконкой карандаша для открытия диалога редактирования. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGrid\<T>** — грид с серверной пагинацией, поиском, сортировкой, группировкой, фильтрацией по колонкам. Разметка в `KescoGrid.razor`, логика в 9 partial class-файлах (1 основной + 8 по темам, см. «Codebehind-структура» ниже). При `EditDialogType != null` автоматически добавляет сервисную колонку (первой) с иконкой карандаша для открытия диалога редактирования. Конфигурация передаётся через параметры: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `DataLoader`, `ColumnMenuMode`. `OnGroupToggle` — страница подписывается на раскрытие/сворачивание групп (грид сам рендерит `KescoGroupHeader` в вычисленной хост-колонке `GroupRowHostKey`)| [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPageBase\<T>** — базовый класс страниц с гридом в 5 partial-файлах (1 основной + 4 по темам, см. «Codebehind-структура KescoGridPageBase» ниже). Читает конфигурацию SQL из `Grid` (IKescoGrid). Предоставляет `LoadData`, `ToggleGroup`, `OpenAddDialog`. Авто-вычисляет `FilterColumnTypes` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumn\<T>** — колонка грида с авто-заголовком. Получает Title/SortName/Drag&Drop из `KescoColumnDef` по `ColumnId`. Скрывается при группировке. Кнопка меню ⋮ для мобильных | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnDef** — невидимый регистратор метаданных колонки: `ColumnId` (EditorRequired), `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable` | [docs/kesco-grid.md](docs/kesco-grid.md) |
-| **KescoGroupHeader** — заголовок строки группы с иконкой раскрытия/сворачивания и количеством элементов | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoGroupHeader** — заголовок строки группы с иконкой раскрытия/сворачивания и количеством элементов. Рендерится гридом автоматически в вычисленной хост-колонке (`GroupRowHostKey`) — страница напрямую компонент не вызывает, только подписывается на `OnGroupToggle` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoDragState** — статическое хранилище SQL-имени перетаскиваемой колонки между dragstart и drop | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPrintHtmlGenerator** — статический генератор HTML для печати всех данных грида. Генерирует HTML с теми же MudBlazor CSS-классами (`.mud-table`, `.mud-table-cell`, `.group-header-cell`) и встраивает полный `@media print` CSS — визуально идентичен печати текущей страницы | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPrintStyles** — символы для печатных форм: иконки групп (`▸`/`▾` — аналог MudBlazor ChevronRight/ExpandMore), булевы значения (`✓`/`✗` — аналог CheckCircle/Cancel) | — |
@@ -222,7 +222,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | `KescoGrid.razor.cs` | ~540 | Основа: интерфейсы, параметры, поля (`_lastQuery`, `_columnById`, `_columnBySqlName`, `_columnOrder`, `_hiddenSqlNames`), инициализация, регистрация колонок, `RegisterCellTemplate`, `NotifyQueryChanged`, высота грида, `DisposeAsync`, `ColumnMenuMode`, `OpenColumnSettings`, `BuildColumnSettingsItems` (переиспользуется для печати/экспорта) |
 | `KescoGrid.Search.cs` | 18 | `_searchText`, `DebounceTimer`, обработчики поиска |
 | `KescoGrid.Sorting.cs` | 66 | `_sortState`, `ToggleSort`, `HandleSortClick`, `GetSortBadge` |
-| `KescoGrid.Grouping.cs` | 217 | `_groupColumns`, `_trayExpanded`, `AddGroupColumn`, `RemoveGroupColumn`, `OnChipDragStart/End`, `OnTrayDragOver/Drop`, `GroupColumns`, `OnGroupTriToggle`, `OnHeaderTriToggle`, `_groupChildIds` |
+| `KescoGrid.Grouping.cs` | ~250 | `OnGroupToggle` (параметр-событие), `GroupRowHostKey` (авто-выбор хост-колонки для заголовка группы), `IsGroupRowHost`, `_groupColumns`, `_trayExpanded`, `AddGroupColumn`, `RemoveGroupColumn`, `OnChipDragStart/End`, `OnTrayDragOver/Drop`, `GroupColumns`, `OnGroupTriToggle`, `OnHeaderTriToggle`, `_groupChildIds` |
 | `KescoGrid.Filtering.cs` | 195 | `_filterRoot` (KescoFilterGroupNode), `_filterTrayExpanded`, `ColumnDialogLeaves`, `OpenFilterDialog`, `AddFilterAsync`, `RemoveFilter`, `RemoveCompositeNodes`, `OnFilterTrayDragOver`, `OnFilterTrayDrop`, `BuildFilterDescription`, `BuildFilterSegments`, `ActiveCompositeFilter`, `OpenCompositeFilterDialog` |
 | `KescoGrid.DragDrop.cs` | 86 | `_dragSourceIndex`, drag-and-drop чипов группировки (перемещение/перестановка в трее) |
 | `KescoGrid.Selection.cs` | 113 | `_selectMode`, `_selectAllChecked`, `_selectedIds`, `OnRowSelectAsync`, `SelectAllAsync`, `DeselectAllAsync`, `ToggleSelectMode`, персистентность выделения |
@@ -268,22 +268,25 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 ### Рендеринг
 - **Плоская модель**: заголовки групп и строки детализации передаются как единый `IEnumerable<IKescoGridRow>`
-- Колонки используют компонент `<KescoColumn>` с проверкой типа в `CellTemplate`:
+- `KescoGrid` сам решает, какая колонка хостит `<KescoGroupHeader>` для строк `GroupHeaderRow`
+  (`GroupRowHostKey`/`IsGroupRowHost` в `KescoGrid.Grouping.cs`: колонка редактирования, если есть,
+  иначе первая видимая колонка данных, не скрытая группировкой). Страница подписывается только через
+  `OnGroupToggle="ToggleGroup"` на теге `<KescoGrid>` — вручную вставлять `<KescoGroupHeader>` в
+  `CellTemplate` не нужно:
   ```razor
-  <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
-      <CellTemplate>
-          @if (context.Item is GroupHeaderRow header)
-          {
-              <KescoGroupHeader Header="header" OnToggle="ToggleGroup" />
-          }
-          else if (context.Item is DetailRow<MyEntity> detail)
-          {
-              <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
-          }
-      </CellTemplate>
-  </KescoColumn>
+  <KescoGrid TEntity="IKescoGridRow" ... OnGroupToggle="ToggleGroup">
+      ...
+      <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
+          <CellTemplate>
+              @if (context.Item is DetailRow<MyEntity> detail)
+              {
+                  <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
+              }
+          </CellTemplate>
+      </KescoColumn>
+  </KescoGrid>
   ```
-- `KescoGroupHeader` — встроенный компонент для отображения иконки раскрытия/сворачивания и количества элементов
+- `KescoGroupHeader` — встроенный компонент для отображения иконки раскрытия/сворачивания и количества элементов, вызывается гридом автоматически
 - `KescoColumn` автоматически получает Title (DisplayName), строит HeaderTemplate с drag&drop и серверной сортировкой, скрывает колонку при группировке
 - **Запрещено** использовать MudBlazor `GroupBy`/`Groupable`/`GroupExpanded`/`GroupTemplate` — группировка управляется сервером
 - `SortMode` на MudDataGrid **не задаётся** — порядок строк определяется серверным SQL
