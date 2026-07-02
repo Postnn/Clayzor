@@ -8,8 +8,8 @@
     ? "display:flex;flex-direction:column;gap:6px;padding:6px 0"
     : "display:flex;flex-direction:column;gap:6px;padding:6px 6px 6px 8px;border-left:2px solid var(--mud-palette-primary)")">
 
-    @* ── Заголовок группы: переключатель И/ИЛИ + кнопка удаления ── *@
-    <div style="display:flex;align-items:center;gap:6px">
+    @* ── Заголовок группы: И/ИЛИ + добавление + удаление ── *@
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
         <MudToggleGroup T="LogicalOperator"
                         Value="@Node.Logic"
                         ValueChanged="@SetLogic"
@@ -20,6 +20,17 @@
             <MudToggleItem Value="@LogicalOperator.And" Text="И" />
             <MudToggleItem Value="@LogicalOperator.Or" Text="ИЛИ" />
         </MudToggleGroup>
+
+        <MudButton Variant="Variant.Text" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@AddExpression" Style="text-transform:none">
+            добавить условие
+        </MudButton>
+        <MudButton Variant="Variant.Text" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.CreateNewFolder"
+                   OnClick="@AddGroup" Style="text-transform:none">
+            добавить группу
+        </MudButton>
 
         <MudSpacer />
 
@@ -76,21 +87,4 @@
         }
     }
 
-    @* ── Кнопки добавления ────────────────────────────────────────── *@
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <MudButton Variant="Variant.Text"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="@AddExpression"
-                   Style="text-transform:none">
-            добавить условие
-        </MudButton>
-        <MudButton Variant="Variant.Text"
-                   Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.CreateNewFolder"
-                   OnClick="@AddGroup"
-                   Style="text-transform:none">
-            добавить группу
-        </MudButton>
-    </div>
 </div>
