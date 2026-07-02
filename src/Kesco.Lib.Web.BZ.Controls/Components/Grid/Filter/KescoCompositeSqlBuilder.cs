@@ -64,6 +64,8 @@ public static class KescoCompositeSqlBuilder
                     => BuildGroup(nestedGroup, parameters, knownColumns, columnNameMap, ref counter),
                 ColumnFilter leaf
                     => BuildLeaf(leaf, parameters, knownColumns, columnNameMap, ref counter),
+                ValueFilter vf
+                    => BuildValueLeaf(vf, parameters, knownColumns, columnNameMap, ref counter),
                 _ => null,
             };
 
@@ -118,5 +120,80 @@ public static class KescoCompositeSqlBuilder
 
         var logic = cf.LogicalOperator == LogicalOperator.Or ? "OR" : "AND";
         return $"({clause1} {logic} {clause2})";
+    }
+
+    /// <summary>
+    /// Строит SQL-фрагмент для листового узла фильтрации по набору значений
+    /// (<see cref="ValueFilter"/>). Генерирует <c>IN (...)</c> или
+    /// <c>NOT IN (...)</c> в зависимости от <see cref="ValueFilter.Negate"/>,
+    /// с учётом <see cref="ValueFilter.BlankChecked"/> для включения NULL
+    /// и пустых строк.
+    /// Колонка проверяется по белому списку; неизвестные колонки → null.
+    /// Имена параметров назначаются через сквозной счётчик.
+    /// </summary>
+    private static string? BuildValueLeaf(
+        ValueFilter vf,
+        DynamicParameters parameters,
+        ISet<string> knownColumns,
+        IReadOnlyDictionary<string, string>? columnNameMap,
+        ref int counter)
+    {
+        // Белый список: колонка должна быть зарегистрирована в гриде
+        if (!knownColumns.Contains(vf.Column))
+            return null;
+
+        if (!vf.HasValue)
+            return null;
+
+        // Применяем маппинг имени если задан
+        var colName = columnNameMap is not null && columnNameMap.TryGetValue(vf.Column, out var mapped)
+            ? mapped
+            : vf.Column;
+
+        var hasValues = vf.Values.Count > 0;
+        var negate = vf.Negate;
+        var blank  = vf.BlankChecked;
+
+        // Есть ли строковые значения — для обработки пустых строк ''
+        var hasStringValues = vf.Values.Any(v => v is string);
+
+        string? valueClause = null;
+        if (hasValues)
+        {
+            var paramNames = new List<string>();
+            foreach (var value in vf.Values)
+            {
+                var pName = $"p{counter++}";
+                parameters.Add(pName, value);
+                paramNames.Add($"@{pName}");
+            }
+
+            var list = string.Join(", ", paramNames);
+            valueClause = negate
+                ? $"{colName} NOT IN ({list})"
+                : $"{colName} IN ({list})";
+        }
+
+        // Сборка финального фрагмента
+        var parts = new List<string>();
+
+        if (valueClause is not null)
+            parts.Add(valueClause);
+
+        if (blank)
+        {
+            parts.Add($"{colName} IS NULL");
+            if (hasStringValues)
+                parts.Add($"{colName} = ''");
+        }
+
+        if (parts.Count == 0)
+            return null; // Negate=true, BlankChecked=true, Values пуст → 1=1
+
+        // Логика объединения:
+        // Negate=false → OR (расширяем выборку: значение ИЛИ пустое)
+        // Negate=true  → AND (сужаем выборку: не значение И не null)
+        var separator = negate ? " AND " : " OR ";
+        return $"({string.Join(separator, parts)})";
     }
 }
