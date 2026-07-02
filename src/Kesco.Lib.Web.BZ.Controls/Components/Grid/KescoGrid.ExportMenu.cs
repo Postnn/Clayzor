@@ -1,5 +1,7 @@
 using Microsoft.JSInterop;
 using MudBlazor;
+using MudBlazor.Extensions;
+using MudBlazor.Extensions.Options;
 
 namespace Kesco.Lib.Web.BZ.Controls.Components.Grid;
 
@@ -22,17 +24,114 @@ public partial class KescoGrid<TEntity> where TEntity : class
     private bool IsSubGroupOpen(string label)
         => _openSubGroups.TryGetValue(label, out var isOpen) && isOpen;
 
-    private async Task PrintCurrentPageInternal()
-        => await JS.InvokeVoidAsync("kescoGridPrint.printCurrentPage", Id);
+    // ── Разрешение колонок для печати/экспорта ───────────────────────────────────
 
-    private async Task PrintAllInternal()
+    /// <summary>
+    /// Запрашивает у пользователя состав колонок для печати/экспорта.
+    /// Три исхода: «настроить» → диалог колонок (без сортировки), «как на странице» →
+    /// текущие видимые колонки, «отмена» → null.
+    /// </summary>
+    /// <param name="contextLabel">Контекст операции, напр. «печати (все данные)».</param>
+    /// <returns>Список колонок или null, если операция отменена.</returns>
+    private async Task<IReadOnlyList<KescoColumnMeta>?> ResolveExportColumnsAsync(string contextLabel)
+    {
+        // 1. Спросить пользователя
+        var promptParams = new DialogParameters<KescoColumnSettingsPromptDialog>
+        {
+            { x => x.ContextLabel, contextLabel }
+        };
+        var promptOptions = new DialogOptionsEx
+        {
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true,
+            DragMode = MudDialogDragMode.Simple,
+        };
+        var promptDialog = await DialogService.ShowExAsync<KescoColumnSettingsPromptDialog>(
+            "Выбор колонок", promptParams, promptOptions);
+        var promptResult = await promptDialog.Result;
+
+        if (promptResult is null || promptResult.Canceled)
+            return null;
+
+        // 2. «Как на странице»
+        if (promptResult.Data is false)
+            return ((IKescoGrid)this).GetVisibleColumns();
+
+        // 3. «Настроить» — диалог колонок без сортировки
+        var items = BuildColumnSettingsItems();
+        // Сбрасываем SortPriority/IsSortDesc — в режиме печати/экспорта сортировка не нужна
+        foreach (var item in items)
+        {
+            item.SortPriority = 0;
+            item.IsSortDesc = false;
+        }
+
+        var settingsParams = new DialogParameters<KescoColumnSettingsDialog>
+        {
+            { x => x.Items, items },
+            { x => x.ShowSorting, false },
+        };
+        var settingsOptions = new DialogOptionsEx
+        {
+            MaxWidth = MaxWidth.ExtraSmall,
+            FullWidth = true,
+            DragMode = MudDialogDragMode.Simple,
+        };
+        // Заголовок явно называет контекст
+        var title = contextLabel.StartsWith("печати") ? "Колонки для печати" : "Колонки для выгрузки в Excel";
+        var settingsDialog = await DialogService.ShowExAsync<KescoColumnSettingsDialog>(
+            title, settingsParams, settingsOptions);
+        var settingsResult = await settingsDialog.Result;
+
+        if (settingsResult is null || settingsResult.Canceled || settingsResult.Data is not List<ColumnSettingsItem> updatedItems)
+            return null;
+
+        // Построить результат в порядке, заданном пользователем
+        var resolved = new List<KescoColumnMeta>();
+        foreach (var item in updatedItems.Where(i => i.IsVisible))
+        {
+            var meta = ((IKescoGrid)this).GetColumnMeta(item.SqlName);
+            if (meta is not null)
+                resolved.Add(meta);
+        }
+
+        return resolved;
+    }
+
+    // ── Печать ───────────────────────────────────────────────────────────────────
+
+    private async Task PrintCurrentPageInternal()
     {
         if (DataLoader is null) return;
+        var columns = await ResolveExportColumnsAsync("печати (текущая страница)");
+        if (columns is null) return;
+
         var spinnerId = Id + "-print-spinner";
         _ = JS.InvokeVoidAsync("kescoGridPrint.showSpinner", spinnerId);
         try
         {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
+            var html = await DataLoader.BuildPrintHtmlForCurrentPageAsync(
+                columns, Title, BuildFilterDescription(), BuildGroupDescription());
+            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
+            await JS.InvokeAsync<object>("kescoGridPrint.printHtml", html);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
+            Snackbar.Add($"Ошибка печати: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PrintAllInternal()
+    {
+        if (DataLoader is null) return;
+        var columns = await ResolveExportColumnsAsync("печати (все данные)");
+        if (columns is null) return;
+
+        var spinnerId = Id + "-print-spinner";
+        _ = JS.InvokeVoidAsync("kescoGridPrint.showSpinner", spinnerId);
+        try
+        {
             var html = await DataLoader.BuildPrintHtmlAsync(
                 columns, Title, BuildFilterDescription(), BuildGroupDescription());
             await JS.InvokeVoidAsync("kescoGridPrint.hideSpinner", spinnerId);
@@ -48,11 +147,13 @@ public partial class KescoGrid<TEntity> where TEntity : class
     private async Task PrintSelectedInternal()
     {
         if (DataLoader is null || _selectedIds.Count == 0) return;
+        var columns = await ResolveExportColumnsAsync("печати (выбранные записи)");
+        if (columns is null) return;
+
         var spinnerId = Id + "-print-spinner";
         _ = JS.InvokeVoidAsync("kescoGridPrint.showSpinner", spinnerId);
         try
         {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
             var html = await DataLoader.BuildPrintHtmlForSelectedAsync(
                 columns, Title, _selectedIds.ToList(),
                 BuildFilterDescription(), BuildGroupDescription());
@@ -66,14 +167,18 @@ public partial class KescoGrid<TEntity> where TEntity : class
         }
     }
 
+    // ── Excel ────────────────────────────────────────────────────────────────────
+
     private async Task ExcelCurrentPageInternal()
     {
         if (DataLoader is null) return;
+        var columns = await ResolveExportColumnsAsync("выгрузки в Excel (текущая страница)");
+        if (columns is null) return;
+
         _isExporting = true;
         StateHasChanged();
         try
         {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
             await DataLoader.ExcelExportAsync(new ExcelExportRequest
             {
                 Mode = ExcelExportMode.CurrentPage,
@@ -93,11 +198,13 @@ public partial class KescoGrid<TEntity> where TEntity : class
     private async Task ExcelAllInternal()
     {
         if (DataLoader is null) return;
+        var columns = await ResolveExportColumnsAsync("выгрузки в Excel (все данные)");
+        if (columns is null) return;
+
         _isExporting = true;
         StateHasChanged();
         try
         {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
             await DataLoader.ExcelExportAsync(new ExcelExportRequest
             {
                 Mode = ExcelExportMode.All,
@@ -117,11 +224,13 @@ public partial class KescoGrid<TEntity> where TEntity : class
     private async Task ExcelSelectedInternal()
     {
         if (DataLoader is null || _selectedIds.Count == 0) return;
+        var columns = await ResolveExportColumnsAsync("выгрузки в Excel (выбранные записи)");
+        if (columns is null) return;
+
         _isExporting = true;
         StateHasChanged();
         try
         {
-            var columns = ((IKescoGrid)this).GetVisibleColumns();
             await DataLoader.ExcelExportAsync(new ExcelExportRequest
             {
                 Mode = ExcelExportMode.Selected,

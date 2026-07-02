@@ -318,10 +318,14 @@ public partial class KescoGrid<TEntity> where TEntity : class
 
     private List<int> _columnOrderSnapshot = [];
 
-    private async Task OpenColumnSettings()
+    /// <summary>
+    /// Строит список <see cref="ColumnSettingsItem"/> из текущего состояния грида:
+    /// порядок колонок, видимость, признак группировки и состояние сортировки.
+    /// Переиспользуется в <see cref="OpenColumnSettings"/> и при подготовке колонок
+    /// к печати/экспорту.
+    /// </summary>
+    private List<ColumnSettingsItem> BuildColumnSettingsItems()
     {
-        _columnOrderSnapshot = [.._columnOrder];
-
         var items = _columnBySqlName.Values
             .OrderBy(m => _columnOrder.IndexOf(m.ColumnId))
             .Select(m => new ColumnSettingsItem
@@ -344,6 +348,15 @@ public partial class KescoGrid<TEntity> where TEntity : class
                 match.IsSortDesc   = sc.Desc;
             }
         }
+
+        return items;
+    }
+
+    private async Task OpenColumnSettings()
+    {
+        _columnOrderSnapshot = [.._columnOrder];
+
+        var items = BuildColumnSettingsItems();
 
         var parameters = new DialogParameters<KescoColumnSettingsDialog> { { x => x.Items, items } };
         var options = new DialogOptionsEx

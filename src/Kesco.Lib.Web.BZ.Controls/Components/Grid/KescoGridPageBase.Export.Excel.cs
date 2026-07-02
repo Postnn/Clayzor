@@ -171,6 +171,16 @@ public abstract partial class KescoGridPageBase<T> where T : Entity
         }
     }
 
+    async Task<string> IKescoGridDataLoader.BuildPrintHtmlForCurrentPageAsync(
+        IReadOnlyList<KescoColumnMeta> columns, string title,
+        string? filterDescription, string? groupDescription)
+    {
+        var rows = await BuildExportRows();
+        return KescoGridPrintHtmlGenerator.Build(
+            title, columns, rows, typeof(T), _query.ExpandedGroups,
+            filterDescription, groupDescription);
+    }
+
     /// <summary>
     /// Строит список строк для экспорта текущей страницы. Если активна группировка —
     /// для каждой развёрнутой группы загружает ВСЕ детальные строки (игнорируя пагинацию).

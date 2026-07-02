@@ -28,14 +28,23 @@
                     <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
                              Size="Size.Small"
                              Style="margin-right:6px;opacity:0.45;flex-shrink:0;cursor:grab" />
-                    <div class="sort-toggle-area"
-                         style="flex:1;display:flex;align-items:center;gap:3px;min-width:0;cursor:pointer"
-                         @onclick="() => ToggleDialogSort(item.SqlName)"
-                         @onclick:stopPropagation="true">
-                        <span class="chip-label-clickable"
-                              style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@item.DisplayName</span>
-                        @GetDialogSortBadge(item.SqlName)
-                    </div>
+                    @if (ShowSorting)
+                    {
+                        <div class="sort-toggle-area"
+                             style="flex:1;display:flex;align-items:center;gap:3px;min-width:0;cursor:pointer"
+                             @onclick="() => ToggleDialogSort(item.SqlName)"
+                             @onclick:stopPropagation="true">
+                            <span class="chip-label-clickable"
+                                  style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@item.DisplayName</span>
+                            @GetDialogSortBadge(item.SqlName)
+                        </div>
+                    }
+                    else
+                    {
+                        <div style="flex:1;display:flex;align-items:center;min-width:0">
+                            <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">@item.DisplayName</span>
+                        </div>
+                    }
                     <div @onpointerdown:stopPropagation="true"
                          style="display:flex;align-items:center;flex-shrink:0">
                         <MudSwitch T="bool"
@@ -49,11 +58,14 @@
     </DialogContent>
     <DialogActions>
         <div style="flex:1;display:flex;gap:4px">
-            <MudTooltip Text="Сбросить сортировку" Placement="Placement.Top">
-                <MudIconButton Icon="@Icons.Material.Filled.ClearAll"
-                               Size="Size.Small"
-                               OnClick="ResetSort" />
-            </MudTooltip>
+            @if (ShowSorting)
+            {
+                <MudTooltip Text="Сбросить сортировку" Placement="Placement.Top">
+                    <MudIconButton Icon="@Icons.Material.Filled.ClearAll"
+                                   Size="Size.Small"
+                                   OnClick="ResetSort" />
+                </MudTooltip>
+            }
             <MudTooltip Text="Восстановить порядок и видимость колонок по-умолчанию" Placement="Placement.Top">
                 <MudIconButton Icon="@Icons.Material.Filled.RestartAlt"
                                Size="Size.Small"
@@ -70,6 +82,10 @@
 @code {
     /// <summary>Входной список колонок — не мутируется до нажатия «Применить».</summary>
     [Parameter] public List<ColumnSettingsItem> Items { get; set; } = [];
+
+    /// <summary>Показывать секцию сортировки. По умолчанию true (настройки страницы);
+    /// false — для печати/экспорта, где сортировка не имеет смысла.</summary>
+    [Parameter] public bool ShowSorting { get; set; } = true;
 
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
 
@@ -107,8 +123,11 @@
         _dotnetRef = DotNetObjectReference.Create(this);
 
         // Восстанавливаем сортировку из входных Items (если заданы из грида)
-        foreach (var item in _items.Where(i => i.SortPriority > 0).OrderBy(i => i.SortPriority))
-            _dialogSortState.Add((item.SqlName, item.IsSortDesc));
+        if (ShowSorting)
+        {
+            foreach (var item in _items.Where(i => i.SortPriority > 0).OrderBy(i => i.SortPriority))
+                _dialogSortState.Add((item.SqlName, item.IsSortDesc));
+        }
     }
 
     /// <summary>При первом рендере инициализирует sortable через JS.</summary>
@@ -215,7 +234,6 @@
     /// <summary>Восстанавливает исходный порядок, видимость и сортировку колонок.</summary>
     private void ResetAll()
     {
-        _dialogSortState.Clear();
         _items.Clear();
         _items.AddRange(_originalItems.Select(i => new ColumnSettingsItem
         {
@@ -226,9 +244,16 @@
             SortPriority = 0,
             IsSortDesc   = false,
         }));
-        _syncSortToItems();
+        if (ShowSorting)
+        {
+            _dialogSortState.Clear();
+            _syncSortToItems();
+        }
         InvokeAsync(StateHasChanged);
     }
+
+    /// <summary>Snackbar для показа ошибок валидации.</summary>
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
 
     /// <summary>Закрывает диалог без сохранения.</summary>
     private void Cancel() => MudDialog.Cancel();
@@ -236,6 +261,12 @@
     /// <summary>Применяет изменения и закрывает диалог.</summary>
     private void Apply()
     {
+        if (_items.All(i => !i.IsVisible))
+        {
+            Snackbar.Add("Должна быть видна хотя бы одна колонка", Severity.Warning);
+            return;
+        }
+
         Items.Clear();
         Items.AddRange(_items);
         MudDialog.Close(DialogResult.Ok(Items));

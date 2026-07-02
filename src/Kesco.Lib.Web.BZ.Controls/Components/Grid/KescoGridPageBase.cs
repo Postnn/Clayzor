@@ -44,6 +44,19 @@ public interface IKescoGridDataLoader
         string? filterDescription, string? groupDescription);
 
     /// <summary>
+    /// Вызывается гридом при выборе пункта меню «Печать текущей страницы».
+    /// Загружает те же строки, что видны на текущей странице (с учётом группировки
+    /// и состояния развёрнутости групп), и возвращает готовый HTML-документ для печати.
+    /// </summary>
+    /// <param name="columns">Видимые колонки в порядке отображения.</param>
+    /// <param name="title">Заголовок грида.</param>
+    /// <param name="filterDescription">Описание активных фильтров (или null).</param>
+    /// <param name="groupDescription">Описание колонок группировки (или null).</param>
+    Task<string> BuildPrintHtmlForCurrentPageAsync(
+        IReadOnlyList<KescoColumnMeta> columns, string title,
+        string? filterDescription, string? groupDescription);
+
+    /// <summary>
     /// Проверяет, развёрнуты ли ВСЕ группы на указанной глубине.
     /// Используется чипами панели группировки для отображения иконки переключателя.
     /// Возвращает false, если хотя бы одна группа свёрнута или группировка не активна.
