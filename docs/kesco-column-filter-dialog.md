@@ -18,6 +18,7 @@
 | `ColumnType` | `ColumnType` | `Text` | Тип данных колонки — определяет доступные операторы. Конвертируется в `ColumnTypeDescriptor` через `ColumnTypeRegistry` |
 | `LookupOptions` | `IReadOnlyList<KescoFilterOption>?` | `null` | Список вариантов для выпадающего выбора значения (вместо типозависимого редактора) |
 | `ExistingFilter` | `ColumnFilter?` | `null` | Существующий фильтр для режима редактирования. `null` — новый фильтр |
+| `InitialOperator` | `ColumnFilterOperator?` | `null` | Начальный оператор для нового фильтра. Если задан и допустим для типа колонки — используется вместо `DefaultOperator`. Игнорируется в режиме редактирования |
 
 ## ColumnType и доступные операторы
 

@@ -19,8 +19,8 @@
   `GetFilterDescription` — как есть.
 
 ## Критерии
-- [ ] Новый необязательный параметр `InitialOperator`.
-- [ ] При новом фильтре и валидном `InitialOperator` первое условие открывается
+- [x] Новый необязательный параметр `InitialOperator`.
+- [x] При новом фильтре и валидном `InitialOperator` первое условие открывается
       с ним; иначе — прежний `DefaultOperator`.
-- [ ] Режим редактирования (`ExistingFilter != null`) не изменился.
-- [ ] `dotnet build` без ошибок.
+- [x] Режим редактирования (`ExistingFilter != null`) не изменился.
+- [x] `dotnet build` без ошибок.

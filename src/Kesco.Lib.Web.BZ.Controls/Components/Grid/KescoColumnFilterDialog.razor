@@ -121,6 +121,13 @@
     /// <summary>Существующий фильтр для режима редактирования. null — новый фильтр.</summary>
     [Parameter] public ColumnFilter? ExistingFilter { get; set; }
 
+    /// <summary>
+    /// Начальный оператор для нового фильтра. Если задан и присутствует в списке
+    /// доступных операторов типа колонки — используется вместо <c>DefaultOperator</c>.
+    /// Игнорируется в режиме редактирования (<see cref="ExistingFilter"/> != null).
+    /// </summary>
+    [Parameter] public ColumnFilterOperator? InitialOperator { get; set; }
+
     /// <summary>Необязательный список вариантов для выпадающего выбора значения.</summary>
     [Parameter] public IReadOnlyList<KescoFilterOption>? LookupOptions { get; set; }
 
@@ -246,7 +253,9 @@
         }
         else
         {
-            _op1        = _descriptor.DefaultOperator;
+            _op1 = InitialOperator is { } io && _availableOperators.Contains(io)
+                ? io
+                : _descriptor.DefaultOperator;
             _value1     = null;
             _showSecond = false;
         }

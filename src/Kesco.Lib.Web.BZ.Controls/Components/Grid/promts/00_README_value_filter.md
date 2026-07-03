@@ -31,7 +31,8 @@
 - **V1 — Модель узла `ValueFilter` — СДЕЛАНО, закоммичено.**
 - **V2 — SQL для `ValueFilter` в `KescoCompositeSqlBuilder` — СДЕЛАНО, закоммичено.**
 - **V3 — Метаданные колонки: `AllowValueFilter`, подписи bool — СДЕЛАНО, закоммичено.**
-- **V4 — Источник уникальных значений: `LoadDistinctValuesAsync` — СДЕЛАНО.**
+- **V4 — Источник уникальных значений: `LoadDistinctValuesAsync` — СДЕЛАНО, закоммичено.**
+- **V5 — Пресет оператора в `KescoColumnFilterDialog` (`InitialOperator`) — СДЕЛАНО.**
 
 ## Порядок выполнения (одна задача за подход)
 
