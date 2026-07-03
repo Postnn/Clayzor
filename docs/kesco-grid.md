@@ -30,6 +30,7 @@
 | `SelectVisible` | `bool` | `false` | Показать кнопку выбора записей (чекбоксы + меню групповых операций) |
 | `ShowPrint` | `bool` | `false` | Показать группу «Печать» в меню групповых операций (текущая страница и все данные реализованы) |
 | `ShowExcel` | `bool` | `false` | Показать группу «Выгрузка в Excel» в меню групповых операций. При экспорте рядом с заголовком показывается спиннер |
+| `EnableValueFilter` | `bool` | `true` | Глобальное включение фильтра по уникальному значению (Excel-style). При `false` значки фильтра по значению не отображаются, даже если на отдельных колонках установлен `AllowValueFilter=true` |
 | `CustomBatchGroups` | `IReadOnlyList<BatchOperationGroup>?` | `null` | Кастомные группы операций (рендерятся после стандартных) |
 | `OnAdd` | `EventCallback` | — | Обработчик кнопки «Добавить» |
 | `OnGroupToggle` | `EventCallback<GroupHeaderRow>` | — | Обработчик раскрытия/сворачивания группы. Страница подписывается через `OnGroupToggle="ToggleGroup"` — вручную вставлять `<KescoGroupHeader>` в `CellTemplate` больше не нужно, грид рендерит его сам в вычисленной хост-колонке (`GroupRowHostKey`) |
@@ -76,6 +77,9 @@
 | `SortName` | `string?` | `null` | — | Имя для ORDER BY. Если `null` — используется `SqlName` |
 | `Groupable` | `bool` | `false` | — | Разрешить группировку по колонке |
 | `Filterable` | `bool` | `false` | — | Разрешить фильтрацию по колонке |
+| `AllowValueFilter` | `bool` | `false` | — | Включить фильтр по уникальному значению (Excel-style). Работает только при `Filterable=true` |
+| `BoolTrueLabel` | `string?` | `null` | — | Подпись `true` для булевой колонки (напр. «Только IT оборудование»). `null` → «Да» |
+| `BoolFalseLabel` | `string?` | `null` | — | Подпись `false` для булевой колонки (напр. «Не IT оборудование»). `null` → «Нет» |
 
 ## KescoColumn\<TEntity>
 
@@ -178,6 +182,10 @@ public static class KescoDragState
 | `SortName` | `string` | Имя для ORDER BY (по умолчанию = SqlName) |
 | `Groupable` | `bool` | Разрешена группировка |
 | `Filterable` | `bool` | Разрешена фильтрация |
+| `AllowValueFilter` | `bool` | Разрешён фильтр по уникальному значению (Excel-style) |
+| `BoolTrueLabel` | `string?` | Подпись `true` для булевой колонки |
+| `BoolFalseLabel` | `string?` | Подпись `false` для булевой колонки |
+| `Type` | `ColumnTypeDescriptor` | Дескриптор типа колонки |
 
 ## Серверная группировка
 

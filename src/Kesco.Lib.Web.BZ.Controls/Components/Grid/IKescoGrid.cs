@@ -30,6 +30,15 @@ public sealed class KescoColumnMeta
     /// <summary>Разрешена ли фильтрация по колонке.</summary>
     public bool Filterable { get; init; }
 
+    /// <summary>Разрешена ли фильтрация по набору значений (Excel-style) для этой колонки.</summary>
+    public bool AllowValueFilter { get; init; }
+
+    /// <summary>Пользовательская подпись <c>true</c> для булевой колонки. <c>null</c> → «Да».</summary>
+    public string? BoolTrueLabel { get; init; }
+
+    /// <summary>Пользовательская подпись <c>false</c> для булевой колонки. <c>null</c> → «Нет».</summary>
+    public string? BoolFalseLabel { get; init; }
+
     /// <summary>Дескриптор типа — единый источник операторов, парсинга и формата.</summary>
     public ColumnTypes.ColumnTypeDescriptor Type { get; init; } = null!;
 }
@@ -126,7 +135,16 @@ public interface IKescoGrid
     /// <param name="sortName">
     /// Имя для ORDER BY. Если <c>null</c> — используется <paramref name="sqlName"/>.
     /// </param>
-    void RegisterColumn(int columnId, string sqlName, string displayName, bool groupable, bool filterable, string? sortName = null);
+    /// <param name="allowValueFilter">
+    /// Разрешить фильтр по уникальным значениям (Excel-style). По умолчанию <c>false</c>.
+    /// </param>
+    /// <param name="boolTrueLabel">
+    /// Пользовательская подпись <c>true</c> для булевых колонок. <c>null</c> → «Да».
+    /// </param>
+    /// <param name="boolFalseLabel">
+    /// Пользовательская подпись <c>false</c> для булевых колонок. <c>null</c> → «Нет».
+    /// </param>
+    void RegisterColumn(int columnId, string sqlName, string displayName, bool groupable, bool filterable, string? sortName = null, bool allowValueFilter = false, string? boolTrueLabel = null, string? boolFalseLabel = null);
 
     /// <summary>
     /// Отменяет регистрацию колонки.

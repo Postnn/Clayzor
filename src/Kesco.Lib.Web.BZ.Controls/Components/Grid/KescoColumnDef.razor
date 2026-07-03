@@ -50,9 +50,27 @@
     /// </summary>
     [Parameter] public bool Filterable { get; set; }
 
+    /// <summary>
+    /// Включает фильтр по уникальному значению (Excel-style) для этой колонки.
+    /// Имеет эффект только при <see cref="Filterable"/>=<c>true</c>.
+    /// </summary>
+    [Parameter] public bool AllowValueFilter { get; set; }
+
+    /// <summary>
+    /// Пользовательская подпись для значения <c>true</c> в булевой колонке
+    /// (напр. «Только IT оборудование»). Если <c>null</c> — используется «Да».
+    /// </summary>
+    [Parameter] public string? BoolTrueLabel { get; set; }
+
+    /// <summary>
+    /// Пользовательская подпись для значения <c>false</c> в булевой колонке
+    /// (напр. «Не IT оборудование»). Если <c>null</c> — используется «Нет».
+    /// </summary>
+    [Parameter] public string? BoolFalseLabel { get; set; }
+
     /// <summary>Регистрирует колонку в гриде при инициализации компонента.</summary>
     protected override void OnInitialized()
-        => Grid?.RegisterColumn(ColumnId, SqlName, DisplayName, Groupable, Filterable, SortName);
+        => Grid?.RegisterColumn(ColumnId, SqlName, DisplayName, Groupable, Filterable, SortName, AllowValueFilter, BoolTrueLabel, BoolFalseLabel);
 
     /// <summary>Отменяет регистрацию при уничтожении компонента.</summary>
     public void Dispose()

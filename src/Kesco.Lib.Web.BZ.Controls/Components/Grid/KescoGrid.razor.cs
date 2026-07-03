@@ -180,6 +180,14 @@ public partial class KescoGrid<TEntity> where TEntity : class
     [Parameter] public bool ShowExcel { get; set; }
 
     /// <summary>
+    /// Глобальное включение фильтра по значению (Excel-style) для всех колонок.
+    /// При <c>false</c> значки фильтра по значению не отображаются, даже если
+    /// на отдельных колонках установлен <c>AllowValueFilter</c>=<c>true</c>.
+    /// По умолчанию <c>true</c>. Используется начиная с задачи V7.
+    /// </summary>
+    [Parameter] public bool EnableValueFilter { get; set; } = true;
+
+    /// <summary>
     /// Кастомные группы операций для меню групповых операций.
     /// Каждая группа рендерится как подменю со своими операциями.
     /// Обработчики (<see cref="BatchOperation.OnExecute"/>) реализуются в приложении.
@@ -481,19 +489,22 @@ public partial class KescoGrid<TEntity> where TEntity : class
     /// Регистрирует колонку. Вызывается из <see cref="KescoColumnDef"/> при инициализации.
     /// Поддерживает два индекса: по <paramref name="columnId"/> и по <paramref name="sqlName"/>.
     /// </summary>
-    void IKescoGrid.RegisterColumn(int columnId, string sqlName, string displayName, bool groupable, bool filterable, string? sortName)
+    void IKescoGrid.RegisterColumn(int columnId, string sqlName, string displayName, bool groupable, bool filterable, string? sortName, bool allowValueFilter, string? boolTrueLabel, string? boolFalseLabel)
     {
         if (string.IsNullOrEmpty(sqlName)) return;
         var colType = FilterColumnTypes.TryGetValue(sqlName, out var t) ? t : ColumnType.Text;
         var meta = new KescoColumnMeta
         {
-            ColumnId    = columnId,
-            SqlName     = sqlName,
-            DisplayName = displayName,
-            SortName    = string.IsNullOrEmpty(sortName) ? sqlName : sortName,
-            Groupable   = groupable,
-            Filterable  = filterable,
-            Type        = ColumnTypes.ColumnTypeRegistry.FromKind(colType),
+            ColumnId         = columnId,
+            SqlName          = sqlName,
+            DisplayName      = displayName,
+            SortName         = string.IsNullOrEmpty(sortName) ? sqlName : sortName,
+            Groupable        = groupable,
+            Filterable       = filterable,
+            AllowValueFilter = allowValueFilter,
+            BoolTrueLabel    = boolTrueLabel,
+            BoolFalseLabel   = boolFalseLabel,
+            Type             = ColumnTypes.ColumnTypeRegistry.FromKind(colType),
         };
         _columnById[columnId]     = meta;
         _columnBySqlName[sqlName] = meta;
