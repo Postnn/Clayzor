@@ -26,9 +26,15 @@ public partial class KescoGrid<TEntity> where TEntity : class
         _filterRoot.Nodes.OfType<ColumnFilter>()
                          .Where(f => f.Source == KescoFilterSource.ColumnDialog);
 
-    /// <summary>Есть ли в дереве хотя бы один узел составного фильтра (не лист ColumnDialog).</summary>
+    /// <summary>Есть ли в дереве хотя бы один узел составного фильтра (не лист ColumnDialog и не ValueFilter).</summary>
     private bool HasComposite =>
-        _filterRoot.Nodes.Any(n => n is not ColumnFilter cf || cf.Source != KescoFilterSource.ColumnDialog);
+        _filterRoot.Nodes.Any(n =>
+            n is not ValueFilter
+            && (n is not ColumnFilter cf || cf.Source != KescoFilterSource.ColumnDialog));
+
+    /// <summary>Активные листья фильтра по значению — для отдельных чипов в панели.</summary>
+    private IEnumerable<ValueFilter> ValueFilterLeaves =>
+        _filterRoot.Nodes.OfType<ValueFilter>().Where(vf => vf.HasValue);
 
     /// <summary>
     /// Включает/выключает панель фильтрации. Настроенный фильтр при сворачивании
@@ -98,8 +104,17 @@ public partial class KescoGrid<TEntity> where TEntity : class
     /// Открывает диалог настройки фильтра для указанной колонки.
     /// Результат вставляется в <see cref="_filterRoot"/> как лист с <c>Source=ColumnDialog</c>.
     /// </summary>
-    private async Task OpenFilterDialog(string sqlName, string displayName)
+    private async Task OpenFilterDialog(string sqlName, string displayName, ColumnFilterOperator? initialOperator = null)
     {
+        // Взаимоисключение: нельзя задать условие при активном фильтре по значению
+        if (_filterRoot.Nodes.OfType<ValueFilter>()
+                .Any(vf => string.Equals(vf.Column, sqlName, StringComparison.OrdinalIgnoreCase) && vf.HasValue))
+        {
+            Snackbar.Add($"На колонке «{displayName}» установлен фильтр по значению. " +
+                         "Снимите его, чтобы задать фильтр по условию.", Severity.Info);
+            return;
+        }
+
         var colType  = FilterColumnTypes.TryGetValue(sqlName, out var t) ? t : ColumnType.Text;
         // Ищем существующий лист ColumnDialog для этой колонки
         var existing = _filterRoot.Nodes
@@ -112,6 +127,7 @@ public partial class KescoGrid<TEntity> where TEntity : class
             { x => x.ColumnSqlName,     sqlName },
             { x => x.ColumnType,        colType },
             { x => x.ExistingFilter,    existing },
+            { x => x.InitialOperator,   initialOperator },
             { x => x.LookupOptions,     FilterLookupOptions?.GetValueOrDefault(sqlName) },
         };
         var options = new DialogOptionsEx
@@ -127,6 +143,12 @@ public partial class KescoGrid<TEntity> where TEntity : class
         if (result is not null && !result.Canceled && result.Data is ColumnFilter colFilter)
         {
             colFilter.Source = KescoFilterSource.ColumnDialog;
+            // Взаимоисключение: удалить ValueFilter этой колонки
+            var existingVf = _filterRoot.Nodes
+                .OfType<ValueFilter>()
+                .FirstOrDefault(old => string.Equals(old.Column, colFilter.Column, StringComparison.OrdinalIgnoreCase));
+            if (existingVf is not null)
+                _filterRoot.Nodes.Remove(existingVf);
             // Заменяем существующий или добавляем новый лист
             if (existing is not null)
             {
@@ -227,4 +249,136 @@ public partial class KescoGrid<TEntity> where TEntity : class
             await NotifyQueryChanged();
         }
     }
+
+    // ── Фильтр по значению (Excel-style) — V7 ──────────────────────────────────
+
+    /// <inheritdoc cref="IKescoGrid.IsValueFilterAvailable"/>
+    bool IKescoGrid.IsValueFilterAvailable(string sqlName)
+    {
+        if (!EnableValueFilter) return false;
+        if (!_columnBySqlName.TryGetValue(sqlName, out var meta)) return false;
+        return meta.Filterable && meta.AllowValueFilter;
+    }
+
+    /// <inheritdoc cref="IKescoGrid.IsValueFilterActive"/>
+    bool IKescoGrid.IsValueFilterActive(string sqlName)
+        => _filterRoot.Nodes.OfType<ValueFilter>()
+            .Any(vf => string.Equals(vf.Column, sqlName, StringComparison.OrdinalIgnoreCase) && vf.HasValue);
+
+    /// <inheritdoc cref="IKescoGrid.OpenValueFilterDialog"/>
+    async Task IKescoGrid.OpenValueFilterDialog(string sqlName)
+    {
+        if (!_columnBySqlName.TryGetValue(sqlName, out var meta)) return;
+
+        var colType = FilterColumnTypes.TryGetValue(sqlName, out var t) ? t : ColumnType.Text;
+
+        var existingValue = _filterRoot.Nodes
+            .OfType<ValueFilter>()
+            .FirstOrDefault(vf => string.Equals(vf.Column, sqlName, StringComparison.OrdinalIgnoreCase));
+
+        var existingCondition = _filterRoot.Nodes
+            .OfType<ColumnFilter>()
+            .FirstOrDefault(cf => cf.Column == sqlName && cf.Source == KescoFilterSource.ColumnDialog);
+
+        // Ленивый загрузчик (замыкание на LoadDistinctValuesAsync)
+        Func<Task<DistinctValuesResult>> load = () =>
+            DataLoader!.LoadDistinctValuesAsync(sqlName, BuildCurrentQuery(), 100);
+
+        var parameters = new DialogParameters<KescoColumnValueFilterDialog>
+        {
+            { x => x.ColumnSqlName,            sqlName },
+            { x => x.ColumnDisplayName,        meta.DisplayName },
+            { x => x.ColumnType,               colType },
+            { x => x.BoolTrueLabel,            meta.BoolTrueLabel },
+            { x => x.BoolFalseLabel,           meta.BoolFalseLabel },
+            { x => x.ExistingValueFilter,      existingValue },
+            { x => x.ExistingConditionFilter,  existingCondition },
+            { x => x.LoadValues,               load },
+        };
+        var options = new DialogOptionsEx
+        {
+            MaxWidth  = MaxWidth.ExtraSmall,
+            FullWidth = true,
+            DragMode  = MudDialogDragMode.Simple,
+        };
+        var dialog = await DialogService.ShowExAsync<KescoColumnValueFilterDialog>(
+            $"Фильтр: {meta.DisplayName}", parameters, options);
+        var result = await dialog.Result;
+
+        if (result is null || result.Canceled || result.Data is null) return;
+
+        switch (result.Data)
+        {
+            case ValueFilter vf:
+                await ApplyValueFilter(sqlName, vf);
+                break;
+
+            case OpenConditionRequest ocr:
+                await OpenFilterDialog(sqlName, meta.DisplayName, ocr.Operator);
+                break;
+
+            default:
+                if (ReferenceEquals(result.Data, KescoColumnValueFilterDialog.ClearedSentinel))
+                {
+                    await RemoveValueFilter(sqlName);
+                }
+                else if (ReferenceEquals(result.Data, KescoColumnValueFilterDialog.RemoveConditionSentinel))
+                {
+                    await RemoveFilter(sqlName);
+                    await ((IKescoGrid)this).OpenValueFilterDialog(sqlName);
+                }
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Применяет ValueFilter к дереву. Удаляет существующие ColumnFilter и ValueFilter
+    /// для этой колонки (взаимоисключение — треб. 8, 9).
+    /// </summary>
+    private async Task ApplyValueFilter(string sqlName, ValueFilter vf)
+    {
+        // Удалить существующий ColumnFilter (Source=ColumnDialog) для этой колонки
+        var existingCond = _filterRoot.Nodes
+            .OfType<ColumnFilter>()
+            .FirstOrDefault(cf => cf.Column == sqlName && cf.Source == KescoFilterSource.ColumnDialog);
+        if (existingCond is not null)
+            _filterRoot.Nodes.Remove(existingCond);
+
+        // Удалить старый ValueFilter для этой колонки
+        var existingVf = _filterRoot.Nodes
+            .OfType<ValueFilter>()
+            .FirstOrDefault(old => string.Equals(old.Column, sqlName, StringComparison.OrdinalIgnoreCase));
+        if (existingVf is not null)
+            _filterRoot.Nodes.Remove(existingVf);
+
+        _filterRoot.Nodes.Add(vf);
+        _pageNumber = 1;
+        await NotifyQueryChanged();
+    }
+
+    /// <summary>Удаляет ValueFilter для указанной колонки из дерева фильтра.</summary>
+    private async Task RemoveValueFilter(string sqlName)
+    {
+        var existingVf = _filterRoot.Nodes
+            .OfType<ValueFilter>()
+            .FirstOrDefault(old => string.Equals(old.Column, sqlName, StringComparison.OrdinalIgnoreCase));
+        if (existingVf is not null)
+        {
+            _filterRoot.Nodes.Remove(existingVf);
+            _pageNumber = 1;
+            await NotifyQueryChanged();
+        }
+    }
+
+    /// <summary>
+    /// Строит снимок текущего состояния запроса для передачи в
+    /// <see cref="IKescoGridDataLoader.LoadDistinctValuesAsync"/>.
+    /// </summary>
+    private KescoDataQuery BuildCurrentQuery()
+        => new()
+        {
+            SearchText      = _searchText ?? "",
+            CompositeFilter = _filterRoot,
+        };
+
 }

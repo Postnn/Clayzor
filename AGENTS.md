@@ -178,7 +178,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoGridPrintHtmlGenerator** — статический генератор HTML для печати всех данных грида. Генерирует HTML с теми же MudBlazor CSS-классами (`.mud-table`, `.mud-table-cell`, `.group-header-cell`) и встраивает полный `@media print` CSS — визуально идентичен печати текущей страницы | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoGridPrintStyles** — символы для печатных форм: иконки групп (`▸`/`▾` — аналог MudBlazor ChevronRight/ExpandMore), булевы значения (`✓`/`✗` — аналог CheckCircle/Cancel) | — |
 | **KescoColumnFilterDialog** — диалог настройки фильтра по колонке с типо-зависимыми операторами. Использует `KescoFilterValueEditor` для редакторов значений. Параметр `InitialOperator` позволяет задать начальный оператор для нового фильтра | [docs/kesco-column-filter-dialog.md](docs/kesco-column-filter-dialog.md) |
-| **KescoColumnValueFilterDialog** — диалог фильтра по уникальным значениям (Excel-style): список с галочками, «выделить все», контекстные условия, ленивая загрузка. Возвращает `ValueFilter`, `Cleared`, `OpenConditionRequest` или `RemoveCondition` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **KescoColumnValueFilterDialog** — диалог фильтра по уникальным значениям (Excel-style): кастомные чекбоксы (как в гриде), «выделить все» (tri-state), контекстные условия через `MudMenu`, ленивая загрузка, обработка порога 100, взаимоисключение с фильтром по условию. Возвращает `ValueFilter`, `Cleared`, `OpenConditionRequest` или `RemoveCondition` | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **OpenConditionRequest** — record для маршрутизации из диалога значений в форму условия с пресетом оператора | — |
 | **KescoFilterOption** — класс варианта для выпадающего списка значения фильтра: `Value` (object?), `Label` (string) | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterValueEditor** — единый редактор значения фильтра по типу колонки (Text/Number/Decimal/Date/Boolean/lookup). Скрывается при операторах без значения. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterOperatorLabels** — статический хелпер: читаемые русские метки операторов фильтрации. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | — |
@@ -203,7 +204,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Интерфейс | Назначение |
 |---|---|
-| **IKescoGrid** — контракт KescoGrid: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `ColumnMenuMode`, `IsGrouped`, `ToggleSort`, `GetSortBadge`, `GetColumnMeta`, `AddGroupAsync`, `AddFilterAsync`, регистрация колонок | [docs/kesco-grid.md](docs/kesco-grid.md) |
+| **IKescoGrid** — контракт KescoGrid: `SelectSql`, `SearchColumns`, `DefaultOrder`, `EditDialogType`, `ColumnMenuMode`, `IsGrouped`, `ToggleSort`, `GetSortBadge`, `GetColumnMeta`, `AddGroupAsync`, `AddFilterAsync`, `IsValueFilterAvailable`, `IsValueFilterActive`, `OpenValueFilterDialog` (V7), регистрация колонок | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **IKescoGridDataLoader** — контракт обратного вызова: `OnQueryChangedAsync(KescoDataQuery)`, `ExcelExportAsync(ExcelExportRequest)`, `BuildPrintHtmlAsync(columns, title, filterDescription, groupDescription)`, `BuildPrintHtmlForCurrentPageAsync(columns, title, filterDescription, groupDescription)`, `BuildPrintHtmlForSelectedAsync(...)`, `LoadDistinctValuesAsync(sqlName, query, limit)` — загрузка уникальных значений колонки для Excel-style фильтра. Реализуется KescoGridPageBase, передаётся через `DataLoader="this"` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnMeta** — метаданные зарегистрированной колонки: `ColumnId`, `SqlName`, `DisplayName`, `SortName`, `Groupable`, `Filterable`, `AllowValueFilter`, `BoolTrueLabel`, `BoolFalseLabel`, `Type` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 
@@ -225,7 +226,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | `KescoGrid.Search.cs` | 18 | `_searchText`, `DebounceTimer`, обработчики поиска |
 | `KescoGrid.Sorting.cs` | 66 | `_sortState`, `ToggleSort`, `HandleSortClick`, `GetSortBadge` |
 | `KescoGrid.Grouping.cs` | ~250 | `OnGroupToggle` (параметр-событие), `GroupRowHostKey` (авто-выбор хост-колонки для заголовка группы), `IsGroupRowHost`, `_groupColumns`, `_trayExpanded`, `AddGroupColumn`, `RemoveGroupColumn`, `OnChipDragStart/End`, `OnTrayDragOver/Drop`, `GroupColumns`, `OnGroupTriToggle`, `OnHeaderTriToggle`, `_groupChildIds` |
-| `KescoGrid.Filtering.cs` | 195 | `_filterRoot` (KescoFilterGroupNode), `_filterTrayExpanded`, `ColumnDialogLeaves`, `OpenFilterDialog`, `AddFilterAsync`, `RemoveFilter`, `RemoveCompositeNodes`, `OnFilterTrayDragOver`, `OnFilterTrayDrop`, `BuildFilterDescription`, `BuildFilterSegments`, `ActiveCompositeFilter`, `OpenCompositeFilterDialog` |
+| `KescoGrid.Filtering.cs` | ~420 | `_filterRoot`, `HasComposite`, `ValueFilterLeaves` (V12), `OpenFilterDialog` (+`initialOperator`), `OpenValueFilterDialog` (V7), `ApplyValueFilter`, `RemoveValueFilter`, `OpenFilterDialogWithOperator`, `BuildCurrentQuery`, `OpenCompositeFilterDialog`, чипы, фильтр-трей |
 | `KescoGrid.DragDrop.cs` | 86 | `_dragSourceIndex`, drag-and-drop чипов группировки (перемещение/перестановка в трее) |
 | `KescoGrid.Selection.cs` | 113 | `_selectMode`, `_selectAllChecked`, `_selectedIds`, `OnRowSelectAsync`, `SelectAllAsync`, `DeselectAllAsync`, `ToggleSelectMode`, персистентность выделения |
 | `KescoGrid.ExportMenu.cs` | ~240 | `_isExporting`, `_openSubGroups`, `ToggleSubGroup`, `ResolveExportColumnsAsync` (prompt → настройка/как на странице/null), `Print{CurrentPage,Selected,All}Internal` (через `BuildPrintHtmlForCurrentPageAsync` / `BuildPrintHtmlAsync` / `BuildPrintHtmlForSelectedAsync`), `Excel{CurrentPage,Selected,All}Internal` |
@@ -243,7 +244,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 
 | Файл | Строк | Содержание |
 |---|---|---|
-| `KescoGridPageBase.cs` | 365 | Ядро: `[Inject]`-сервисы (`Db`, `Snackbar`, `DialogService`, `JS`), свойство `Grid`, поля `_query`/`_rows`/`_loading`/`_totalGroupCount`, `OnAfterRenderAsync`, `LoadData`, `LoadFlatData`, `LoadGroupedData`, `ToggleGroup`, `OpenAddDialog`, `Dispose`, интерфейс `IKescoGridDataLoader` |
+| `KescoGridPageBase.cs` | ~530 | Ядро: `[Inject]`-сервисы, `Grid`, `LoadData`, `LoadFlatData`, `LoadGroupedData`, `LoadDistinctValuesAsync` (V4), `CloneFilterTreeWithoutColumn`, `CheckHasBlanksAsync`, `ToggleGroup`, `OpenAddDialog`, `IKescoGridDataLoader` |
 | `KescoGridPageBase.ColumnTypes.cs` | 83 | Вывод типов колонок: `_idColumnName`, `_propertyMap`, `_inferredColumnTypes`, `FilterColumnTypes`, `GetIdColumnName`, `BuildPropertyMap`, `InferFilterColumnTypes`, `MapClrTypeToColumnType` |
 | `KescoGridPageBase.Export.Excel.cs` | 208 | Экспорт в Excel: `IKescoGridDataLoader.ExcelExportAsync`, `BuildAllRowsForExcel`, `BuildAllGroupedRowsForExcel`, `BuildExportRows`, `CollectCounts`, `SanitizeFileName` |
 | `KescoGridPageBase.Export.Print.cs` | 89 | Печать всех данных: `BuildAllRowsForPrint`, `BuildAllFlatRowsForPrint`, `BuildAllGroupedRowsForPrint` |

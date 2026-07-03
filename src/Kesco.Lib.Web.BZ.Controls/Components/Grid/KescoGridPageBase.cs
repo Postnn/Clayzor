@@ -279,45 +279,47 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         var bracketedCol   = $"[{sqlName}]";
 
         // Шаг 4 — проверка на Capped
+        var notBlank = isText
+            ? $"{bracketedCol} IS NOT NULL AND {bracketedCol} <> ''"
+            : $"{bracketedCol} IS NOT NULL";
+        var valueWhere = KescoDataQuery.CombineWhere(where, notBlank);
+
         var countSql = $"""
             SELECT COUNT(*) FROM (
                 SELECT DISTINCT {bracketedCol} v
                 FROM ( {selectSql} ) src
-                {(where is null ? "" : $"WHERE {where}")}
-                AND {bracketedCol} IS NOT NULL
-                {(isText ? $"AND {bracketedCol} <> ''" : "")}
+                {(valueWhere is null ? "" : $"WHERE {valueWhere}")}
             ) t
             """;
 
         var distinctCount = (await Db.QueryAsync<int>(countSql, dp)).FirstOrDefault();
 
-        if (distinctCount > limit)
-        {
-            var hasBlanks = await CheckHasBlanksAsync(selectSql, bracketedCol, where, dp, isText);
-            return new DistinctValuesResult { Capped = true, HasBlanks = hasBlanks };
-        }
+        // Шаг 5 — HasBlanks (один раз, дешёвый EXISTS)
+        var hasBlanks = await CheckHasBlanksAsync(selectSql, bracketedCol, where, dp, isText);
 
-        // Шаг 5 — выборка значений
+        if (distinctCount > limit)
+            return new DistinctValuesResult { Capped = true, HasBlanks = hasBlanks };
+
+        // Шаг 6 — выборка значений
         var valuesSql = $"""
             SELECT DISTINCT TOP (@lim) {bracketedCol} v
             FROM ( {selectSql} ) src
-            {(where is null ? "" : $"WHERE {where}")}
-            AND {bracketedCol} IS NOT NULL
-            {(isText ? $"AND {bracketedCol} <> ''" : "")}
+            {(valueWhere is null ? "" : $"WHERE {valueWhere}")}
             ORDER BY v
             """;
 
         dp.Add("lim", limit);
-        var rawValues = (await Db.QueryAsync<object>(valuesSql, dp)).ToList();
-
-        // Шаг 6 — HasBlanks
-        var hasBlanks2 = await CheckHasBlanksAsync(selectSql, bracketedCol, where, dp, isText);
+        var rows     = await Db.QueryAsync<dynamic>(valuesSql, dp);
+        var rawValues = ((IEnumerable<dynamic>)rows)
+            .Select(r => (object?)((IDictionary<string, object>)r)["v"])
+            .Select(v => v is DBNull ? null : v)
+            .ToList();
 
         return new DistinctValuesResult
         {
             Values        = rawValues.AsReadOnly(),
             Capped        = false,
-            HasBlanks     = hasBlanks2,
+            HasBlanks     = hasBlanks,
             TotalDistinct = distinctCount,
         };
     }
@@ -498,12 +500,12 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         var blankCheck = isText
             ? $"{bracketedCol} IS NULL OR {bracketedCol} = ''"
             : $"{bracketedCol} IS NULL";
+        var blankWhere = KescoDataQuery.CombineWhere(where, blankCheck);
 
         var sql = $"""
             SELECT CASE WHEN EXISTS(
                 SELECT 1 FROM ( {selectSql} ) src
-                {(where is null ? "" : $"WHERE {where}")}
-                AND ({blankCheck})
+                {(blankWhere is null ? "" : $"WHERE {blankWhere}")}
             ) THEN 1 ELSE 0 END
             """;
 

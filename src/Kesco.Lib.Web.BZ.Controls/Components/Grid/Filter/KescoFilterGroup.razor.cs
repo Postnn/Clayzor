@@ -96,4 +96,14 @@ public partial class KescoFilterGroup : ComponentBase
         => KescoFilterDescriptionBuilder.DescribeLeaf(
             leaf,
             sql => Columns.FirstOrDefault(c => c.SqlName == sql)?.DisplayName ?? sql);
+
+    /// <summary>
+    /// Возвращает подпись для фильтра по значению в диалоге настраиваемого фильтра.
+    /// Формат: «Колонка: выбраны значения» (как у чипа в трее).
+    /// </summary>
+    private string ValueFilterLabel(ValueFilter vf)
+    {
+        var name = Columns.FirstOrDefault(c => c.SqlName == vf.Column)?.DisplayName ?? vf.Column;
+        return $"{name}: выбраны значения";
+    }
 }

@@ -194,6 +194,24 @@ public interface IKescoGrid
     Task OpenCompositeFilterDialog();
 
     /// <summary>
+    /// Доступен ли фильтр по значению (Excel-style) для колонки.
+    /// Условия: глобальный <c>EnableValueFilter</c> + <c>Filterable</c> + <c>AllowValueFilter</c>.
+    /// </summary>
+    bool IsValueFilterAvailable(string sqlName);
+
+    /// <summary>
+    /// Активен ли фильтр по значению для колонки (есть <see cref="ValueFilter"/> с <c>HasValue</c>).
+    /// Используется для подсветки значка в заголовке (треб. 13).
+    /// </summary>
+    bool IsValueFilterActive(string sqlName);
+
+    /// <summary>
+    /// Открывает диалог фильтра по уникальным значениям (<see cref="KescoColumnValueFilterDialog"/>)
+    /// для колонки с ленивой загрузкой через <see cref="IKescoGridDataLoader.LoadDistinctValuesAsync"/>.
+    /// </summary>
+    Task OpenValueFilterDialog(string sqlName);
+
+    /// <summary>
     /// Регистрирует колонку в порядке отображения.
     /// Вызывается из <see cref="KescoColumn{TEntity}"/> при инициализации.
     /// </summary>

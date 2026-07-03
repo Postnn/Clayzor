@@ -74,6 +74,22 @@ public sealed class DistinctValuesResult
   из `FilterColumnTypes` (см. `KescoGridPageBase.ColumnTypes.cs`,
   `_inferredColumnTypes`).
 
+## ⚠️ Не собирать `WHERE {where} AND …` вручную
+`where` (контекстный фильтр) может быть `null`. Нельзя дописывать
+`{(where is null ? "" : $"WHERE {where}")} AND [col] IS NOT NULL` — при `where==null`
+получится `… src AND [col] IS NOT NULL` → SQL-ошибка «Неправильный синтаксис около
+AND». Предикаты «не пусто»/«пусто» складывать в общий WHERE через
+`KescoDataQuery.CombineWhere` (он оборачивает операнды в скобки и при `null`
+возвращает второй операнд):
+```csharp
+var notBlank = isText
+    ? $"{col} IS NOT NULL AND {col} <> ''"
+    : $"{col} IS NOT NULL";
+var valueWhere = KescoDataQuery.CombineWhere(where, notBlank); // всегда непусто
+// затем: FROM (select) src WHERE {valueWhere}
+```
+Та же логика для проверки пустышек: `CombineWhere(where, "col IS NULL OR col = ''")`.
+
 ## Безопасность
 - `sqlName` подставляется в SQL **только** если он есть в реестре колонок
   (`BuildKnownColumns()` / ключи `_inferredColumnTypes`). Иначе — бросить/вернуть
@@ -82,13 +98,13 @@ public sealed class DistinctValuesResult
   Dapper-параметры (уже обеспечивается `BuildCompositeFilterClause`).
 
 ## Критерии
-- [x] Метод в `IKescoGridDataLoader` + реализация в `KescoGridPageBase<T>`.
-- [x] Выборка идёт по всей таблице (весь результат запроса), НЕ по текущей
+- [ ] Метод в `IKescoGridDataLoader` + реализация в `KescoGridPageBase<T>`.
+- [ ] Выборка идёт по всей таблице (весь результат запроса), НЕ по текущей
       странице: пагинация к distinct-запросу не применяется.
-- [x] Собственные условия колонки исключаются из контекстного WHERE.
-- [x] Список значений отсортирован по возрастанию (`ORDER BY v`): текст — по
+- [ ] Собственные условия колонки исключаются из контекстного WHERE.
+- [ ] Список значений отсортирован по возрастанию (`ORDER BY v`): текст — по
       алфавиту, числа/даты — по значению; порядок из SQL в UI не переставляется.
-- [x] `Capped=true` при `> limit` без выборки значений; иначе значения ≤ limit.
-- [x] `HasBlanks` определяется отдельно; типизация значений сохранена.
-- [x] `sqlName` только из белого списка; значения — параметрами.
-- [x] `dotnet build` без ошибок.
+- [ ] `Capped=true` при `> limit` без выборки значений; иначе значения ≤ limit.
+- [ ] `HasBlanks` определяется отдельно; типизация значений сохранена.
+- [ ] `sqlName` только из белого списка; значения — параметрами.
+- [ ] `dotnet build` без ошибок.

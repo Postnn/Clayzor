@@ -660,6 +660,22 @@ body {
     fill: var(--lh-gold) !important;
 }
 
+/* ── Kesco value-filter icon (FilterList в заголовке колонки) ── */
+/* Иконка должна быть видна на тёмном фоне шапки (--lh-navy).
+   Color.Default даёт тёмную иконку на тёмном фоне — невидима.
+   Поэтому используем CSS-класс с явным fill вместо Color= атрибута. */
+.kesco-vf-icon .mud-svg-icon path:not([fill="none"]) {
+    fill: var(--lh-white) !important;
+    opacity: .55;
+}
+.mud-table-cell:hover .kesco-vf-icon .mud-svg-icon path:not([fill="none"]) {
+    opacity: 1;
+}
+.kesco-vf-icon--active .mud-svg-icon path:not([fill="none"]) {
+    fill: var(--lh-gold) !important;
+    opacity: 1;
+}
+
 /* ── KescoGrid cell borders ── */
 .mud-table-cell {
     border-bottom: 1px solid var(--lh-grey-light) !important;

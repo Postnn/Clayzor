@@ -85,6 +85,21 @@
                               OnChanged="@NotifyChanged"
                               OnRemove="@(() => RemoveNode(capturedIndex))" />
         }
+        else if (node is ValueFilter vf)
+        {
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
+                        border:1px solid var(--mud-palette-lines-default);border-radius:4px;
+                        color:var(--mud-palette-text-secondary);font-size:var(--kesco-font-size)">
+                <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" />
+                <MudText Typo="Typo.body2" Style="flex:1 1 auto">
+                    Фильтр по значению: @ValueFilterLabel(vf)
+                </MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                               Size="Size.Small"
+                               OnClick="@(() => RemoveNode(capturedIndex))"
+                               title="Удалить фильтр по значению" Style="flex:0 0 auto" />
+            </div>
+        }
     }
 
 </div>

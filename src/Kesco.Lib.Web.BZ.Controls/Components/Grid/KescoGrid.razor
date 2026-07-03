@@ -229,7 +229,7 @@
     @if (_filterTrayExpanded)
     {
         var _filterSegments   = BuildFilterSegments();
-        var _hasAnyFilter     = _filterSegments.Count > 0;
+        var _hasAnyFilter     = _filterSegments.Count > 0 || ValueFilterLeaves.Any();
         <div class="filter-tray @(_hasAnyFilter ? "filter-tray--active" : "") d-flex align-items-center flex-wrap gap-2 mb-2"
              @ondragover="OnFilterTrayDragOver"
              @ondragover:preventDefault="true"
@@ -238,6 +238,25 @@
                          Icon="@Icons.Material.Filled.FilterList"
                          Class="filter-tray-icon"
                          OnClick="@OpenCompositeFilterDialog" />
+
+            @* ── Чипы фильтра по значению (всегда, независимо от HasComposite) ── *@
+            @foreach (var vf in ValueFilterLeaves.ToList())
+            {
+                var vfSql  = vf.Column;
+                var vfDisp = _columnBySqlName.TryGetValue(vfSql, out var vm) ? vm.DisplayName : vfSql;
+                <div class="filter-chip" style="cursor:pointer"
+                     @onclick="async () => await ((IKescoGrid)this).OpenValueFilterDialog(vfSql)">
+                    <span class="chip-label">@vfDisp: выбраны значения</span>
+                    <span @onclick:stopPropagation="true">
+                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                       Size="Size.Small"
+                                       OnClick="async () => await RemoveValueFilter(vfSql)"
+                                       Class="chip-remove-btn pa-0"
+                                       Style="width:18px;height:18px"
+                                       title="Снять фильтр по значению" />
+                    </span>
+                </div>
+            }
 
             @if (HasComposite)
             {
@@ -434,6 +453,17 @@
                                     CellClassFunc="@(item => item is GroupHeaderRow && IsGroupRowHost(sqlName) ? "group-header-cell" : "")">
                         <HeaderTemplate>
                             <div style="display:flex;align-items:center;width:100%">
+                                @if (((IKescoGrid)this).IsValueFilterAvailable(sqlName))
+                                {
+                                    var vfSql    = sqlName;
+                                    var vfActive = ((IKescoGrid)this).IsValueFilterActive(vfSql);
+                                    <MudIconButton Icon="@Icons.Material.Filled.FilterList"
+                                                   Size="Size.Small"
+                                                   Class="@("kesco-vf-icon" + (vfActive ? " kesco-vf-icon--active" : ""))"
+                                                   OnClick="async () => await ((IKescoGrid)this).OpenValueFilterDialog(vfSql)"
+                                                   Style="padding:0;width:22px;height:22px;min-width:22px;margin-right:2px"
+                                                   title="Фильтр по значению" />
+                                }
                                  <div style="flex:1;display:flex;align-items:center;cursor:grab"
                                       draggable="true"
                                       data-col-sql="@sqlName"

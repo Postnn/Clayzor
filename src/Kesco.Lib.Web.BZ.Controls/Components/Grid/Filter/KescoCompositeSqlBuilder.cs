@@ -186,14 +186,21 @@ public static class KescoCompositeSqlBuilder
             if (hasStringValues)
                 parts.Add($"{colName} = ''");
         }
+        else if (negate)
+        {
+            // Negate=true, BlankChecked=false — явно исключаем NULL/пустые строки
+            parts.Add($"{colName} IS NOT NULL");
+            if (hasStringValues)
+                parts.Add($"{colName} <> ''");
+        }
 
         if (parts.Count == 0)
             return null; // Negate=true, BlankChecked=true, Values пуст → 1=1
 
         // Логика объединения:
-        // Negate=false → OR (расширяем выборку: значение ИЛИ пустое)
-        // Negate=true  → AND (сужаем выборку: не значение И не null)
-        var separator = negate ? " AND " : " OR ";
+        // BlankChecked=true → OR  (добавляем пустые строки к выборке)
+        // BlankChecked=false → AND (сужаем: исключаем и значения, и пустые)
+        var separator = blank ? " OR " : " AND ";
         return $"({string.Join(separator, parts)})";
     }
 }

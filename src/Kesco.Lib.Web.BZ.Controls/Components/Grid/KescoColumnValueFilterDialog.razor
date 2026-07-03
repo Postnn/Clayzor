@@ -9,7 +9,7 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <div style="display:flex;flex-direction:column;gap:12px;min-width:320px">
+        <div class="kesco-vf-dialog" style="display:flex;flex-direction:column;gap:6px;min-width:300px">
 
             @* ── Индикатор загрузки ────────────────────────────── *@
             @if (_loading)
@@ -28,24 +28,34 @@
                 @* ── Контекстный список условий (треб. 7) ───────── *@
                 @if (_availableOperators.Count > 1 && ColumnType != ColumnType.Boolean)
                 {
-                    <MudExpansionPanel Text="@_conditionsLabel" Style="margin:0">
-                        <div style="display:flex;flex-direction:column;gap:2px">
-                            @foreach (var op in _availableOperators)
-                            {
-                                if (!_descriptor.OperatorTakesValue(op) && op != ColumnFilterOperator.IsNull
-                                    && op != ColumnFilterOperator.IsNotNull && op != ColumnFilterOperator.IsEmpty
-                                    && op != ColumnFilterOperator.IsNotEmpty)
-                                    continue;
+                    <div style="display:flex;align-items:center">
+                        <MudMenu Dense="true"
+                                 AnchorOrigin="Origin.TopRight"
+                                 TransformOrigin="Origin.TopLeft">
+                            <ActivatorContent Context="menuCtx">
+                                @{ var ctx = (object)menuCtx; }
+                                <div style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"
+                                     @onclick="@(async () => await ((dynamic)ctx).ToggleAsync(null))">
+                                    <MudText Typo="Typo.body2" Style="font-weight:600">@_conditionsLabel</MudText>
+                                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
+                                </div>
+                            </ActivatorContent>
+                            <ChildContent>
+                                @foreach (var op in _availableOperators)
+                                {
+                                    if (!_descriptor.OperatorTakesValue(op) && op != ColumnFilterOperator.IsNull
+                                        && op != ColumnFilterOperator.IsNotNull && op != ColumnFilterOperator.IsEmpty
+                                        && op != ColumnFilterOperator.IsNotEmpty)
+                                        continue;
 
-                                <MudButton Variant="Variant.Text"
-                                           Size="Size.Small"
-                                           OnClick="() => OpenCondition(op)"
-                                           Style="text-transform:none;justify-content:flex-start;padding:4px 12px">
-                                    @KescoFilterOperatorLabels.Get(op)
-                                </MudButton>
-                            }
-                        </div>
-                    </MudExpansionPanel>
+                                    var captured = op;
+                                    <MudMenuItem Dense="true" OnClick="() => OpenCondition(captured)">
+                                        @KescoFilterOperatorLabels.Get(op)
+                                    </MudMenuItem>
+                                }
+                            </ChildContent>
+                        </MudMenu>
+                    </div>
                 }
 
                 @* ── Плашка существующего условия (треб. 8-9) ───── *@
@@ -74,37 +84,54 @@
                 }
                 else
                 {
-                    @* ── «Выделить все» — sticky (треб. 6) ──────── *@
+                    @* ── «Выделить все» — sticky, tri-state (треб. 6) ── *@
                     <div class="value-filter-select-all">
-                        <MudCheckBox T="bool"
-                                     Checked="@IsSelectAllState"
-                                     TriState="true"
-                                     Label="(Выделить все)"
-                                     CheckedChanged="OnSelectAllChanged"
-                                     Dense="true"
-                                     Style="font-weight:bold" />
+                        <div @onclick="ToggleSelectAll" class="kesco-checkbox"
+                             style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:1px 0;font-weight:bold">
+                            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid @(IsSelectAllState == true ? "#424242" : "#757575");border-radius:2px;background:#fff;box-sizing:border-box;flex-shrink:0">
+                                @if (IsSelectAllState is null)
+                                {
+                                    <span style="display:block;width:8px;height:8px;background:#424242"></span>
+                                }
+                                else if (IsSelectAllState == true)
+                                {
+                                    <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+                                }
+                            </span>
+                            <span>(Выделить все)</span>
+                        </div>
                     </div>
 
-                    @* ── Прокручиваемый список значений ─────────── *@
+                    @* ── Прокручиваемый список значений ── *@
                     <div class="value-filter-values-scroll">
                         @foreach (var value in _result.Values)
                         {
-                            var captured = value;
-                            var label = FormatValue(value);
-                            <MudCheckBox T="bool"
-                                         Checked="_checkedValues.Contains(captured)"
-                                         CheckedChanged="v => OnValueCheckedChanged(captured, v)"
-                                         Label="@label"
-                                         Dense="true" />
+                            var captured  = value;
+                            var isChecked = _checkedValues.Contains(captured);
+                            <div @onclick="() => ToggleValue(captured)" class="kesco-checkbox"
+                                 style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:1px 0">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid @(isChecked ? "#424242" : "#757575");border-radius:2px;background:#fff;box-sizing:border-box;flex-shrink:0">
+                                    @if (isChecked)
+                                    {
+                                        <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+                                    }
+                                </span>
+                                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px">@FormatValue(value)</span>
+                            </div>
                         }
 
                         @if (_result.HasBlanks)
                         {
-                            <MudCheckBox T="bool"
-                                         Checked="_blankChecked"
-                                         CheckedChanged="v => _blankChecked = v"
-                                         Label="(пустые)"
-                                         Dense="true" />
+                            <div @onclick="ToggleBlank" class="kesco-checkbox"
+                                 style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;padding:1px 0">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid @(_blankChecked ? "#424242" : "#757575");border-radius:2px;background:#fff;box-sizing:border-box;flex-shrink:0">
+                                    @if (_blankChecked)
+                                    {
+                                        <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+                                    }
+                                </span>
+                                <span>(пустые)</span>
+                            </div>
                         }
                     </div>
                 }
@@ -112,29 +139,33 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Text">Отмена</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Size="Size.Small">Отмена</MudButton>
         @if (!_loading && _result is not null && !_result.Capped && ExistingConditionFilter is null)
         {
             <MudButton Color="Color.Primary"
                        Variant="Variant.Filled"
+                       Size="Size.Small"
                        OnClick="Apply">
-                OK
+                Применить
             </MudButton>
         }
     </DialogActions>
 </MudDialog>
 
 <style>
-    .mud-dialog-content { overflow: visible; }
-    .mud-list-item { padding-block: 4px; min-height: 32px; }
-    .mud-popover .mud-list { max-height: 260px; }
-    .value-filter-values-scroll { overflow-y: auto; max-height: 300px; }
-    .value-filter-select-all {
+    .kesco-vf-dialog { font-size: .875rem; }
+    .kesco-vf-dialog .kesco-checkbox { padding: 1px 0 !important; gap: 6px; }
+    .kesco-vf-dialog .kesco-checkbox > span:last-child {
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px;
+    }
+    .kesco-vf-dialog .value-filter-values-scroll { overflow-y: auto; max-height: 260px; }
+    .kesco-vf-dialog .value-filter-select-all {
         position: sticky; top: 0; z-index: 1;
         background: var(--mud-palette-background);
-        padding-bottom: 4px;
-        border-bottom: 1px solid var(--mud-palette-divider);
+        padding-bottom: 2px; border-bottom: 1px solid var(--mud-palette-divider);
     }
+    .mud-popover .mud-list { max-height: 260px; }
+    .mud-popover .mud-list-item { min-height: 30px; padding-block: 3px; }
 </style>
 
 @code {
@@ -168,10 +199,10 @@
     // ── Сентинелы возврата ─────────────────────────────────────────────────
 
     /// <summary>Сентинел: снять фильтр по значению для колонки.</summary>
-    private static readonly object ClearedSentinel = new();
+    internal static readonly object ClearedSentinel = new();
 
     /// <summary>Сентинел: удалить фильтр по условию для колонки.</summary>
-    private static readonly object RemoveConditionSentinel = new();
+    internal static readonly object RemoveConditionSentinel = new();
 
     // ── Состояние ──────────────────────────────────────────────────────────
 
@@ -230,6 +261,12 @@
             }
             _blankChecked = ExistingValueFilter.BlankChecked;
         }
+        else if (_result is not null)
+        {
+            // По умолчанию выбраны все (Excel-поведение)
+            foreach (var v in _result.Values) _checkedValues.Add(v);
+            _blankChecked = _result.HasBlanks;
+        }
     }
 
     // ── Формат значения ────────────────────────────────────────────────────
@@ -260,29 +297,33 @@
         }
     }
 
-    private void OnSelectAllChanged(bool? state)
+    private void ToggleSelectAll()
     {
         if (_result is null) return;
-        if (state == true)
-        {
-            foreach (var v in _result.Values)
-                _checkedValues.Add(v!);
-            if (_result.HasBlanks)
-                _blankChecked = true;
-        }
-        else
+        if (IsSelectAllState == true)            // сейчас всё → снять всё
         {
             _checkedValues.Clear();
             _blankChecked = false;
         }
+        else                                     // иначе → выбрать всё
+        {
+            _checkedValues = _result.Values.ToHashSet();
+            _blankChecked = _result.HasBlanks;
+        }
+        StateHasChanged();
     }
 
-    private void OnValueCheckedChanged(object? value, bool isChecked)
+    private void ToggleValue(object? value)
     {
-        if (isChecked)
-            _checkedValues.Add(value);
-        else
+        if (!_checkedValues.Add(value))          // Add вернул false → уже было → снять
             _checkedValues.Remove(value);
+        StateHasChanged();
+    }
+
+    private void ToggleBlank()
+    {
+        _blankChecked = !_blankChecked;
+        StateHasChanged();
     }
 
     // ── Контекстные условия ────────────────────────────────────────────────

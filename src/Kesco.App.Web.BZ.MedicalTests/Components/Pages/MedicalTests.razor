@@ -30,12 +30,12 @@
             OnGroupToggle="ToggleGroup">
 
     <ColumnDefs>
-        <KescoColumnDef ColumnId="1" SqlName="TestTypeName"            DisplayName="Тип"         Groupable="true" Filterable="true" />
-        <KescoColumnDef ColumnId="2" SqlName="КодМедицинскогоАнализа" DisplayName="Код"         Groupable="true" Filterable="true" />
-        <KescoColumnDef ColumnId="3" SqlName="НазваниеАнализа"        DisplayName="Название"    Groupable="true" Filterable="true" />
-        <KescoColumnDef ColumnId="4" SqlName="Порядок"                DisplayName="Порядок"     Groupable="true" Filterable="true" />
-        <KescoColumnDef ColumnId="5" SqlName="Группа"                 DisplayName="Группа"                       Filterable="true" />
-        <KescoColumnDef ColumnId="6" SqlName="Заключение"             DisplayName="Заключение"                   Filterable="true" />
+        <KescoColumnDef ColumnId="1" SqlName="TestTypeName"            DisplayName="Тип"         Groupable="true" Filterable="true" AllowValueFilter="true" />
+        <KescoColumnDef ColumnId="2" SqlName="КодМедицинскогоАнализа" DisplayName="Код"         Groupable="true" Filterable="true" AllowValueFilter="true" />
+        <KescoColumnDef ColumnId="3" SqlName="НазваниеАнализа"        DisplayName="Название"    Groupable="true" Filterable="true" AllowValueFilter="true" />
+        <KescoColumnDef ColumnId="4" SqlName="Порядок"                DisplayName="Порядок"     Groupable="true" Filterable="true" AllowValueFilter="true" />
+        <KescoColumnDef ColumnId="5" SqlName="Группа"                 DisplayName="Группа"                       Filterable="true" AllowValueFilter="true" BoolTrueLabel="Группа" BoolFalseLabel="Не группа" />
+        <KescoColumnDef ColumnId="6" SqlName="Заключение"             DisplayName="Заключение"                   Filterable="true" AllowValueFilter="true" BoolTrueLabel="Заключение" BoolFalseLabel="Не заключение" />
     </ColumnDefs>
 
     <Columns>
