@@ -83,6 +83,18 @@ public interface IKescoGridDataLoader
         IReadOnlyList<string> groupFullKeys, KescoDataQuery query);
 
     /// <summary>
+    /// Загружает уникальные значения колонки для фильтра по значению (Excel-style).
+    /// Выполняется лениво при открытии диалога. Ограничена порогом <paramref name="limit"/>.
+    /// Фильтры <b>других</b> колонок учитываются; собственные условия колонки исключаются.
+    /// Пагинация к distinct-запросу не применяется — выборка по всей таблице.
+    /// </summary>
+    /// <param name="sqlName">SQL-имя колонки (из реестра).</param>
+    /// <param name="query">Текущее состояние запроса (поиск, фильтры, группировка).</param>
+    /// <param name="limit">Максимальное количество уникальных значений (по умолчанию 100).</param>
+    Task<DistinctValuesResult> LoadDistinctValuesAsync(
+        string sqlName, KescoDataQuery query, int limit = 100);
+
+    /// <summary>
     /// Вызывается гридом при выборе пункта меню «Печать выбранных».
     /// Загружает только выбранные строки (по ID) с групповыми заголовками
     /// и возвращает готовый HTML-документ для печати в iframe.
@@ -242,6 +254,74 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         return result;
     }
 
+    async Task<DistinctValuesResult> IKescoGridDataLoader.LoadDistinctValuesAsync(
+        string sqlName, KescoDataQuery query, int limit)
+    {
+        // Шаг 1 — белый список
+        if (!_inferredColumnTypes.ContainsKey(sqlName))
+            return new DistinctValuesResult();
+
+        // Шаг 2 — тип колонки (для обработки пустых строк)
+        var colType = _inferredColumnTypes[sqlName];
+        var isText  = colType == ColumnType.Text;
+
+        // Шаг 3 — контекстный WHERE без собственных фильтров колонки
+        var selectSql     = Grid?.SelectSql     ?? string.Empty;
+        var searchColumns = Grid?.SearchColumns ?? [];
+
+        var searchWhere = query.BuildWhereClause(searchColumns);
+        var dp          = new DynamicParameters();
+        dp.Add("search", $"%{query.SearchText}%");
+
+        var clonedRoot     = CloneFilterTreeWithoutColumn(query.CompositeFilter, sqlName);
+        var compositeWhere = BuildCompositeFilterClause(clonedRoot, dp);
+        var where          = KescoDataQuery.CombineWhere(searchWhere, compositeWhere);
+        var bracketedCol   = $"[{sqlName}]";
+
+        // Шаг 4 — проверка на Capped
+        var countSql = $"""
+            SELECT COUNT(*) FROM (
+                SELECT DISTINCT {bracketedCol} v
+                FROM ( {selectSql} ) src
+                {(where is null ? "" : $"WHERE {where}")}
+                AND {bracketedCol} IS NOT NULL
+                {(isText ? $"AND {bracketedCol} <> ''" : "")}
+            ) t
+            """;
+
+        var distinctCount = (await Db.QueryAsync<int>(countSql, dp)).FirstOrDefault();
+
+        if (distinctCount > limit)
+        {
+            var hasBlanks = await CheckHasBlanksAsync(selectSql, bracketedCol, where, dp, isText);
+            return new DistinctValuesResult { Capped = true, HasBlanks = hasBlanks };
+        }
+
+        // Шаг 5 — выборка значений
+        var valuesSql = $"""
+            SELECT DISTINCT TOP (@lim) {bracketedCol} v
+            FROM ( {selectSql} ) src
+            {(where is null ? "" : $"WHERE {where}")}
+            AND {bracketedCol} IS NOT NULL
+            {(isText ? $"AND {bracketedCol} <> ''" : "")}
+            ORDER BY v
+            """;
+
+        dp.Add("lim", limit);
+        var rawValues = (await Db.QueryAsync<object>(valuesSql, dp)).ToList();
+
+        // Шаг 6 — HasBlanks
+        var hasBlanks2 = await CheckHasBlanksAsync(selectSql, bracketedCol, where, dp, isText);
+
+        return new DistinctValuesResult
+        {
+            Values        = rawValues.AsReadOnly(),
+            Capped        = false,
+            HasBlanks     = hasBlanks2,
+            TotalDistinct = distinctCount,
+        };
+    }
+
     // ── Инфраструктура (не переопределяются на странице) ────────────────────────
 
     /// <summary>
@@ -367,6 +447,69 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
         DynamicParameters dp,
         IReadOnlyDictionary<string, string>? columnNameMap = null)
         => KescoCompositeSqlBuilder.Build(filter, dp, BuildKnownColumns(), columnNameMap);
+
+    /// <summary>
+    /// Клонирует дерево фильтра, удаляя все листья (<see cref="ColumnFilter"/> и
+    /// <see cref="ValueFilter"/>) с указанным <paramref name="sqlName"/>.
+    /// Если группа становится пустой — она тоже удаляется.
+    /// Возвращает <c>null</c> если дерево полностью опустело.
+    /// </summary>
+    private static KescoFilterGroupNode? CloneFilterTreeWithoutColumn(
+        KescoFilterGroupNode? root, string sqlName)
+    {
+        if (root is null) return null;
+
+        var filtered = new List<IKescoFilterNode>();
+        foreach (var node in root.Nodes)
+        {
+            if (node is KescoFilterGroupNode group)
+            {
+                var sub = CloneFilterTreeWithoutColumn(group, sqlName);
+                if (sub is not null)
+                    filtered.Add(sub);
+            }
+            else if (node is ColumnFilter cf
+                     && !string.Equals(cf.Column, sqlName, StringComparison.OrdinalIgnoreCase))
+            {
+                filtered.Add(cf.Clone());
+            }
+            else if (node is ValueFilter vf
+                     && !string.Equals(vf.Column, sqlName, StringComparison.OrdinalIgnoreCase))
+            {
+                filtered.Add(vf.Clone());
+            }
+        }
+
+        if (filtered.Count == 0) return null;
+
+        return new KescoFilterGroupNode
+        {
+            Logic = root.Logic,
+            Nodes = filtered,
+        };
+    }
+
+    /// <summary>
+    /// Проверяет наличие NULL или пустых строк в колонке с учётом контекстного WHERE.
+    /// </summary>
+    private async Task<bool> CheckHasBlanksAsync(
+        string selectSql, string bracketedCol, string? where, DynamicParameters dp, bool isText)
+    {
+        var blankCheck = isText
+            ? $"{bracketedCol} IS NULL OR {bracketedCol} = ''"
+            : $"{bracketedCol} IS NULL";
+
+        var sql = $"""
+            SELECT CASE WHEN EXISTS(
+                SELECT 1 FROM ( {selectSql} ) src
+                {(where is null ? "" : $"WHERE {where}")}
+                AND ({blankCheck})
+            ) THEN 1 ELSE 0 END
+            """;
+
+        var result = await Db.QueryAsync<int>(sql, dp);
+        return result.FirstOrDefault() == 1;
+    }
 
     // ── Загрузка данных ──────────────────────────────────────────────────────────
 

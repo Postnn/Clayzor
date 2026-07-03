@@ -158,7 +158,7 @@ public static class KescoDragState
 | `GetSortBadge(sqlName)` | `RenderFragment` | Бейдж сортировки |
 | `GetColumnMeta(sqlName)` | `KescoColumnMeta?` | Метаданные по SQL-имени |
 | `GetColumnMetaById(columnId)` | `KescoColumnMeta?` | Метаданные по ID |
-| `RegisterColumn(columnId, sqlName, displayName, groupable, filterable, sortName?)` | `void` | Регистрация колонки |
+| `RegisterColumn(columnId, sqlName, displayName, groupable, filterable, sortName?, allowValueFilter?, boolTrueLabel?, boolFalseLabel?)` | `void` | Регистрация колонки |
 | `UnregisterColumn(columnId, sqlName)` | `void` | Отмена регистрации |
 | `ColumnsChanged` | `event Action?` | Событие изменения реестра |
 | `TrayStateChanged` | `event Action?` | Событие открытия/закрытия панелей |
@@ -186,6 +186,17 @@ public static class KescoDragState
 | `BoolTrueLabel` | `string?` | Подпись `true` для булевой колонки |
 | `BoolFalseLabel` | `string?` | Подпись `false` для булевой колонки |
 | `Type` | `ColumnTypeDescriptor` | Дескриптор типа колонки |
+
+## DistinctValuesResult
+
+Результат загрузки уникальных значений колонки через `IKescoGridDataLoader.LoadDistinctValuesAsync()`. Используется диалогом фильтра по значению (V6).
+
+| Свойство | Тип | Описание |
+|---|---|---|
+| `Values` | `IReadOnlyList<object?>` | Уникальные значения (без пустышек), не больше лимита. Пусто, если `Capped=true`. Типы сохранены (int, string, DateTime, bool, …) |
+| `Capped` | `bool` | `true` — уникальных значений больше лимита (100), список `Values` пуст |
+| `HasBlanks` | `bool` | `true` — в колонке есть `NULL` или пустые строки |
+| `TotalDistinct` | `int` | Полное количество уникальных не-пустых значений (для инверсии), когда `Capped=false` |
 
 ## Серверная группировка
 
