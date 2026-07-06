@@ -15,4 +15,5 @@
     <ProjectReference Include="..\Kesco.Lib.Web.Settings\Kesco.Lib.Web.Settings.csproj" />
     <ProjectReference Include="..\Kesco.Lib.Web.BZ.Controls\Kesco.Lib.Web.BZ.Controls.csproj" />
   </ItemGroup>
+  <Import Project="$(SolutionDir)build\StyleGuard.targets" Condition="Exists('$(SolutionDir)build\StyleGuard.targets')" />
 </Project>

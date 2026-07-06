@@ -19,7 +19,7 @@
                    Size="Size.Small"
                    OnClick="() => OnToggle.InvokeAsync(Header)"
                    Style="padding:0;width:22px;height:22px;min-width:22px" />
-    <MudText Style="font-weight:600;font-size:0.875rem">@Header.DisplayValue (@Header.ItemCount шт.)</MudText>
+    <MudText Class="kesco-group-header-text">@Header.DisplayValue (@Header.ItemCount шт.)</MudText>
 </MudStack>
 
 @code {

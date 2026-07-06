@@ -1,0 +1,150 @@
+<Project>
+    <PropertyGroup>
+        <StyleGuardEnabled Condition="'$(StyleGuardEnabled)' == ''">true</StyleGuardEnabled>
+    </PropertyGroup>
+
+    <UsingTask TaskName="EnforceStyleRules" TaskFactory="RoslynCodeTaskFactory"
+               AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+        <ParameterGroup>
+            <ProjectDir ParameterType="System.String" Required="true" />
+        </ParameterGroup>
+        <Task>
+            <Using Namespace="System.Text.RegularExpressions" />
+            <Code Type="Fragment" Language="cs">
+<![CDATA[
+    string[] whiteListPatterns = {
+        @"wwwroot\css\app.css",
+        @"Themes\KescoTheme.cs",
+        @"Services\KescoGridPrintStyles.cs",
+        @"Services\KescoGridPrintHtmlGenerator.cs",
+        @"Services\KescoGridExcelGenerator.cs"
+    };
+
+    // Allowed structural CSS property names (prefixes)
+    string[] allowedProperties = {
+        "display", "flex", "gap", "width", "min-width", "max-width",
+        "height", "min-height", "max-height", "overflow", "text-overflow",
+        "position", "z-index", "top", "right", "bottom", "left",
+        "padding", "margin", "cursor", "opacity", "visibility",
+        "white-space", "word-break", "align-items", "align-self",
+        "align-content", "justify-content", "justify-self", "justify-items",
+        "flex-wrap", "flex-direction", "flex-shrink", "flex-grow", "flex-basis",
+        "place-items", "user-select", "box-sizing", "transform",
+        "text-align", "vertical-align", "order", "grid", "column-gap", "row-gap",
+        "border-collapse", "line-height"
+    };
+
+    // Prohibited CSS property regex patterns (checked against property name + colon)
+    string[] prohibitedPatterns = {
+        @"color\s*:",
+        @"background(?:-color|-image|-position|-size|-repeat|-attachment)?\s*:",
+        @"border(?:-(?:top|right|bottom|left|color|style|width|radius))?\s*:",
+        @"box-shadow\s*:",
+        @"font-(?:family|size|weight|style|variant)\s*:",
+        @"fill\s*:",
+        @"stroke\s*:",
+        @"letter-spacing\s*:",
+        @"text-transform\s*:",
+        @"outline\s*:"
+    };
+
+    // Prohibited value patterns (hex colors, rgb/rgba)
+    string[] prohibitedValuePatterns = {
+        @"#[0-9a-fA-F]{3,8}\b",
+        @"rgba?\s*\("
+    };
+
+    // Regex to find style="..." and Style="..." attributes
+    var styleRegex = new Regex(@"(?:style|Style)\s*=\s*[""]([^""]*)[""]", RegexOptions.Compiled);
+
+    bool IsWhiteListed(string filePath) {
+        foreach (var p in whiteListPatterns)
+            if (filePath.Contains(p)) return true;
+        return false;
+    }
+
+    bool HasProhibitedPattern(string styleContent, out string reason) {
+        reason = null;
+        var declarations = styleContent.Split(';');
+        foreach (var decl in declarations) {
+            var trimmed = decl.Trim();
+            if (trimmed.Length == 0) continue;
+            int colonIdx = trimmed.IndexOf(':');
+            if (colonIdx <= 0) continue;
+            string propName = trimmed.Substring(0, colonIdx).Trim().ToLowerInvariant();
+
+            bool isAllowed = false;
+            foreach (var a in allowedProperties)
+                if (propName == a) { isAllowed = true; break; }
+            if (isAllowed) continue;
+
+            foreach (var pattern in prohibitedPatterns)
+                if (Regex.IsMatch(trimmed, pattern, RegexOptions.IgnoreCase)) {
+                    reason = $"property '{propName}' in style=\"{trimmed}\"";
+                    return true;
+                }
+        }
+
+        foreach (var pattern in prohibitedValuePatterns) {
+            var m = Regex.Match(styleContent, pattern, RegexOptions.IgnoreCase);
+            if (m.Success) {
+                reason = $"prohibited value '{m.Value}' in style=\"{styleContent}\"";
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    var dir = new DirectoryInfo(ProjectDir);
+    if (!dir.Exists) { Log.LogWarning($"StyleGuard: project dir not found: {ProjectDir}"); return true; }
+
+    var razorFiles = dir.GetFiles("*.razor", SearchOption.AllDirectories);
+    var csFiles = dir.GetFiles("*.cs", SearchOption.AllDirectories);
+    var allFiles = razorFiles.Concat(csFiles);
+    bool hasErrors = false;
+
+    foreach (var file in allFiles) {
+        if (file.DirectoryName.Contains("\\obj\\") || file.DirectoryName.Contains("\\bin\\"))
+            continue;
+        string relPath = file.FullName.Replace(ProjectDir, "").TrimStart('\\');
+        if (IsWhiteListed(relPath))
+            continue;
+
+        var lines = File.ReadAllLines(file.FullName);
+        for (int i = 0; i < lines.Length; i++) {
+            string line = lines[i];
+
+            var matches = styleRegex.Matches(line);
+            foreach (Match match in matches) {
+                string styleContent = match.Groups[1].Value;
+                if (string.IsNullOrWhiteSpace(styleContent)) continue;
+
+                if (HasProhibitedPattern(styleContent, out string reason)) {
+                    Log.LogError($"KESCO002: {relPath}({i + 1}) — visual inline style violation: {reason}");
+                    hasErrors = true;
+                }
+            }
+
+            // Check .cs files for <style> tags
+            if (file.Extension == ".cs" && line.Contains("<style")) {
+                Log.LogError($"KESCO002: {relPath}({i + 1}) — <style> tag in .cs file outside white-list");
+                hasErrors = true;
+            }
+        }
+    }
+
+    if (hasErrors) {
+        Log.LogError("StyleGuard: visual style violations found. See errors above.");
+    }
+    return true; // Task succeeds; build will fail due to LogError calls
+]]>
+            </Code>
+        </Task>
+    </UsingTask>
+
+    <Target Name="EnforceStyleRules" BeforeTargets="CoreCompile"
+            Condition="'$(StyleGuardEnabled)' == 'true'">
+        <EnforceStyleRules ProjectDir="$(ProjectDir)" />
+    </Target>
+</Project>

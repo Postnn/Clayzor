@@ -7,23 +7,9 @@ namespace Kesco.Lib.Web.BZ.Controls.Themes;
 /// </summary>
 public static class KescoTheme
 {
-    // Lufthansa brand colors
-    private const string DarkNavy = "#05164D";
-    private const string Navy = "#0A1D3D";
-    private const string MidBlue = "#00235F";
-    private const string Gold = "#FFAD00";
-    private const string GoldDark = "#E69C00";
-    private const string White = "#FFFFFF";
-    private const string OffWhite = "#F7F8FA";
-    private const string LightGrey = "#EBEDF0";
-    private const string MidGrey = "#9B9B9B";
-    private const string DarkGrey = "#4A4A4A";
-    private const string TextDark = "#1A1A2E";
-    private const string ErrorRed = "#C62828";
-    private const string SuccessGreen = "#2E7D32";
-
     /// <summary>
     /// Создаёт и возвращает настроенную тему MudBlazor в корпоративном стиле.
+    /// Цвета берутся из <see cref="KescoColors"/> — единого источника brand-значений.
     /// </summary>
     /// <returns>Готовая тема <see cref="MudTheme"/>.</returns>
     public static MudTheme Create() => new()
@@ -31,58 +17,59 @@ public static class KescoTheme
         PaletteLight = new PaletteLight
         {
             // Core
-            Primary = DarkNavy,
-            PrimaryDarken = "#030F35",
-            PrimaryLighten = "#1A2D6B",
-            Secondary = Gold,
-            SecondaryDarken = GoldDark,
-            Tertiary = MidBlue,
+            Primary = KescoColors.Navy,
+            PrimaryDarken = KescoColors.NavyDark,
+            PrimaryLighten = KescoColors.NavyLight,
+            Secondary = KescoColors.Gold,
+            SecondaryDarken = KescoColors.GoldDark,
+            Tertiary = KescoColors.BlueMid,
 
             // App bar
-            AppbarBackground = DarkNavy,
-            AppbarText = White,
+            AppbarBackground = KescoColors.Navy,
+            AppbarText = KescoColors.White,
 
             // Background & Surface
-            Background = OffWhite,
-            Surface = White,
-            BackgroundGray = "#F7F8FA",
+            Background = KescoColors.OffWhite,
+            Surface = KescoColors.White,
+            BackgroundGray = KescoColors.OffWhite,
 
             // Drawer / Sidebar
-            DrawerBackground = Navy,
-            DrawerText = "#C8CDD8",
-            DrawerIcon = "#8A93A8",
+            DrawerBackground = KescoColors.Navy2,
+            DrawerText = KescoColors.DrawerTextColor,
+            DrawerIcon = KescoColors.DrawerIconColor,
 
             // Text
-            TextPrimary = TextDark,
-            TextSecondary = DarkGrey,
-            TextDisabled = MidGrey,
+            TextPrimary = KescoColors.TextDark,
+            TextSecondary = KescoColors.GreyDark,
+            TextDisabled = KescoColors.GreyMid,
 
             // Actions
-            ActionDefault = DarkNavy,
-            ActionDisabled = "#B4B4B4",
-            ActionDisabledBackground = LightGrey,
+            ActionDefault = KescoColors.Navy,
+            ActionDisabled = KescoColors.ActionDisabledColor,
+            ActionDisabledBackground = KescoColors.GreyLight,
 
             // Semantic
-            Error = ErrorRed,
-            Warning = Gold,
-            Info = MidBlue,
-            Success = SuccessGreen,
+            Error = KescoColors.ErrorRed,
+            Warning = KescoColors.Gold,
+            Info = KescoColors.BlueMid,
+            Success = KescoColors.SuccessGreen,
 
             // Table
-            TableLines = LightGrey,
-            TableStriped = "#F2F4F7",
-            TableHover = "#E8EBF0",
+            TableLines = KescoColors.GreyLight,
+            TableStriped = KescoColors.TableStripedColor,
+            TableHover = KescoColors.TableHoverColor,
 
             // Misc
-            Divider = LightGrey,
-            LinesDefault = LightGrey,
-            LinesInputs = "#C4C8D0",
+            Divider = KescoColors.GreyLight,
+            DividerLight = KescoColors.GreyLight,
+            LinesDefault = KescoColors.GreyLight,
+            LinesInputs = KescoColors.LinesInputsColor,
         },
 
         PaletteDark = new PaletteDark
         {
             Primary = "#4A7CFF",
-            Secondary = Gold,
+            Secondary = "#FFAD00",
             AppbarBackground = "#0B1529",
             Surface = "#1A1F33",
             Background = "#0E1220",
@@ -139,6 +126,22 @@ public static class KescoTheme
             {
                 FontSize = "var(--kesco-font-size)",
                 LineHeight = "1.5",
+            },
+            Subtitle1 = new Subtitle1Typography
+            {
+                FontSize = "var(--kesco-font-size)",
+            },
+            Subtitle2 = new Subtitle2Typography
+            {
+                FontSize = "var(--kesco-font-size)",
+            },
+            Caption = new CaptionTypography
+            {
+                FontSize = "var(--kesco-font-size)",
+            },
+            Overline = new OverlineTypography
+            {
+                FontSize = "var(--kesco-font-size)",
             },
             Button = new ButtonTypography
             {

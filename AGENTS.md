@@ -199,7 +199,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoCheckbox** — контролируемый (controlled) чекбокс с tri-state поддержкой (`State`: `true`/`false`/`null`). Кастомный `<span>`-глиф (16×16, CSS-галочка border-rotate). Используется для выбора записей в гриде и фильтра по значению | — |
 | **ConfirmDialog** — диалог подтверждения | [docs/confirm-dialog.md](docs/confirm-dialog.md) |
 | **ILookupEntity** — интерфейс справочной сущности (`int Id`, `string Name`) | [docs/entity-crud.md](docs/entity-crud.md) |
-| **KescoTheme** — corporate theme (DarkNavy + Gold accent). Typography via CSS variables `--kesco-font-family` (Verdana) and `--kesco-font-size` (12pt). Applied in MainLayout | — |
+| **KescoTheme** — corporate theme (DarkNavy + Gold accent). PaletteLight references `KescoColors.*` (single source of truth for brand hex values). Typography references CSS variables `--kesco-font-family` (Verdana) and `--kesco-font-size` (0.8rem). Applied in MainLayout. **Important**: palette values must be C# hex literals, NOT `var(...)` — MudBlazor parses them via `MudColor.Parse()` | — |
+| **KescoColors** — public C# constants (`public const string`) for every brand color. Single source of truth — shared by `KescoTheme.cs` and (via `--mud-palette-*` variables) by `app.css`. See STYLE_RULES.md §1 (Variant A) | — |
 
 ### Интерфейсы
 
@@ -405,10 +406,38 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 ## Typography & Fonts
 
 - Font face: **Verdana** + fallback `Arial, sans-serif` — defined via CSS variable `--kesco-font-family`
-- Font size: **12pt** (`0.75rem`) — defined via CSS variable `--kesco-font-size`
-- MudBlazor typography (`KescoTheme.cs`) references these CSS variables: `FontFamily = ["var(--kesco-font-family)"]`, `FontSize = "var(--kesco-font-size)"`
-- MudBlazor input controls use `font-size: var(--kesco-font-size)` (CSS rule in `app.css`)
+- Font size: **0.8rem** (~13pt) — defined via CSS variable `--kesco-font-size` (single token, NO size variants)
+- MudBlazor typography (`KescoTheme.cs`) — all levels (Default, Body1, Body2, Subtitle1, Subtitle2, Caption, Overline) set `FontSize = "var(--kesco-font-size)"`. H4/H5/H6/Button keep their own sizes (heading/button scale)
+- MudBlazor input controls use `font-size: var(--kesco-font-size) !important` (CSS rules in `app.css` for `.mud-input-control input`, `.mud-input-label`, and `.mud-input-outlined-border legend`)
 - No external font CDN dependencies (Google Fonts Inter removed)
+
+### Known issue: legend font-size in MudBlazor 9
+MudBlazor 9's outlined variant uses `<fieldset><legend>` for floating labels. The legend's font-size is hardcoded as `0.75em` in MudBlazor's CSS (relative to parent `.mud-input`). Our `!important` override may not win because `MudThemeProvider` generates `<style>` tags at runtime after `app.css` loads. Workaround TBD.
+
+## Style enforcement (STYLE_RULES.md)
+
+**All visual styling (color, font, background, border, shadow, radius) lives ONLY in:**
+- `Kesco.App.Web.BZ.MedicalTests/wwwroot/css/app.css` — CSS classes and `:root` tokens
+- `Kesco.Lib.Web.BZ.Controls/Themes/KescoTheme.cs` — MudBlazor theme palette
+- `Kesco.Lib.Web.BZ.Controls/Themes/KescoColors.cs` — single source of brand hex values
+
+### Architecture (Variant A)
+`KescoColors.cs` (C# hex literals) → `KescoTheme.cs` (MudBlazor palette) → MudBlazor emits `--mud-palette-*` CSS variables → `app.css` aliases them as `--kesco-*` variables. Dark mode adapts automatically.
+
+### Build-time enforcement
+- **`build/StyleGuard.targets`** — MSBuild inline C# task (`BeforeTargets="CoreCompile"`). Scans `**/*.razor` and `**/*.cs` for visual inline styles (`color:`, `background`, `border`, `font-*`, hex colors, `rgba(`). Build FAILS on violations with file/line/error details.
+- White-listed files (excluded from scanning): `app.css`, `KescoTheme.cs`, `KescoGridPrintStyles.cs`, `KescoGridPrintHtmlGenerator.cs`, `KescoGridExcelGenerator.cs`
+- **Allowed in `style=`/`Style=`**: structural properties only — `display`, `flex`, `gap`, `width`, `padding`, `margin`, `cursor`, `overflow`, `text-overflow`, `position`, `z-index`, `opacity`, `white-space`, etc.
+- **Prohibited in `style=`/`Style=`**: `color`, `background*`, `border*`, `box-shadow`, `font-*`, `fill`, `stroke`, `letter-spacing`, `text-transform`, hex colors, `rgb(`/`rgba(` with color values
+- All `<style>` blocks in `.razor` must be moved to `app.css`
+
+### Before completing any UI task (checklist)
+- No visual `style=`/`Style=` in changed `.razor`
+- No hex colors/font strings in `.cs` outside white-list
+- Colors use `var(--mud-palette-*)` (adaptive) or `var(--kesco-*)` (brand aliases)
+- New visual patterns → CSS class in `app.css`
+- Layout → MudBlazor utility classes (`d-flex`, `gap-*`, `pa-*`)
+- `dotnet build` passes (StyleGuard checks active)
 
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**

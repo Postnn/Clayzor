@@ -14,8 +14,7 @@
 
         @if (!string.IsNullOrEmpty(_draftDescription))
         {
-            <MudPaper Elevation="0" Class="pa-1"
-                      Style="flex:0 0 auto;background:var(--mud-palette-background-grey)">
+            <MudPaper Elevation="0" Class="pa-1 kesco-filter-dialog__panel">
                 <MudText Typo="Typo.body2">@_draftDescription</MudText>
             </MudPaper>
         }
@@ -32,7 +31,7 @@
     <DialogActions>
         <MudButton OnClick="@Reset" Variant="Variant.Text"
                    StartIcon="@Icons.Material.Filled.ClearAll"
-                   Style="text-transform:none">Сбросить</MudButton>
+                   Class="kesco-text-normal">Сбросить</MudButton>
         <MudSpacer />
         <MudButton OnClick="@Cancel" Variant="Variant.Text">Отмена</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled"

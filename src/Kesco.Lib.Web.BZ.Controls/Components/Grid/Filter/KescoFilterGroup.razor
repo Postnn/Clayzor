@@ -4,12 +4,10 @@
 @* Рекурсивный узел-группа составного фильтра.
    Может содержать листья (KescoFilterExpression) и вложенные группы (KescoFilterGroup). *@
 
-<div style="@(IsRoot
-    ? "display:flex;flex-direction:column;gap:6px;padding:6px 0"
-    : "display:flex;flex-direction:column;gap:6px;padding:6px 6px 6px 8px;border-left:2px solid var(--mud-palette-primary)")">
+<div class="@(IsRoot ? "kesco-filter-group--root" : "kesco-filter-group--indented")">
 
     @* ── Заголовок группы: И/ИЛИ + добавление + удаление ── *@
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+    <div class="kesco-filter-group__header">
         <MudToggleGroup T="LogicalOperator"
                         Value="@Node.Logic"
                         ValueChanged="@SetLogic"
@@ -23,12 +21,12 @@
 
         <MudButton Variant="Variant.Text" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="@AddExpression" Style="text-transform:none">
+                   OnClick="@AddExpression" Class="kesco-text-normal">
             добавить условие
         </MudButton>
         <MudButton Variant="Variant.Text" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.CreateNewFolder"
-                   OnClick="@AddGroup" Style="text-transform:none">
+                   OnClick="@AddGroup" Class="kesco-text-normal">
             добавить группу
         </MudButton>
 
@@ -54,9 +52,7 @@
             @if (leaf.Source == KescoFilterSource.ColumnDialog)
             {
                 @* Условия из диалога колонки — не редактируются здесь, только удаляются *@
-                <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
-                            border:1px solid var(--mud-palette-lines-default);border-radius:4px;
-                            color:var(--mud-palette-text-secondary);font-size:var(--kesco-font-size)">
+                <div class="kesco-filter-leaf">
                     <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" />
                     <MudText Typo="Typo.body2" Style="flex:1 1 auto">
                         Редактируется в диалоге колонки: @GetLeafDescription(leaf)
@@ -87,9 +83,7 @@
         }
         else if (node is ValueFilter vf)
         {
-            <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
-                        border:1px solid var(--mud-palette-lines-default);border-radius:4px;
-                        color:var(--mud-palette-text-secondary);font-size:var(--kesco-font-size)">
+            <div class="kesco-filter-leaf">
                 <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" />
                 <MudText Typo="Typo.body2" Style="flex:1 1 auto">
                     Фильтр по значению: @ValueFilterLabel(vf)

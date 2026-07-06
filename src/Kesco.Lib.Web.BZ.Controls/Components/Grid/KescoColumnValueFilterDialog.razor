@@ -36,7 +36,7 @@
                                 @{ var ctx = (object)menuCtx; }
                                 <div style="display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"
                                      @onclick="@(async () => await ((dynamic)ctx).ToggleAsync(null))">
-                                    <MudText Typo="Typo.body2" Style="font-weight:600">@_conditionsLabel</MudText>
+                                    <MudText Typo="Typo.body2">@_conditionsLabel</MudText>
                                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small" />
                                 </div>
                             </ActivatorContent>
@@ -88,7 +88,7 @@
                     <div class="value-filter-select-all">
                         <KescoCheckbox State="IsSelectAllState"
                                        Label="(Выделить все)"
-                                       Style="font-weight:bold;padding:4px 0"
+                                       Style="padding:4px 0"
                                        OnToggle="ToggleSelectAll" />
                     </div>
 
@@ -131,7 +131,7 @@
 </MudDialog>
 
 <style>
-    .kesco-vf-dialog { font-size: .875rem; }
+    .kesco-vf-dialog { }
     .kesco-vf-dialog .kesco-checkbox { padding: 1px 0 !important; gap: 6px; }
     .kesco-vf-dialog .kesco-checkbox > span:last-child {
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px;

@@ -8,24 +8,24 @@
     При клике компонент поднимает OnToggle — родитель меняет состояние и перерисовывается.
 *@
 
-<div class="kesco-checkbox @Class"
-     style="display:flex;align-items:center;gap:8px;user-select:none;@(Disabled ? "cursor:default;opacity:.5" : "cursor:pointer");@Style"
+<div class="kesco-checkbox @(Disabled ? "kesco-checkbox--disabled" : "kesco-checkbox--clickable") @Class"
+     style="@Style"
      title="@Title"
      @onclick="HandleClick"
      @onclick:stopPropagation="true">
-    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid @(State == true ? "#424242" : "#757575");border-radius:2px;background:#fff;box-sizing:border-box;flex-shrink:0">
+    <span class="kesco-checkbox-box @(State == true ? "kesco-checkbox-box--checked" : "kesco-checkbox-box--unchecked")">
         @if (State is null)
         {
-            <span style="display:block;width:8px;height:8px;background:#424242"></span>
+            <span class="kesco-checkbox-indeterminate"></span>
         }
         else if (State == true)
         {
-            <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+            <span class="kesco-checkbox-checkmark"></span>
         }
     </span>
     @if (!string.IsNullOrEmpty(Label))
     {
-        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%"
+        <span class="kesco-checkbox-label"
               title="@(LabelTitle ?? (Label.Length > 30 ? Label : null))">@Label</span>
     }
 </div>

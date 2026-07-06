@@ -197,8 +197,7 @@
                             Icon="@(isExpanded ? Icons.Material.Filled.UnfoldLess : Icons.Material.Filled.UnfoldMore)"
                             Size="Size.Small"
                             OnClick="async () => await ToggleLevel(depth)"
-                            Class="pa-0"
-                            Style="width:18px;height:18px;margin-right:4px;color:var(--lh-gold)"
+                            Class="pa-0 kesco-grid-chip-btn--gold"
                             title="@(isExpanded ? "Свернуть все группы" : "Развернуть все группы")" />
                     }
                     <span class="chip-label chip-label-clickable" @onclick="async () => await ToggleSort(col)" @onclick:stopPropagation="true">@displayName</span>
@@ -206,7 +205,7 @@
                     @if (_filterTrayExpanded && meta is not null && meta.Filterable)
                     {
                         <KescoMenu Icon="@Icons.Material.Filled.MoreVert"
-                                   ActivatorStyle="padding:0;width:18px;height:18px;min-width:18px;color:var(--lh-gold)">
+                                   ActivatorStyle="padding:0;width:18px;height:18px;min-width:18px">
                             <MudMenuItem OnClick="async () => await OpenFilterDialog(col, displayName)"
                                          Icon="@Icons.Material.Filled.FilterAlt"
                                          IconColor="Color.Primary">Фильтровать</MudMenuItem>

@@ -4,18 +4,42 @@
    ═══════════════════════════════════════════════════ */
 
 :root {
-    --lh-navy: #05164D;
-    --lh-navy-light: #0A1D3D;
-    --lh-gold: #FFAD00;
-    --lh-gold-dark: #E69C00;
-    --lh-white: #FFFFFF;
-    --lh-offwhite: #F7F8FA;
-    --lh-grey-light: #EBEDF0;
-    --lh-grey-mid: #9B9B9B;
-    --lh-grey-dark: #4A4A4A;
+    /* Legacy aliases — keep for backward compatibility, don't introduce new --lh-* */
+    --lh-navy:        var(--kesco-navy);
+    --lh-navy-light:  var(--kesco-navy-2);
+    --lh-gold:        var(--kesco-gold);
+    --lh-gold-dark:   var(--kesco-gold-dark);
+    --lh-white:       var(--kesco-white);
+    --lh-offwhite:    var(--kesco-offwhite);
+    --lh-grey-light:  var(--kesco-grey-light);
+    --lh-grey-mid:    var(--kesco-grey-mid);
+    --lh-grey-dark:   var(--kesco-grey-dark);
 
+    /* Цвета — алиасы на палитру MudBlazor (источник — KescoColors / KescoTheme).
+       MudThemeProvider эмитит --mud-palette-* в DOM — они адаптируются к dark mode. */
+    --kesco-navy:       var(--mud-palette-primary);
+    --kesco-navy-dark:  var(--mud-palette-primary-darken);
+    --kesco-navy-light: var(--mud-palette-primary-lighten);
+    --kesco-navy-2:     var(--mud-palette-drawer-background);
+    --kesco-blue-mid:   var(--mud-palette-tertiary);
+    --kesco-gold:       var(--mud-palette-secondary);
+    --kesco-gold-dark:  var(--mud-palette-secondary-darken);
+    --kesco-offwhite:   var(--mud-palette-background);
+    --kesco-grey-light: var(--mud-palette-lines-default);
+    --kesco-grey-mid:   var(--mud-palette-text-disabled);
+    --kesco-grey-dark:  var(--mud-palette-text-secondary);
+    --kesco-text:       var(--mud-palette-text-primary);
+    --kesco-error:      var(--mud-palette-error);
+    --kesco-warning:    var(--mud-palette-warning);
+    --kesco-info:       var(--mud-palette-info);
+    --kesco-success:    var(--mud-palette-success);
+
+    /* Не-цветовые константы — единственные литералы в :root */
     --kesco-font-family: Verdana, Arial, sans-serif;
-    --kesco-font-size: 0.75rem; /* 12pt */
+    --kesco-font-size:   0.8rem;
+    --kesco-radius:      2px;
+    --kesco-accent:      3px;        /* Gold underline accent */
+    --kesco-white:       #FFFFFF;
 }
 
 html {
@@ -31,8 +55,16 @@ body {
 
 .mud-input-control input,
 .mud-input-control textarea,
-.mud-input-control .mud-input-slot {
-    font-size: var(--kesco-font-size);
+.mud-input-control .mud-input-slot,
+.mud-input-control .mud-input-slot input {
+    font-size: var(--kesco-font-size) !important;
+    font-weight: normal;
+}
+.mud-input-control .mud-input-label {
+    font-size: var(--kesco-font-size) !important;
+}
+.mud-input-control .mud-input.mud-input-outlined .mud-input-outlined-border legend {
+    font-size: var(--kesco-font-size) !important;
 }
 
 #blazor-error-ui {
@@ -141,7 +173,7 @@ body {
     background-color: var(--lh-navy) !important;
     color: var(--lh-white) !important;
     font-weight: 600;
-    font-size: 0.75rem;
+    font-size: var(--kesco-font-size);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     border-bottom: 2px solid var(--lh-gold) !important;
@@ -343,7 +375,7 @@ body {
 }
 
 .grouping-tray-hint {
-    font-size: 0.75rem;
+    font-size: var(--kesco-font-size);
     color: var(--mud-palette-text-disabled);
     font-style: italic;
     letter-spacing: 0.02em;
@@ -359,7 +391,7 @@ body {
     background: var(--lh-navy);
     color: var(--lh-white);
     border-radius: 0;
-    font-size: 0.75rem;
+    font-size: var(--kesco-font-size);
     font-weight: 400;
     letter-spacing: 0.01em;
     text-transform: none;
@@ -386,7 +418,7 @@ body {
     min-height: 38px;
     padding: 0 10px;
     border-radius: 0;
-    font-size: 0.75rem;
+    font-size: var(--kesco-font-size);
     font-weight: 400;
     letter-spacing: 0.01em;
     text-transform: none;
@@ -489,7 +521,7 @@ body {
     border-radius: 0;
     padding: 0 4px;
     margin-left: 3px;
-    font-size: 0.65rem;
+    font-size: var(--kesco-font-size);
     font-weight: 800;
     letter-spacing: 0.04em;
     line-height: 16px;
@@ -561,7 +593,7 @@ body {
 }
 
 .filter-tray-hint {
-    font-size: 0.75rem;
+    font-size: var(--kesco-font-size);
     color: var(--mud-palette-text-disabled);
     font-style: italic;
     letter-spacing: 0.02em;
@@ -578,7 +610,7 @@ body {
     background: var(--lh-navy);
     color: var(--lh-white);
     border-radius: 0;
-    font-size: 0.75rem;
+    font-size: var(--kesco-font-size);
     font-weight: 400;
     letter-spacing: 0.01em;
     text-transform: none;
@@ -888,4 +920,310 @@ body {
 
 @keyframes kesco-print-spin {
     to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════════════════════════════════════
+   Kesco component classes — visual style lives here,
+   not in .razor or .cs. See STYLE_RULES.md §4.
+   ═══════════════════════════════════════════════════ */
+
+/* ── Error bar (KescoErrorBar) ── */
+.kesco-error-bar {
+    background: var(--mud-palette-error);
+    color: #fff;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+}
+.kesco-error-bar__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.kesco-error-bar__message {
+    font-weight: 600;
+    word-break: break-word;
+    flex: 1;
+}
+.kesco-error-bar__close {
+    cursor: pointer;
+    font-size: var(--kesco-font-size);
+    padding: 0 4px;
+}
+
+.kesco-error-details {
+    cursor: pointer;
+    margin-top: 6px;
+    opacity: 0.85;
+    font-size: var(--kesco-font-size);
+}
+.kesco-error-details-wrapper {
+    margin-top: 8px;
+    font-size: var(--kesco-font-size);
+    opacity: 0.9;
+}
+
+.kesco-error-sql {
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: var(--mud-palette-error-darken);
+    color: var(--mud-palette-error-lighten);
+    padding: 8px;
+    margin: 0;
+    max-height: 300px;
+    overflow: auto;
+}
+.kesco-error-sql-summary {
+    cursor: pointer;
+    padding: 4px 8px;
+    background: var(--mud-palette-error-darken);
+    border-radius: var(--kesco-radius);
+}
+
+.kesco-error-param-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--mud-palette-error-darken);
+    border-radius: var(--kesco-radius);
+    overflow: hidden;
+}
+.kesco-error-param-table th {
+    padding: 4px 8px;
+    text-align: left;
+    color: var(--mud-palette-error-lighten);
+    background: var(--mud-palette-error-darken);
+}
+.kesco-error-param-table td {
+    padding: 3px 8px;
+    color: var(--mud-palette-error-lighten);
+}
+.kesco-error-param-table .kesco-error-param-value {
+    color: var(--mud-palette-error-lighten);
+    opacity: 0.85;
+}
+
+/* ── Cards (Home page) ── */
+.kesco-card {
+    border-left: 3px solid var(--kesco-grey-light);
+    min-height: 120px;
+}
+.kesco-card--accent {
+    border-left: 3px solid var(--kesco-gold);
+    min-height: 120px;
+}
+.kesco-text-secondary {
+    color: var(--mud-palette-text-secondary);
+}
+.kesco-icon-primary {
+    color: var(--mud-palette-primary);
+}
+.kesco-icon-default {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* ── AppBar (MainLayout) ── */
+.kesco-appbar-title {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.kesco-appbar-divider {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Drawer (MainLayout) ── */
+.kesco-drawer-username {
+    opacity: 0.85;
+}
+.kesco-drawer-footer {
+    opacity: 0.4;
+}
+.kesco-drawer-version {
+    color: var(--kesco-grey-mid);
+    font-size: var(--kesco-font-size);
+}
+
+/* ── Checkbox (KescoCheckbox) ── */
+.kesco-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+}
+.kesco-checkbox--clickable {
+    cursor: pointer;
+}
+.kesco-checkbox--disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+.kesco-checkbox-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--kesco-radius);
+    background: var(--kesco-white);
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+.kesco-checkbox-box--checked {
+    border: 2px solid var(--mud-palette-text-primary);
+}
+.kesco-checkbox-box--unchecked {
+    border: 2px solid var(--mud-palette-text-disabled);
+}
+.kesco-checkbox-indeterminate {
+    display: block;
+    width: 8px;
+    height: 8px;
+    background: var(--mud-palette-text-primary);
+}
+.kesco-checkbox-checkmark {
+    display: block;
+    width: 4px;
+    height: 7px;
+    border: solid var(--mud-palette-text-primary);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-top: -1px;
+}
+.kesco-checkbox-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* ── Grid common ── */
+.kesco-grid-chip-btn {
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+}
+.kesco-grid-chip-btn--gold {
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+    color: var(--kesco-gold);
+}
+.kesco-grid-column-btn {
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    margin-right: 2px;
+}
+.kesco-grid-column-menu-btn {
+    padding: 0;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+}
+.kesco-grid-header-cell {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+.kesco-grid-header-sort {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    cursor: grab;
+}
+.kesco-grid-header-text {
+    flex: 1;
+    text-align: center;
+}
+.kesco-group-header-text {
+    font-weight: 600;
+    font-size: var(--kesco-font-size);
+}
+.kesco-filter-chip-clickable {
+    cursor: pointer;
+}
+
+/* ── Column settings dialog ── */
+.kesco-column-settings-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--mud-palette-background-gray);
+    color: var(--mud-palette-text-primary);
+    font-weight: bold;
+    border-bottom: 2px solid var(--kesco-gold);
+    margin-bottom: 2px;
+}
+.kesco-column-settings-row {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+.kesco-column-settings-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Filter common ── */
+.kesco-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0;
+}
+.kesco-filter-group--root {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0;
+}
+.kesco-filter-group--indented {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0 6px 12px;
+    border-left: 2px solid var(--mud-palette-primary);
+}
+.kesco-filter-group__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.kesco-filter-leaf {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--kesco-radius);
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--kesco-font-size);
+}
+.kesco-filter-expression {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding: 6px;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: var(--kesco-radius);
+}
+.kesco-filter-dialog__panel {
+    flex: 0 0 auto;
+    background: var(--mud-palette-background-grey);
+}
+
+/* ── Text transform override ── */
+.kesco-text-normal {
+    text-transform: none;
+}
+
+/* ── Font-size references from component <style> blocks (source of truth: :root tokens) ── */
+.kesco-vf-dialog {
+    font-size: var(--kesco-font-size);
+}
+.kesco-combo-popover .mud-list-item {
+    font-size: var(--kesco-font-size);
 }

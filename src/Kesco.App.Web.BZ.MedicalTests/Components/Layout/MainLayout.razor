@@ -18,15 +18,15 @@
                        OnClick="@ToggleDrawer" />
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
             <MudIcon Icon="@Icons.Material.Filled.LocalHospital" Size="Size.Medium" />
-            <MudText Typo="Typo.h6" Style="font-weight:700; letter-spacing:0.04em;">
+            <MudText Typo="Typo.h6" Class="kesco-appbar-title">
                 @AppSettings.ApplicationName.ToUpper()
             </MudText>
         </MudStack>
         <MudSpacer />
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-            <MudText Typo="Typo.body2" Style="opacity:0.85;">@_userName</MudText>
-            <MudDivider Vertical="true" FlexItem="true" Class="mx-2" Style="border-color:rgba(255,255,255,0.2);" />
+            <MudText Typo="Typo.body2" Class="kesco-drawer-username">@_userName</MudText>
+            <MudDivider Vertical="true" FlexItem="true" Class="mx-2 kesco-appbar-divider" />
             <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                            Color="Color.Inherit"
                            Size="Size.Small"
@@ -50,8 +50,8 @@
 
         <MudSpacer />
 
-        <MudStack Class="pa-3" Style="opacity:0.4;">
-            <MudText Typo="Typo.caption" Style="color:#8A93A8; font-size:0.65rem;">
+        <MudStack Class="pa-3 kesco-drawer-footer">
+            <MudText Typo="Typo.caption" Class="kesco-drawer-version">
                 Kesco BZ v1.0
             </MudText>
         </MudStack>
