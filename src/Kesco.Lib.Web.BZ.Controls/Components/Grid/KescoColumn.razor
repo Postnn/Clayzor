@@ -26,7 +26,7 @@
             @if (Grid is not null && _meta is not null && Grid.IsValueFilterAvailable(_meta.SqlName))
             {
                 var isActive = Grid.IsValueFilterActive(_meta.SqlName);
-                <MudIconButton Icon="@Icons.Material.Filled.FilterList" Size="Size.Small"
+                <MudIconButton Icon="@Icons.Material.Filled.Checklist" Size="Size.Small"
                                Class="@("kesco-vf-icon" + (isActive ? " kesco-vf-icon--active" : ""))"
                                OnClick="async () => await Grid.OpenValueFilterDialog(_meta.SqlName)"
                                Style="padding:0;width:22px;height:22px;min-width:22px;margin-right:2px"

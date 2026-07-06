@@ -457,7 +457,7 @@
                                 {
                                     var vfSql    = sqlName;
                                     var vfActive = ((IKescoGrid)this).IsValueFilterActive(vfSql);
-                                    <MudIconButton Icon="@Icons.Material.Filled.FilterList"
+                                    <MudIconButton Icon="@Icons.Material.Filled.Checklist"
                                                    Size="Size.Small"
                                                    Class="@("kesco-vf-icon" + (vfActive ? " kesco-vf-icon--active" : ""))"
                                                    OnClick="async () => await ((IKescoGrid)this).OpenValueFilterDialog(vfSql)"
