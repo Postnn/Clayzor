@@ -196,6 +196,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoErrorBar** — баннер ошибок БД с детализацией (SQL, параметры) | [docs/kesco-error-bar.md](docs/kesco-error-bar.md) |
 | **KescoButton** — обёртка `MudTooltip` + `MudIconButton` с авто-сбросом тултипа после клика. Заменяет пару `<MudTooltip><MudIconButton/></MudTooltip>` | — |
 | **KescoMenu** — обёртка `MudMenu` с авто-построением кнопки-активатора (опциональный тултип, сброс тултипа после клика). Заменяет `<MudMenu><ActivatorContent><MudTooltip><MudIconButton/></MudTooltip></ActivatorContent></MudMenu>` | — |
+| **KescoCheckbox** — контролируемый (controlled) чекбокс с tri-state поддержкой (`State`: `true`/`false`/`null`). Кастомный `<span>`-глиф (16×16, CSS-галочка border-rotate). Используется для выбора записей в гриде и фильтра по значению | — |
 | **ConfirmDialog** — диалог подтверждения | [docs/confirm-dialog.md](docs/confirm-dialog.md) |
 | **ILookupEntity** — интерфейс справочной сущности (`int Id`, `string Name`) | [docs/entity-crud.md](docs/entity-crud.md) |
 | **KescoTheme** — corporate theme (DarkNavy + Gold accent). Typography via CSS variables `--kesco-font-family` (Verdana) and `--kesco-font-size` (12pt). Applied in MainLayout | — |
@@ -416,6 +417,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - **Использовать готовые компоненты из `src\Kesco.Lib.Web.BZ.Controls`** при разработке форм (KescoEditForm, KescoComboBox, ConfirmDialog, KescoColumnFilterDialog, KescoErrorBar). Проверять наличие подходящего компонента перед использованием MudBlazor-компонентов напрямую.
 - **Кнопки с тултипом**: всегда использовать `<KescoButton>` вместо пары `<MudTooltip><MudIconButton/></MudTooltip>`. `KescoButton` автоматически сбрасывает тултип после клика, предотвращая «залипание» при открытии диалогов.
 - **Выпадающие меню**: всегда использовать `<KescoMenu>` вместо `<MudMenu>` с `<ActivatorContent>`, `<MudTooltip>` и `<MudIconButton>`. `KescoMenu` автоматически строит кнопку-активатор с опциональным тултипом и сбрасывает тултип после клика, аналогично `KescoButton`.
+- **Кастомные чекбоксы**: всегда использовать `<KescoCheckbox>` (controlled: `State` + `OnToggle`) вместо inline `<span>`-глифов 16×16. Поддерживает tri-state (`null` = indeterminate).
 - `[Column]` attributes use exact Russian database column names — do not translate
 - SQL queries reference tables by Russian names (e.g. `МедицинскиеАнализы`, `МедицинскиеАнализыТипы`)
 - Each SQL constant must be documented with `///` XML doc and `--` inline SQL comments for every column

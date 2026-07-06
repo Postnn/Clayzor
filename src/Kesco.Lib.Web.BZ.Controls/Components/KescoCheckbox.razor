@@ -1,0 +1,59 @@
+@namespace Kesco.Lib.Web.BZ.Controls.Components
+
+@*
+    Контролируемый (controlled) чекбокс с tri-state поддержкой.
+    Используется для выбора записей в гриде и фильтра по значению.
+
+    Родитель хранит состояние и передаёт через State.
+    При клике компонент поднимает OnToggle — родитель меняет состояние и перерисовывается.
+*@
+
+<div class="kesco-checkbox @Class"
+     style="display:inline-flex;align-items:center;gap:8px;user-select:none;@(Disabled ? "cursor:default;opacity:.5" : "cursor:pointer");@Style"
+     title="@Title"
+     @onclick="HandleClick"
+     @onclick:stopPropagation="true">
+    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid @(State == true ? "#424242" : "#757575");border-radius:2px;background:#fff;box-sizing:border-box;flex-shrink:0">
+        @if (State is null)
+        {
+            <span style="display:block;width:8px;height:8px;background:#424242"></span>
+        }
+        else if (State == true)
+        {
+            <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
+        }
+    </span>
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span>@Label</span>
+    }
+</div>
+
+@code {
+    /// <summary>Состояние: <c>null</c> — «частично», <c>true</c> — отмечен, <c>false</c> — снят.</summary>
+    [Parameter] public bool? State { get; set; } = false;
+
+    /// <summary>Текстовая подпись справа от чекбокса (опционально).</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>Тултип (HTML-атрибут title).</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Блокировка: клик не срабатывает, вид приглушённый.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Доп. CSS-класс обёртки.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Доп. inline-стиль обёртки.</summary>
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>Клик по чекбоксу (если не <see cref="Disabled"/>). Родитель сам меняет состояние.</summary>
+    [Parameter] public EventCallback OnToggle { get; set; }
+
+    private async Task HandleClick()
+    {
+        if (Disabled) return;
+        await OnToggle.InvokeAsync();
+    }
+}

@@ -336,24 +336,10 @@
                                     DragAndDropEnabled="false"
                                     Style="width:48px;min-width:48px;max-width:48px">
                         <HeaderTemplate>
-                            <div @onclick="OnHeaderTriToggle"
-                                 style="display:flex;align-items:center;justify-content:center;width:100%;cursor:pointer;user-select:none">
-                                @if (IsHeaderIndeterminate())
-                                {
-                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box" title="Выбраны не все">
-                                        <span style="display:block;width:8px;height:8px;background:#424242"></span>
-                                    </span>
-                                }
-                                else if (_selectAllChecked)
-                                {
-                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #424242;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box" title="Снять выделение">
-                                        <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box" title="Выделить всё"></span>
-                                }
+                            <div style="display:flex;align-items:center;justify-content:center;width:100%">
+                                <KescoCheckbox State="@(IsHeaderIndeterminate() ? null : (bool?)_selectAllChecked)"
+                                               Title="@(IsHeaderIndeterminate() ? "Выбраны не все" : _selectAllChecked ? "Снять выделение" : "Выделить всё")"
+                                               OnToggle="OnHeaderTriToggle" />
                             </div>
                         </HeaderTemplate>
                         <CellTemplate>
@@ -361,27 +347,9 @@
                             @if (context.Item is GroupHeaderRow gh)
                             {
                                 var gs = ComputeGroupCheckState(gh);
-                                <div @onclick="async () => await OnGroupTriToggle(gh)"
-                                     @onclick:stopPropagation="true"
-                                     style="cursor:pointer;user-select:none"
-                                     title="Переключить выделение группы">
-                                    @if (gs.Indeterminate)
-                                    {
-                                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box">
-                                            <span style="display:block;width:8px;height:8px;background:#424242"></span>
-                                        </span>
-                                    }
-                                    else if (gs.Checked)
-                                    {
-                                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #424242;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box">
-                                            <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
-                                        </span>
-                                    }
-                                    else
-                                    {
-                                        <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box"></span>
-                                    }
-                                </div>
+                                <KescoCheckbox State="@(gs.Indeterminate ? null : (bool?)gs.Checked)"
+                                               Title="Переключить выделение группы"
+                                               OnToggle="() => OnGroupTriToggle(gh)" />
                             }
                             else if (context.Item is IDetailRow dr)
                             {
@@ -390,21 +358,9 @@
                                 {
                                     var eid = ent.Id;
                                     var detailChecked = _selectedIds.Contains(eid);
-                                    <div @onclick="async () => await OnRowSelectAsync(eid, !detailChecked)"
-                                         @onclick:stopPropagation="true"
-                                         style="cursor:pointer;user-select:none"
-                                         title="Выбрать запись">
-                                        @if (detailChecked)
-                                        {
-                                            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #424242;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box">
-                                                <span style="display:block;width:4px;height:7px;border:solid #424242;border-width:0 2px 2px 0;transform:rotate(45deg);margin-top:-1px"></span>
-                                            </span>
-                                        }
-                                        else
-                                        {
-                                            <span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:2px solid #757575;border-radius:2px;cursor:pointer;background:#fff;box-sizing:border-box"></span>
-                                        }
-                                    </div>
+                                    <KescoCheckbox State="(bool?)detailChecked"
+                                                   Title="Выбрать запись"
+                                                   OnToggle="() => OnRowSelectAsync(eid, !detailChecked)" />
                                 }
                             }
                             </div>
