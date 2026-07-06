@@ -25,7 +25,8 @@
     </span>
     @if (!string.IsNullOrEmpty(Label))
     {
-        <span>@Label</span>
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%"
+              title="@(LabelTitle ?? (Label.Length > 30 ? Label : null))">@Label</span>
     }
 </div>
 
@@ -35,6 +36,9 @@
 
     /// <summary>Текстовая подпись справа от чекбокса (опционально).</summary>
     [Parameter] public string? Label { get; set; }
+
+    /// <summary>Тултип для подписи (если не задан — авто по длине Label).</summary>
+    [Parameter] public string? LabelTitle { get; set; }
 
     /// <summary>Тултип (HTML-атрибут title).</summary>
     [Parameter] public string? Title { get; set; }

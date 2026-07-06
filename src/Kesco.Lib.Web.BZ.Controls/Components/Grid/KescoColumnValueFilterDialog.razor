@@ -99,6 +99,7 @@
                             var captured  = value;
                             <KescoCheckbox State="(bool?)_checkedValues.Contains(captured)"
                                            Label="@FormatValue(value)"
+                                           LabelTitle="@FormatValue(value)"
                                            Style="padding:4px 0"
                                            OnToggle="() => ToggleValue(captured)" />
                         }
