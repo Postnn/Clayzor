@@ -329,7 +329,7 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
   - Есть составные условия → `BuildTreeWithColumnAnded(sqlName)` строит копию дерева с новым условием через `И` на верхнем уровне. Если корень `ИЛИ` — оборачивает в `И(Старое, Новое)`. Открывает диалог на `seedRoot`; отмена не меняет действующий фильтр. У нового листа `IsNew=true` → автофокус на «Значение»
 - Удаление колоночного фильтра: × на чипе → `RemoveFilter(sqlName)`. Колоночные условия можно удалить и из формы `KescoFilterDialog` (крестик в `KescoFilterGroup`)
 - **Печатная шапка** (`.kesco-grid-print-descriptions`) скрыта на экране (`display:none`), видна только при печати (`@media print { display:block }`) — дублирования текста фильтра на экране нет
-- Сегменты/описание строятся через `KescoFilterDescriptionBuilder`: `BuildSegments(root, getDisplayName)` → `IReadOnlyList<FilterSegment>` (для колоночных чипов); `BuildText(root, getDisplayName)` → строка для составного чипа и экспорта/печати
+- Сегменты/описание строятся через `KescoFilterDescriptionBuilder`: `BuildSegments(root, getDisplayName, getColumnMeta?)` → `IReadOnlyList<FilterSegment>` (для колоночных чипов, V8: включает `ValueFilter`); `BuildText(root, getDisplayName, getColumnMeta?)` → строка для составного чипа и экспорта/печати (V8: включает `ValueFilter`); `DescribeValueFilter(vf, getDisplayName, getColumnMeta?)` → читаемое описание фильтра по значению («одно из [...]» / «кроме [...]»)
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
 
 ### Интеграция на странице
@@ -625,7 +625,15 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 ## Диалог настройки колонок
 
-Кнопка `ViewColumn` в тулбаре открывает `KescoColumnSettingsDialog` — диалог управления порядком, видимостью и сортировкой колонок.
+Кнопка `ViewColumn` в тулбаре открывает `KescoColumnSettingsDialog` — диалог управления порядком, видимостью, фильтром по значению и сортировкой колонок.
+
+Каждая строка чипа содержит:
+- **Drag-handle** (`DragIndicator`) — перетаскивание для изменения порядка
+- **Название колонки** — кликабельно для циклического переключения сортировки (нет → ASC → DESC → нет), до 2 колонок
+- **Переключатель видимости** (`MudSwitch`, `Color.Primary`) — показать/скрыть колонку. Заблокирован для сгруппированных колонок
+- **Переключатель фильтра по значению** (`MudSwitch`, `Color.Primary`) — включить/выключить `AllowValueFilter` для колонки. Отображается только при `ShowSorting=true` (скрыт в режиме печати/экспорта)
+
+**Sticky-заголовок** над списком: иконки `Visibility` (видимость) и `Checklist` (фильтр по значению) в контейнерах, соответствующих по ширине `MudSwitch`. При прокрутке длинного списка заголовок прилипает сверху.
 
 ### Drag-and-drop
 

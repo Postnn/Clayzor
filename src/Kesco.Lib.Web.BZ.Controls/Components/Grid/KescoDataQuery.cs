@@ -98,6 +98,8 @@ public enum KescoFilterSource
     ColumnDialog,
     /// <summary>Создано через диалог настраиваемого фильтра (составной фильтр).</summary>
     CompositeDialog,
+    /// <summary>Создано через диалог фильтра по уникальному значению (<see cref="Filter.ValueFilter"/>).</summary>
+    ValueFilter,
 }
 
 /// <summary>

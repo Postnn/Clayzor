@@ -28,4 +28,11 @@ public class ColumnSettingsItem
     /// Имеет значение только при <see cref="SortPriority"/> > 0.
     /// </summary>
     public bool IsSortDesc { get; set; }
+
+    /// <summary>
+    /// Разрешён ли фильтр по уникальным значениям (Excel-style) для колонки.
+    /// Заполняется из <see cref="KescoColumnMeta.AllowValueFilter"/>,
+    /// пользователь может переключить в диалоге настройки.
+    /// </summary>
+    public bool AllowValueFilter { get; set; }
 }

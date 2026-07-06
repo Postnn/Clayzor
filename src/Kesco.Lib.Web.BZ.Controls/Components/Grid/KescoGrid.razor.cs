@@ -338,10 +338,11 @@ public partial class KescoGrid<TEntity> where TEntity : class
             .OrderBy(m => _columnOrder.IndexOf(m.ColumnId))
             .Select(m => new ColumnSettingsItem
             {
-                SqlName     = m.SqlName,
-                DisplayName = m.DisplayName,
-                IsVisible   = !_hiddenSqlNames.Contains(m.SqlName),
-                IsReadonly  = IsGrouped(m.SqlName)
+                SqlName           = m.SqlName,
+                DisplayName       = m.DisplayName,
+                IsVisible         = !_hiddenSqlNames.Contains(m.SqlName),
+                IsReadonly        = IsGrouped(m.SqlName),
+                AllowValueFilter  = !_valueFilterDisabledColumns.Contains(m.SqlName) && m.AllowValueFilter,
             })
             .ToList();
 
@@ -385,6 +386,21 @@ public partial class KescoGrid<TEntity> where TEntity : class
                     _hiddenSqlNames.Add(item.SqlName);
                 if (_columnBySqlName.TryGetValue(item.SqlName, out var meta2))
                     _columnOrder.Add(meta2.ColumnId);
+            }
+
+            // AllowValueFilter: сохраняем пользовательские переопределения
+            _valueFilterDisabledColumns.Clear();
+            foreach (var item in updatedItems)
+            {
+                var meta = _columnBySqlName.GetValueOrDefault(item.SqlName);
+                if (meta is null) continue;
+                // Сохраняем в disabled-набор только если разработчик разрешил (meta.AllowValueFilter),
+                // а пользователь выключил (item.AllowValueFilter == false)
+                if (!item.AllowValueFilter && meta.AllowValueFilter)
+                    _valueFilterDisabledColumns.Add(item.SqlName);
+                // Если нет активного ValueFilter для отключённой колонки — удаляем его
+                if (!item.AllowValueFilter)
+                    await RemoveValueFilter(item.SqlName);
             }
 
             _sortState.Clear();

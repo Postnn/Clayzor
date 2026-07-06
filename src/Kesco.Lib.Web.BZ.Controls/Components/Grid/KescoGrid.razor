@@ -243,10 +243,9 @@
             @foreach (var vf in ValueFilterLeaves.ToList())
             {
                 var vfSql  = vf.Column;
-                var vfDisp = _columnBySqlName.TryGetValue(vfSql, out var vm) ? vm.DisplayName : vfSql;
                 <div class="filter-chip" style="cursor:pointer"
                      @onclick="async () => await ((IKescoGrid)this).OpenValueFilterDialog(vfSql)">
-                    <span class="chip-label">@vfDisp: выбраны значения</span>
+                    <span class="chip-label">@DescribeValueFilter(vf)</span>
                     <span @onclick:stopPropagation="true">
                         <MudIconButton Icon="@Icons.Material.Filled.Close"
                                        Size="Size.Small"

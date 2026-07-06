@@ -18,6 +18,9 @@ public partial class KescoGrid<TEntity> where TEntity : class
     /// <summary>Флаг раскрытия панели фильтрации.</summary>
     private bool _filterTrayExpanded = false;
 
+    /// <summary>SQL-имена колонок, для которых пользователь отключил фильтр по значению через диалог настройки.</summary>
+    private readonly HashSet<string> _valueFilterDisabledColumns = [];
+
     /// <summary>
     /// Вспомогательный доступ к листьям дерева с <c>Source=ColumnDialog</c>
     /// для отображения чипов в панели фильтрации.
@@ -192,7 +195,8 @@ public partial class KescoGrid<TEntity> where TEntity : class
     private string? BuildFilterDescription()
         => KescoFilterDescriptionBuilder.BuildText(
             _filterRoot,
-            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName);
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName,
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m : null);
 
     /// <summary>
     /// Строит список кликабельных сегментов из всего дерева фильтра для панели.
@@ -200,7 +204,18 @@ public partial class KescoGrid<TEntity> where TEntity : class
     private IReadOnlyList<FilterSegment> BuildFilterSegments()
         => KescoFilterDescriptionBuilder.BuildSegments(
             _filterRoot,
-            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName);
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName,
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m : null);
+
+    /// <summary>
+    /// Возвращает читаемое описание ValueFilter для отображения в чипе панели фильтрации.
+    /// Делегирует в <see cref="KescoFilterDescriptionBuilder.DescribeValueFilter"/>.
+    /// </summary>
+    private string DescribeValueFilter(ValueFilter vf)
+        => KescoFilterDescriptionBuilder.DescribeValueFilter(
+            vf,
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m.DisplayName : sqlName,
+            sqlName => _columnBySqlName.TryGetValue(sqlName, out var m) ? m : null);
 
     /// <inheritdoc cref="IKescoGrid.ActiveCompositeFilter"/>
     public KescoFilterGroupNode? ActiveCompositeFilter => _filterRoot;
@@ -257,7 +272,8 @@ public partial class KescoGrid<TEntity> where TEntity : class
     {
         if (!EnableValueFilter) return false;
         if (!_columnBySqlName.TryGetValue(sqlName, out var meta)) return false;
-        return meta.Filterable && meta.AllowValueFilter;
+        return meta.Filterable && meta.AllowValueFilter
+               && !_valueFilterDisabledColumns.Contains(sqlName);
     }
 
     /// <inheritdoc cref="IKescoGrid.IsValueFilterActive"/>

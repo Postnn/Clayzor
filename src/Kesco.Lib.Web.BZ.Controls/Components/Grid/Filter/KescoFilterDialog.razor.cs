@@ -73,7 +73,9 @@ public partial class KescoFilterDialog : ComponentBase
 
     /// <summary>Пересчитывает текстовое описание черновика фильтра.</summary>
     private void RecalcDescription() =>
-        _draftDescription = KescoFilterDescriptionBuilder.BuildText(_draft, DisplayNameOf) ?? "";
+        _draftDescription = KescoFilterDescriptionBuilder.BuildText(
+            _draft, DisplayNameOf,
+            sql => Columns.FirstOrDefault(c => c.SqlName == sql)) ?? "";
 
     /// <summary>
     /// Применяет фильтр: закрывает диалог и возвращает черновик как результат.

@@ -99,11 +99,12 @@ public partial class KescoFilterGroup : ComponentBase
 
     /// <summary>
     /// Возвращает подпись для фильтра по значению в диалоге настраиваемого фильтра.
-    /// Формат: «Колонка: выбраны значения» (как у чипа в трее).
+    /// Использует <see cref="KescoFilterDescriptionBuilder.DescribeValueFilter"/>
+    /// для форматирования значений и учёта режима IN/NOT IN.
     /// </summary>
     private string ValueFilterLabel(ValueFilter vf)
-    {
-        var name = Columns.FirstOrDefault(c => c.SqlName == vf.Column)?.DisplayName ?? vf.Column;
-        return $"{name}: выбраны значения";
-    }
+        => KescoFilterDescriptionBuilder.DescribeValueFilter(
+            vf,
+            sql => Columns.FirstOrDefault(c => c.SqlName == sql)?.DisplayName ?? sql,
+            sql => Columns.FirstOrDefault(c => c.SqlName == sql));
 }

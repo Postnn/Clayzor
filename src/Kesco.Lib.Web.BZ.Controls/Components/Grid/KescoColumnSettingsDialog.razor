@@ -15,8 +15,39 @@
 <MudDialog>
     <DialogContent>
         <div @ref="_container"
-             class="d-flex flex-column pt-2"
+             class="d-flex flex-column"
              style="gap:4px">
+
+            @* ── Заголовок ──────────────────────────────────── *@
+            <div class="column-settings-chip" style="position:sticky;top:0;z-index:1;
+                 background:var(--mud-palette-background-gray);color:var(--mud-palette-text-primary);
+                 font-weight:bold;border-bottom:2px solid var(--lh-gold);margin-bottom:2px">
+                <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                         Size="Size.Small"
+                         Style="margin-right:6px;opacity:0;flex-shrink:0;visibility:hidden" />
+                <div style="flex:1;display:flex;align-items:center;min-width:0">
+                    <span class="chip-label-clickable" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Колонка</span>
+                </div>
+                <div style="display:flex;align-items:center;flex-shrink:0;gap:6px">
+                    <MudTooltip Text="Видимость" Placement="Placement.Top">
+                        <div style="width:50px;display:flex;justify-content:flex-start;padding-left:6px">
+                            <MudIcon Icon="@Icons.Material.Filled.Visibility"
+                                     Size="Size.Small"
+                                     Style="opacity:0.55" />
+                        </div>
+                    </MudTooltip>
+                    @if (ShowSorting)
+                    {
+                        <MudTooltip Text="Фильтр по значению" Placement="Placement.Top">
+                            <div style="width:38px;display:flex;justify-content:center">
+                                <MudIcon Icon="@Icons.Material.Filled.Checklist"
+                                         Size="Size.Small"
+                                         Style="opacity:0.55" />
+                            </div>
+                        </MudTooltip>
+                    }
+                </div>
+            </div>
 
             @for (int i = 0; i < _items.Count; i++)
             {
@@ -46,11 +77,19 @@
                         </div>
                     }
                     <div @onpointerdown:stopPropagation="true"
-                         style="display:flex;align-items:center;flex-shrink:0">
+                         style="display:flex;align-items:center;flex-shrink:0;gap:6px">
                         <MudSwitch T="bool"
                                    @bind-Value="item.IsVisible"
                                    Disabled="@item.IsReadonly"
                                    Color="Color.Primary" />
+                        @if (ShowSorting)
+                        {
+                            <MudTooltip Text="Фильтр по значению" Placement="Placement.Top">
+                                <MudSwitch T="bool"
+                                           @bind-Value="item.AllowValueFilter"
+                                           Color="Color.Primary" />
+                            </MudTooltip>
+                        }
                     </div>
                 </div>
             }
@@ -113,12 +152,13 @@
         _items     = [..Items];
         _originalItems = Items.Select(i => new ColumnSettingsItem
         {
-            SqlName     = i.SqlName,
-            DisplayName = i.DisplayName,
-            IsVisible   = i.IsVisible,
-            IsReadonly  = i.IsReadonly,
+            SqlName      = i.SqlName,
+            DisplayName  = i.DisplayName,
+            IsVisible    = i.IsVisible,
+            IsReadonly   = i.IsReadonly,
             SortPriority = i.SortPriority,
-            IsSortDesc  = i.IsSortDesc,
+            IsSortDesc   = i.IsSortDesc,
+            AllowValueFilter = i.AllowValueFilter,
         }).ToList();
         _dotnetRef = DotNetObjectReference.Create(this);
 
@@ -243,6 +283,7 @@
             IsReadonly   = i.IsReadonly,
             SortPriority = 0,
             IsSortDesc   = false,
+            AllowValueFilter = i.AllowValueFilter,
         }));
         if (ShowSorting)
         {
