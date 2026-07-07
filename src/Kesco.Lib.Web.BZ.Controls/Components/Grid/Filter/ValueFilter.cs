@@ -46,6 +46,7 @@ public sealed class ValueFilter : IKescoFilterNode
     /// Фактические имена назначает сквозной счётчик билдера; поле — для
     /// отладки и читаемости, в SQL не подставляется.
     /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public string ParamPrefix { get; set; } = "";
 
     /// <summary>
@@ -53,6 +54,7 @@ public sealed class ValueFilter : IKescoFilterNode
     /// хотя бы одно выбранное значение или отмечен пункт «(пустые)».
     /// Пустой узел не порождает SQL-фрагмента.
     /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool HasValue => Values.Count > 0 || BlankChecked;
 
     /// <summary>

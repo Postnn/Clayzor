@@ -113,6 +113,7 @@ public sealed class ColumnFilter : Filter.IKescoFilterNode
     public string Column { get; set; } = "";
 
     /// <summary>Имя Dapper-параметра для значения первого условия (без @, уникальное в запросе).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public string ParamName { get; set; } = "";
 
     /// <summary>Значение первого условия. null или пустая строка — условие не активно.</summary>
@@ -125,6 +126,7 @@ public sealed class ColumnFilter : Filter.IKescoFilterNode
     public KescoFilterSource Source { get; set; } = KescoFilterSource.ColumnDialog;
 
     /// <summary>Возвращает true, если первое условие имеет значимое значение.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool HasValue => Operator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
         or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull
         || (Value is not null && Value.ToString() is { Length: > 0 });
@@ -138,6 +140,7 @@ public sealed class ColumnFilter : Filter.IKescoFilterNode
     public LogicalOperator LogicalOperator { get; set; } = LogicalOperator.And;
 
     /// <summary>Имя Dapper-параметра для значения второго условия (без @).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public string SecondParamName { get; set; } = "";
 
     /// <summary>Значение второго условия. null — второе условие не активно.</summary>
@@ -147,6 +150,7 @@ public sealed class ColumnFilter : Filter.IKescoFilterNode
     public ColumnFilterOperator SecondOperator { get; set; } = ColumnFilterOperator.Contains;
 
     /// <summary>Возвращает true, если второе условие задано и имеет значение.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool HasSecondClause => SecondOperator is ColumnFilterOperator.IsEmpty or ColumnFilterOperator.IsNotEmpty
         or ColumnFilterOperator.IsNull or ColumnFilterOperator.IsNotNull
         || (SecondValue is not null && SecondValue.ToString() is { Length: > 0 });

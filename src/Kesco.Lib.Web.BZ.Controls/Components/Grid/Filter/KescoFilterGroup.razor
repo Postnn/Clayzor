@@ -22,12 +22,12 @@
         <MudButton Variant="Variant.Text" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Add"
                    OnClick="@AddExpression" Class="kesco-text-normal">
-            добавить условие
+            @KescoFilterStrings.AddCondition
         </MudButton>
         <MudButton Variant="Variant.Text" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.CreateNewFolder"
                    OnClick="@AddGroup" Class="kesco-text-normal">
-            добавить группу
+            @KescoFilterStrings.AddGroup
         </MudButton>
 
         <MudSpacer />
@@ -37,7 +37,7 @@
             <MudIconButton Icon="@Icons.Material.Filled.Close"
                            Size="Size.Small"
                            OnClick="@OnRemove"
-                           title="Удалить группу" />
+                           title="@KescoFilterStrings.DeleteGroup" />
         }
     </div>
 
@@ -55,12 +55,12 @@
                 <div class="kesco-filter-leaf">
                     <MudIcon Icon="@Icons.Material.Filled.FilterAlt" Size="Size.Small" />
                     <MudText Typo="Typo.body2" Style="flex:1 1 auto">
-                        Редактируется в диалоге колонки: @GetLeafDescription(leaf)
+                        @KescoFilterStrings.ColumnDialogInfo @GetLeafDescription(leaf)
                     </MudText>
                     <MudIconButton Icon="@Icons.Material.Filled.Close"
                                    Size="Size.Small"
                                    OnClick="@(() => RemoveNode(capturedIndex))"
-                                   title="Удалить условие" Style="flex:0 0 auto" />
+                                   title="@KescoFilterStrings.DeleteCondition" Style="flex:0 0 auto" />
                 </div>
             }
             else
@@ -86,12 +86,12 @@
             <div class="kesco-filter-leaf">
                 <MudIcon Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" />
                 <MudText Typo="Typo.body2" Style="flex:1 1 auto">
-                    Фильтр по значению: @ValueFilterLabel(vf)
+                    @KescoFilterStrings.ValueFilterInfo @ValueFilterLabel(vf)
                 </MudText>
                 <MudIconButton Icon="@Icons.Material.Filled.Close"
                                Size="Size.Small"
                                OnClick="@(() => RemoveNode(capturedIndex))"
-                               title="Удалить фильтр по значению" Style="flex:0 0 auto" />
+                               title="@KescoFilterStrings.DeleteValueFilter" Style="flex:0 0 auto" />
             </div>
         }
     }

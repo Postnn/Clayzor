@@ -188,6 +188,12 @@ public interface IKescoGrid
     KescoFilterGroupNode? ActiveCompositeFilter { get; }
 
     /// <summary>
+    /// Восстанавливает дерево фильтра из внешнего источника (например, из URL)
+    /// и немедленно перезагружает данные.
+    /// </summary>
+    void RestoreFilter(KescoFilterGroupNode root);
+
+    /// <summary>
     /// Открывает диалог настраиваемого (составного) фильтра.
     /// UI-реализация — задача 11; здесь может быть заглушка.
     /// </summary>

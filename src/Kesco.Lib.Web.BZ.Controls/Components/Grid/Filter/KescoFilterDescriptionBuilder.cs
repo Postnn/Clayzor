@@ -288,4 +288,35 @@ public static class KescoFilterDescriptionBuilder
         // Fallback
         return value?.ToString() ?? "";
     }
+
+    // ── Счётчик активных условий ──────────────────────────────────────────
+
+    /// <summary>
+    /// Рекурсивно подсчитывает количество активных условий в дереве фильтра.
+    /// <see cref="ColumnFilter"/> с <see cref="ColumnFilter.HasValue"/> = 1
+    /// (+1 если <see cref="ColumnFilter.HasSecondClause"/>).
+    /// <see cref="ValueFilter"/> с <see cref="ValueFilter.HasValue"/> = 1.
+    /// </summary>
+    public static int CountActiveLeaves(KescoFilterGroupNode? root)
+    {
+        if (root is null) return 0;
+        var count = 0;
+        foreach (var node in root.Nodes)
+        {
+            switch (node)
+            {
+                case ColumnFilter leaf:
+                    if (leaf.HasValue) count++;
+                    if (leaf.HasSecondClause) count++;
+                    break;
+                case KescoFilterGroupNode group:
+                    count += CountActiveLeaves(group);
+                    break;
+                case ValueFilter vf:
+                    if (vf.HasValue) count++;
+                    break;
+            }
+        }
+        return count;
+    }
 }

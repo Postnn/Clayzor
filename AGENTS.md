@@ -183,6 +183,9 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoFilterOption** — класс варианта для выпадающего списка значения фильтра: `Value` (object?), `Label` (string) | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterValueEditor** — единый редактор значения фильтра по типу колонки (Text/Number/Decimal/Date/Boolean/lookup). Скрывается при операторах без значения. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterOperatorLabels** — статический хелпер: читаемые русские метки операторов фильтрации. Переиспользуется в `KescoColumnFilterDialog` и `KescoFilterDialog` | — |
+| **KescoFilterStrings** — единый источник строковых констант UI фильтра (заголовки, кнопки, подписи). Устраняет хардкод русских строк в разметке диалогов | — |
+| **KescoFilterJsonConverter** — `JsonConverter<IKescoFilterNode>` с дискриминатором `$type` (`"group"`/`"column"`/`"value"`). Транзиентные поля (`ParamName`, `SecondParamName`, `ParamPrefix`, computed-свойства) исключены через `[JsonIgnore]` | — |
+| **KescoFilterUrlHelper** — статический хелпер: дерево → JSON → DeflateStream → Base64Url (и обратно). Query-параметр `filter`. Используется `KescoGridPageBase` для восстановления фильтра при первой загрузке | — |
 | **KescoFilterExpression** — редактор одного листового условия составного фильтра. Компактная однорядная раскладка (`flex-wrap:wrap`, `Dense="true"`): Поле / Условие / Значение / ✕. Автофокус на «Значение» после смены колонки/оператора (через `@key` ремоунт + `AutoFocus`). При `Node.IsNew` (условие добавлено перетаскиванием) сразу фокусирует значение | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterGroup** — рекурсивный узел-группа составного фильтра с `MudToggleGroup` И/ИЛИ, кнопками добавления условия/группы (в одной строке с переключателем) и удаления. Корневая группа (`IsRoot=true`) рендерится плоско (без рамки/отступа). Не-корневые — компактно (`gap:6px`, `border-left:2px`). `GetLeafDescription` делегирует в `KescoFilterDescriptionBuilder.DescribeLeaf` (оба клауза). Условия `ColumnDialog` отображаются read-only с кнопкой удаления (крестик) | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoFilterDialog** — диалог настраиваемого (составного) фильтра. Фиксированная высота через скоупленный `ContentClass` (`width:600px; height:min(460px,80vh); overflow:hidden; flex column`). Описание — фиксировано сверху (`flex:0 0 auto`), дерево условий — единственная прокручиваемая зона (`flex:1; overflow-y:auto; min-height:0`). `DragMode=Simple` (перетаскивается). Всегда рендерит корневую группу, работает с глубокой копией дерева, возвращает результат через `DialogResult.Ok(KescoFilterGroupNode)` | [docs/kesco-grid.md](docs/kesco-grid.md) |
@@ -387,6 +390,15 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Сегменты/описание строятся через `KescoFilterDescriptionBuilder`: `BuildSegments(root, getDisplayName)` → `IReadOnlyList<FilterSegment>` (для колоночных чипов); `BuildText(root, getDisplayName)` → строка для составного чипа и экспорта/печати
 - **Печатная шапка** (`.kesco-grid-print-descriptions`) скрыта на экране (`display:none`), видна только при печати (`@media print { display:block }`) — дублирования текста фильтра на экране нет
 - Filter tray не конфликтует с grouping tray — оба могут быть открыты одновременно
+- **Бейдж активных условий**: `KescoFilterDescriptionBuilder.CountActiveLeaves(root)` рекурсивно подсчитывает активные условия: `ColumnFilter` с `HasValue` (+1 если `HasSecondClause`), `ValueFilter` с `HasValue` (+1). Счётчик отображается через `MudBadge` на кнопке `FilterAlt` (скрывается при 0)
+
+### Сериализация и URL-персистенция фильтра
+- **`KescoFilterJsonConverter : JsonConverter<IKescoFilterNode>`** — полиморфная JSON-сериализация дерева фильтра с дискриминатором `$type`: `"group"` → `KescoFilterGroupNode`, `"column"` → `ColumnFilter`, `"value"` → `ValueFilter`. Транзиентные поля (`ParamName`, `SecondParamName`, `ParamPrefix`, computed-свойства) помечены `[JsonIgnore]`. `object? Value` сериализуется как есть, десериализуется через `JsonElement` → ближайший CLR-тип. Атрибут `[JsonConverter]` на интерфейсе `IKescoFilterNode`
+- **`KescoFilterUrlHelper`** — статический хелпер: дерево → JSON → `DeflateStream` → Base64Url (и обратно). Query-параметр: `filter`
+- **Восстановление при загрузке**: `KescoGridPageBase.OnAfterRenderAsync(firstRender)` читает параметр `filter` из URL, десериализует через `KescoFilterUrlHelper.Deserialize()` и вызывает `Grid.RestoreFilter(root)`. `KescoGrid.RestoreFilter()` заменяет `_filterRoot` и вызывает `NotifyQueryChanged()`
+
+### Локализация фильтра
+- **`KescoFilterStrings`** — единый источник всех строковых констант UI фильтра (заголовки, кнопки, подписи). Заменяет хардкод русских строк в `KescoFilterGroup.razor`, `KescoFilterDialog.razor`, `KescoFilterExpression.razor` и тулбаре `KescoGrid.razor`
 
 ### Интеграция на странице (через KescoGridPageBase\<T>)
 Конфигурация SQL передаётся через параметры `<KescoGrid>`:

@@ -220,6 +220,22 @@ public partial class KescoGrid<TEntity> where TEntity : class
     /// <inheritdoc cref="IKescoGrid.ActiveCompositeFilter"/>
     public KescoFilterGroupNode? ActiveCompositeFilter => _filterRoot;
 
+    /// <summary>
+    /// Количество активных условий фильтра — для бейджа на кнопке.
+    /// </summary>
+    private int _activeFilterCount
+        => KescoFilterDescriptionBuilder.CountActiveLeaves(_filterRoot);
+
+    /// <summary>
+    /// Восстанавливает дерево фильтра из внешнего источника (например, из URL).
+    /// Заменяет текущий <see cref="_filterRoot"/> и оповещает подписчиков.
+    /// </summary>
+    public void RestoreFilter(KescoFilterGroupNode root)
+    {
+        _filterRoot = root;
+        _ = NotifyQueryChanged();
+    }
+
     /// <inheritdoc cref="IKescoGrid.OpenCompositeFilterDialog"/>
     public async Task OpenCompositeFilterDialog() => await OpenCompositeFilterDialog(null);
 

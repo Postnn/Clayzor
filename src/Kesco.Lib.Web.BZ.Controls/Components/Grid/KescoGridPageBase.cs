@@ -140,6 +140,7 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
 
     /// <summary>JS interop — для скачивания файлов и других операций.</summary>
     [Inject] protected IJSRuntime JS { get; set; } = null!;
+    [Inject] protected NavigationManager Navigation { get; set; } = null!;
 
     // ── Ссылка на грид — устанавливается через @ref="_dataGrid" ─────────────────
 
@@ -334,9 +335,36 @@ public abstract partial class KescoGridPageBase<T> : ComponentBase, IKescoGridDa
     {
         if (firstRender)
         {
+            // Восстановление фильтра из URL при первой загрузке
+            if (Grid is not null)
+            {
+                var uri = new Uri(Navigation.Uri);
+                var filterParam = ParseQueryParam(uri.Query, Filter.KescoFilterUrlHelper.QueryParamName);
+                var restored = Filter.KescoFilterUrlHelper.Deserialize(filterParam);
+                if (restored is not null)
+                    Grid.RestoreFilter(restored);
+            }
+
             await LoadData();
             StateHasChanged();
         }
+    }
+
+    /// <summary>Извлекает значение query-параметра из строки запроса.</summary>
+    private static string? ParseQueryParam(string query, string key)
+    {
+        if (string.IsNullOrEmpty(query) || query[0] != '?')
+            return null;
+        query = query[1..];
+        foreach (var pair in query.Split('&'))
+        {
+            var eq = pair.IndexOf('=');
+            var k = eq >= 0 ? pair[..eq] : pair;
+            var v = eq >= 0 ? Uri.UnescapeDataString(pair[(eq + 1)..]) : "";
+            if (string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
+                return v;
+        }
+        return null;
     }
 
     /// <summary>

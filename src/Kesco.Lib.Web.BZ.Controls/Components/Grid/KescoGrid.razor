@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @using MudBlazor.Extensions
 @using MudBlazor.Extensions.Options
+@using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter
 
 @* CascadingValue охватывает весь рендер — и KescoColumnDef (регистрация метаданных),
    и KescoColumn внутри MudDataGrid (построение заголовков) получают одну ссылку на IKescoGrid *@
@@ -47,11 +48,15 @@
             }
             @if (_columnBySqlName.Values.Any(c => c.Filterable))
             {
-                <KescoButton Text="@(_filterTrayExpanded ? "Скрыть фильтры" : "Фильтровать")"
-                             Icon="@Icons.Material.Filled.FilterAlt"
-                             Class="@(_filterTrayExpanded ? "filter-toggle-btn filter-toggle-btn--active" : "filter-toggle-btn")"
-                             OnClick="@ToggleFilterTray" />
-
+                <MudBadge Content="@_activeFilterCount"
+                          Visible="@(_activeFilterCount > 0)"
+                          Color="Color.Primary"
+                          Overlap="true">
+                    <KescoButton Text="@(_filterTrayExpanded ? KescoFilterStrings.HideFilters : KescoFilterStrings.ShowFilters)"
+                                 Icon="@Icons.Material.Filled.FilterAlt"
+                                 Class="@(_filterTrayExpanded ? "filter-toggle-btn filter-toggle-btn--active" : "filter-toggle-btn")"
+                                 OnClick="@ToggleFilterTray" />
+                </MudBadge>
             }
             @if (ShowAddButton)
             {
