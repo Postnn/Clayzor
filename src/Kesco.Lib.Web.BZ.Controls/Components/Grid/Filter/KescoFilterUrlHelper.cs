@@ -14,6 +14,12 @@ public static class KescoFilterUrlHelper
     /// <summary>Имя query-параметра в URL.</summary>
     public const string QueryParamName = "filter";
 
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+    };
+
     /// <summary>
     /// Сжимает дерево фильтра в URL-безопасную строку:
     /// дерево → JSON → DeflateStream → Base64Url.
@@ -24,7 +30,7 @@ public static class KescoFilterUrlHelper
         if (root is null || root.Nodes.Count == 0)
             return null;
 
-        var json = JsonSerializer.Serialize<IKescoFilterNode>(root);
+        var json = JsonSerializer.Serialize<IKescoFilterNode>(root, _jsonOptions);
         var bytes = Encoding.UTF8.GetBytes(json);
 
         using var output = new MemoryStream();
@@ -53,7 +59,7 @@ public static class KescoFilterUrlHelper
             using var reader = new StreamReader(deflate, Encoding.UTF8);
             var json = reader.ReadToEnd();
 
-            return JsonSerializer.Deserialize<KescoFilterGroupNode>(json);
+            return JsonSerializer.Deserialize<KescoFilterGroupNode>(json, _jsonOptions);
         }
         catch
         {

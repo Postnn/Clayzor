@@ -83,6 +83,12 @@ dotnet run --project src\Kesco.App.Web.BZ.MedicalTests
 ```
 Dev URL: `http://localhost:5010`
 
+## Tests
+```
+dotnet test tests\Kesco.Lib.Web.BZ.Controls.Tests
+```
+Тестовый проект: xUnit, `net10.0`. Покрывает SQL-билдер, модель фильтра, JSON/URL-сериализацию, описание и индикатор. См. `tests/Kesco.Lib.Web.BZ.Controls.Tests/`.
+
 Watch with hot reload (VS Code task also available):
 ```
 dotnet watch run --project src\Kesco.App.Web.BZ.MedicalTests
@@ -452,8 +458,8 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 
 ## Key conventions
 - All Razor markup and user-visible text is **Russian**
-- No tests exist in this repo
 - No CI/CD, no linter configuration
+- Unit tests: `tests/Kesco.Lib.Web.BZ.Controls.Tests/` (xUnit, 39 тестов — SQL-билдер, модель, сериализация)
 - **Использовать готовые компоненты из `src\Kesco.Lib.Web.BZ.Controls`** при разработке форм (KescoEditForm, KescoComboBox, ConfirmDialog, KescoColumnFilterDialog, KescoErrorBar). Проверять наличие подходящего компонента перед использованием MudBlazor-компонентов напрямую.
 - **Кнопки с тултипом**: всегда использовать `<KescoButton>` вместо пары `<MudTooltip><MudIconButton/></MudTooltip>`. `KescoButton` автоматически сбрасывает тултип после клика, предотвращая «залипание» при открытии диалогов.
 - **Выпадающие меню**: всегда использовать `<KescoMenu>` вместо `<MudMenu>` с `<ActivatorContent>`, `<MudTooltip>` и `<MudIconButton>`. `KescoMenu` автоматически строит кнопку-активатор с опциональным тултипом и сбрасывает тултип после клика, аналогично `KescoButton`.

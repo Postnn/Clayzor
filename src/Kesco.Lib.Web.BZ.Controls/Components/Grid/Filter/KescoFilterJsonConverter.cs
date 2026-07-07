@@ -68,7 +68,7 @@ public sealed class KescoFilterJsonConverter : JsonConverter<IKescoFilterNode>
         writer.WriteNumber("logic", (int)group.Logic);
         writer.WriteStartArray("nodes");
         foreach (var node in group.Nodes)
-            JsonSerializer.Serialize(writer, node, node.GetType());
+            JsonSerializer.Serialize(writer, node, typeof(IKescoFilterNode));
         writer.WriteEndArray();
     }
 
@@ -79,7 +79,7 @@ public sealed class KescoFilterJsonConverter : JsonConverter<IKescoFilterNode>
         writer.WriteNumber("operator", (int)leaf.Operator);
         writer.WriteNumber("source", (int)leaf.Source);
 
-        // Первое значение
+        // Значение
         WriteValue(writer, "value", leaf.Value);
 
         // Второе условие
