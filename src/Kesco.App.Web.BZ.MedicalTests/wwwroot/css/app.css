@@ -1173,6 +1173,11 @@ body {
     font-weight: bold;
     border-bottom: 2px solid var(--kesco-gold);
     margin-bottom: 2px;
+    cursor: default;
+}
+.kesco-column-settings-header:hover {
+    background: var(--mud-palette-background-gray);
+    cursor: default;
 }
 .kesco-column-settings-row {
     flex: 1;
