@@ -3,12 +3,17 @@ using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 
 namespace Kesco.Lib.Web.BZ.Controls.Tests;
 
+/// <summary>
+/// Тесты построителя описаний <see cref="KescoFilterDescriptionBuilder"/>:
+/// текстовое описание (<see cref="KescoFilterDescriptionBuilder.BuildText"/>),
+/// сегменты (<see cref="KescoFilterDescriptionBuilder.BuildSegments"/>),
+/// счётчик активных условий (<see cref="KescoFilterDescriptionBuilder.CountActiveLeaves"/>).
+/// </summary>
 public class KescoFilterDescriptionBuilderTests
 {
     private static string GetDisplayName(string sql) => sql;
 
-    // ── 4.1 BuildText — группа И с двумя листьями ─────────────────────────
-
+    /// <summary>BuildText для группы И — содержит имена колонок, операторы и значения.</summary>
     [Fact]
     public void BuildText_AndGroup_ContainsAndWithDescriptions()
     {
@@ -25,8 +30,7 @@ public class KescoFilterDescriptionBuilderTests
         Assert.Contains("v1", text);
     }
 
-    // ── 4.2 CountActiveLeaves — 2 листа + SecondClause ────────────────────
-
+    /// <summary>CountActiveLeaves: 2 листа, у одного второе условие → 3.</summary>
     [Fact]
     public void CountActiveLeaves_TwoLeavesOneWithSecondClause_Returns3()
     {
@@ -34,20 +38,16 @@ public class KescoFilterDescriptionBuilderTests
         root.Nodes.Add(new ColumnFilter { Column = "A", Operator = ColumnFilterOperator.Contains, Value = "x", Source = KescoFilterSource.CompositeDialog });
         root.Nodes.Add(new ColumnFilter
         {
-            Column = "B",
-            Operator = ColumnFilterOperator.Contains,
-            Value = "y",
-            SecondOperator = ColumnFilterOperator.Equals,
-            SecondValue = "z",
+            Column = "B", Operator = ColumnFilterOperator.Contains, Value = "y",
+            SecondOperator = ColumnFilterOperator.Equals, SecondValue = "z",
             Source = KescoFilterSource.CompositeDialog,
         });
 
         var count = KescoFilterDescriptionBuilder.CountActiveLeaves(root);
-        Assert.Equal(3, count); // 1 (A, одно условие) + 2 (B, два условия) = 3
+        Assert.Equal(3, count);
     }
 
-    // ── 4.3 CountActiveLeaves — пустое дерево ─────────────────────────────
-
+    /// <summary>CountActiveLeaves: null и пустое дерево → 0.</summary>
     [Fact]
     public void CountActiveLeaves_Empty_ReturnsZero()
     {
@@ -55,8 +55,7 @@ public class KescoFilterDescriptionBuilderTests
         Assert.Equal(0, KescoFilterDescriptionBuilder.CountActiveLeaves(new KescoFilterGroupNode()));
     }
 
-    // ── 4.4 CountActiveLeaves — ValueFilter ───────────────────────────────
-
+    /// <summary>CountActiveLeaves: ValueFilter с HasValue → 1.</summary>
     [Fact]
     public void CountActiveLeaves_ValueFilterWithValue_ReturnsOne()
     {
@@ -67,8 +66,7 @@ public class KescoFilterDescriptionBuilderTests
         Assert.Equal(1, count);
     }
 
-    // ── 4.5 BuildSegments — Source в сегменте ─────────────────────────────
-
+    /// <summary>BuildSegments для ColumnDialog — сегмент содержит Source и Column.</summary>
     [Fact]
     public void BuildSegments_ColumnDialog_SegmentHasColumnSource()
     {

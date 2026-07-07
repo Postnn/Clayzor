@@ -3,10 +3,13 @@ using Kesco.Lib.Web.BZ.Controls.Components.Grid.ColumnTypes;
 
 namespace Kesco.Lib.Web.BZ.Controls.Tests;
 
+/// <summary>
+/// Тесты реестра типов колонок <see cref="ColumnTypeRegistry"/>:
+/// маппинг CLR-типов на дескрипторы (<see cref="ColumnTypeDescriptor"/>).
+/// </summary>
 public class ColumnTypeRegistryTests
 {
-    // ── 3.1 string → Text ─────────────────────────────────────────────────
-
+    /// <summary>typeof(string) → <see cref="ColumnType.Text"/>.</summary>
     [Fact]
     public void FromClr_String_ReturnsText()
     {
@@ -14,8 +17,7 @@ public class ColumnTypeRegistryTests
         Assert.Equal(ColumnType.Text, descriptor.Kind);
     }
 
-    // ── 3.2 int → Number ──────────────────────────────────────────────────
-
+    /// <summary>typeof(int) → <see cref="ColumnType.Number"/>.</summary>
     [Fact]
     public void FromClr_Int_ReturnsNumber()
     {
@@ -23,8 +25,7 @@ public class ColumnTypeRegistryTests
         Assert.Equal(ColumnType.Number, descriptor.Kind);
     }
 
-    // ── 3.3 int? → Number ─────────────────────────────────────────────────
-
+    /// <summary>typeof(int?) — Nullable-обёртка → <see cref="ColumnType.Number"/>.</summary>
     [Fact]
     public void FromClr_NullableInt_ReturnsNumber()
     {
@@ -32,8 +33,7 @@ public class ColumnTypeRegistryTests
         Assert.Equal(ColumnType.Number, descriptor.Kind);
     }
 
-    // ── 3.4 decimal → Decimal ─────────────────────────────────────────────
-
+    /// <summary>typeof(decimal) → <see cref="ColumnType.Decimal"/>.</summary>
     [Fact]
     public void FromClr_Decimal_ReturnsDecimal()
     {
@@ -41,8 +41,7 @@ public class ColumnTypeRegistryTests
         Assert.Equal(ColumnType.Decimal, descriptor.Kind);
     }
 
-    // ── 3.5 DateTime → Date ───────────────────────────────────────────────
-
+    /// <summary>typeof(DateTime) → <see cref="ColumnType.Date"/>.</summary>
     [Fact]
     public void FromClr_DateTime_ReturnsDate()
     {
@@ -50,8 +49,7 @@ public class ColumnTypeRegistryTests
         Assert.Equal(ColumnType.Date, descriptor.Kind);
     }
 
-    // ── 3.6 bool → Boolean ────────────────────────────────────────────────
-
+    /// <summary>typeof(bool) → <see cref="ColumnType.Boolean"/>.</summary>
     [Fact]
     public void FromClr_Bool_ReturnsBoolean()
     {

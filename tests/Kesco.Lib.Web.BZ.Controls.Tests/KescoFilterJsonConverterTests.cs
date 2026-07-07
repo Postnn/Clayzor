@@ -4,6 +4,10 @@ using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 
 namespace Kesco.Lib.Web.BZ.Controls.Tests;
 
+/// <summary>
+/// Тесты JSON-конвертера <see cref="KescoFilterJsonConverter"/>:
+/// полиморфный round-trip дерева фильтра с дискриминатором $type.
+/// </summary>
 public class KescoFilterJsonConverterTests
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -18,19 +22,12 @@ public class KescoFilterJsonConverterTests
     private static IKescoFilterNode? Deserialize(string json)
         => JsonSerializer.Deserialize<IKescoFilterNode>(json, Options);
 
-    // ── 5.1 Группа + лист → round-trip ────────────────────────────────────
-
+    /// <summary>Группа с листом → JSON → десериализация → структура сохранена.</summary>
     [Fact]
     public void RoundTrip_GroupWithLeaf_StructurePreserved()
     {
         var root = new KescoFilterGroupNode { Logic = LogicalOperator.And };
-        root.Nodes.Add(new ColumnFilter
-        {
-            Column = "col",
-            Operator = ColumnFilterOperator.Contains,
-            Value = "test",
-            Source = KescoFilterSource.CompositeDialog,
-        });
+        root.Nodes.Add(new ColumnFilter { Column = "col", Operator = ColumnFilterOperator.Contains, Value = "test", Source = KescoFilterSource.CompositeDialog });
 
         var json = Serialize(root);
         var restored = Deserialize(json);
@@ -45,18 +42,14 @@ public class KescoFilterJsonConverterTests
         Assert.Equal("test", leaf.Value);
     }
 
-    // ── 5.2 ParamName не сериализуется ────────────────────────────────────
-
+    /// <summary>ParamName и SecondParamName не сериализуются (помечены [JsonIgnore]).</summary>
     [Fact]
     public void Serialize_ParamName_NotInJson()
     {
         var leaf = new ColumnFilter
         {
-            Column = "col",
-            Operator = ColumnFilterOperator.Equals,
-            Value = 1,
-            ParamName = "secret",
-            SecondParamName = "also_secret",
+            Column = "col", Operator = ColumnFilterOperator.Equals, Value = 1,
+            ParamName = "secret", SecondParamName = "also_secret",
             Source = KescoFilterSource.CompositeDialog,
         };
 
@@ -66,35 +59,21 @@ public class KescoFilterJsonConverterTests
         Assert.DoesNotContain("secondParamName", json);
     }
 
-    // ── 5.3 IsNew не сериализуется ────────────────────────────────────────
-
+    /// <summary>IsNew не сериализуется (транзиентный UI-флаг).</summary>
     [Fact]
     public void Serialize_IsNew_NotInJson()
     {
-        var leaf = new ColumnFilter
-        {
-            Column = "col",
-            Operator = ColumnFilterOperator.Equals,
-            Value = 1,
-            IsNew = true,
-        };
+        var leaf = new ColumnFilter { Column = "col", Operator = ColumnFilterOperator.Equals, Value = 1, IsNew = true };
 
         var json = Serialize(leaf);
         Assert.DoesNotContain("isNew", json);
     }
 
-    // ── 5.4 ValueFilter round-trip ────────────────────────────────────────
-
+    /// <summary>ValueFilter round-trip — Negate, BlankChecked, Values сохранены.</summary>
     [Fact]
     public void RoundTrip_ValueFilter_PreservesValues()
     {
-        var vf = new ValueFilter
-        {
-            Column = "col",
-            Values = ["a", "b", "c"],
-            Negate = true,
-            BlankChecked = true,
-        };
+        var vf = new ValueFilter { Column = "col", Values = ["a", "b", "c"], Negate = true, BlankChecked = true };
 
         var json = Serialize(vf);
         var restored = Deserialize(json);
@@ -107,19 +86,15 @@ public class KescoFilterJsonConverterTests
         Assert.Equal(3, restoredVf.Values.Count);
     }
 
-    // ── 5.5 SecondClause round-trip ───────────────────────────────────────
-
+    /// <summary>Второе условие (SecondClause) — round-trip с LogicalOperator и SecondValue.</summary>
     [Fact]
     public void RoundTrip_SecondClause_Preserved()
     {
         var leaf = new ColumnFilter
         {
-            Column = "col",
-            Operator = ColumnFilterOperator.GreaterThan,
-            Value = 10,
+            Column = "col", Operator = ColumnFilterOperator.GreaterThan, Value = 10,
             LogicalOperator = LogicalOperator.And,
-            SecondOperator = ColumnFilterOperator.LessThan,
-            SecondValue = 100,
+            SecondOperator = ColumnFilterOperator.LessThan, SecondValue = 100,
             Source = KescoFilterSource.CompositeDialog,
         };
 

@@ -3,27 +3,19 @@ using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 
 namespace Kesco.Lib.Web.BZ.Controls.Tests;
 
+/// <summary>
+/// Тесты URL-хелпера <see cref="KescoFilterUrlHelper"/>:
+/// сжатие/восстановление дерева фильтра через DeflateStream + Base64Url.
+/// </summary>
 public class KescoFilterUrlHelperTests
 {
-    // ── 6.1 Round-trip ────────────────────────────────────────────────────
-
+    /// <summary>Дерево → Serialize → Deserialize → структура сохранена.</summary>
     [Fact]
     public void SerializeDeserialize_RoundTrip_StructurePreserved()
     {
         var root = new KescoFilterGroupNode { Logic = LogicalOperator.Or };
-        root.Nodes.Add(new ColumnFilter
-        {
-            Column = "col",
-            Operator = ColumnFilterOperator.Contains,
-            Value = "test",
-            Source = KescoFilterSource.CompositeDialog,
-        });
-        root.Nodes.Add(new ValueFilter
-        {
-            Column = "col2",
-            Values = [1, 2],
-            Negate = false,
-        });
+        root.Nodes.Add(new ColumnFilter { Column = "col", Operator = ColumnFilterOperator.Contains, Value = "test", Source = KescoFilterSource.CompositeDialog });
+        root.Nodes.Add(new ValueFilter { Column = "col2", Values = [1, 2], Negate = false });
 
         var url = KescoFilterUrlHelper.Serialize(root);
         Assert.NotNull(url);
@@ -36,8 +28,7 @@ public class KescoFilterUrlHelperTests
         Assert.IsType<ValueFilter>(restored.Nodes[1]);
     }
 
-    // ── 6.2 Пустое дерево → null ──────────────────────────────────────────
-
+    /// <summary>Пустое дерево (нет дочерних узлов) → Serialize возвращает null.</summary>
     [Fact]
     public void Serialize_EmptyTree_ReturnsNull()
     {
@@ -46,8 +37,7 @@ public class KescoFilterUrlHelperTests
         Assert.Null(result);
     }
 
-    // ── 6.3 null → null ───────────────────────────────────────────────────
-
+    /// <summary>null или пустая строка или невалидный Base64 → Deserialize возвращает null.</summary>
     [Fact]
     public void Deserialize_NullOrEmpty_ReturnsNull()
     {

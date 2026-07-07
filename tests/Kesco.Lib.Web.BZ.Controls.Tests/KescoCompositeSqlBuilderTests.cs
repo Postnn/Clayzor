@@ -4,12 +4,16 @@ using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 
 namespace Kesco.Lib.Web.BZ.Controls.Tests;
 
+/// <summary>
+/// Тесты SQL-билдера <see cref="KescoCompositeSqlBuilder"/> и <see cref="KescoDataQuery.BuildSingleClause"/>.
+/// Покрытие: группы И/ИЛИ, вложенность, белый список колонок, параметризация,
+/// уникальные имена параметров, операторы без значений, LIKE/ESCAPE, ValueFilter (IN/NOT IN/BlankChecked).
+/// </summary>
 public class KescoCompositeSqlBuilderTests
 {
     private static ISet<string> Known(string[] cols) => new HashSet<string>(cols);
 
-    // ── 1.1 Группа И с двумя условиями ────────────────────────────────────
-
+    /// <summary>Группа И с двумя условиями — скобки и AND.</summary>
     [Fact]
     public void Build_AndGroup_ReturnsParenthesizedAnd()
     {
@@ -26,8 +30,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.EndsWith(")", result);
     }
 
-    // ── 1.2 Группа ИЛИ с двумя условиями ──────────────────────────────────
-
+    /// <summary>Группа ИЛИ с двумя условиями — скобки и OR.</summary>
     [Fact]
     public void Build_OrGroup_ReturnsParenthesizedOr()
     {
@@ -42,8 +45,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.Contains(" OR ", result);
     }
 
-    // ── 1.3 Вложенная группа ──────────────────────────────────────────────
-
+    /// <summary>Вложенная группа И(ИЛИ(a,b), c) — двойные скобки.</summary>
     [Fact]
     public void Build_NestedGroup_ReturnsNestedBrackets()
     {
@@ -59,14 +61,12 @@ public class KescoCompositeSqlBuilderTests
         var result = KescoCompositeSqlBuilder.Build(root, dp, Known(["A", "B", "C"]));
 
         Assert.NotNull(result);
-        // ((A = @p0 OR B = @p1) AND C = @p2)
         Assert.StartsWith("((", result);
         Assert.Contains(" AND ", result);
         Assert.Contains(" OR ", result);
     }
 
-    // ── 1.4 Пустой корень ─────────────────────────────────────────────────
-
+    /// <summary>Пустой корень (без дочерних узлов) → null.</summary>
     [Fact]
     public void Build_EmptyRoot_ReturnsNull()
     {
@@ -76,6 +76,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.Null(result);
     }
 
+    /// <summary>null-корень → null.</summary>
     [Fact]
     public void Build_NullRoot_ReturnsNull()
     {
@@ -84,8 +85,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.Null(result);
     }
 
-    // ── 1.5 Лист с неизвестной колонкой ───────────────────────────────────
-
+    /// <summary>Колонка вне белого списка — лист молча отбрасывается.</summary>
     [Fact]
     public void Build_UnknownColumn_LeafDropped()
     {
@@ -99,12 +99,10 @@ public class KescoCompositeSqlBuilderTests
         Assert.NotNull(result);
         Assert.DoesNotContain("unknown", result);
         Assert.Contains("known", result);
-        // Только одно условие → без скобок
         Assert.DoesNotContain("(", result);
     }
 
-    // ── 1.6 Значения параметризуются ──────────────────────────────────────
-
+    /// <summary>Значение уходит в Dapper-параметр, а не в SQL-текст.</summary>
     [Fact]
     public void Build_ValueParameterized()
     {
@@ -119,8 +117,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.DoesNotContain("hello", result);
     }
 
-    // ── 1.7 Повтор колонки → уникальные имена параметров ──────────────────
-
+    /// <summary>Два листа на одной колонке — уникальные имена параметров p0, p1.</summary>
     [Fact]
     public void Build_DuplicateColumn_UniqueParamNames()
     {
@@ -134,11 +131,9 @@ public class KescoCompositeSqlBuilderTests
         Assert.NotNull(result);
         Assert.Contains("@p0", result);
         Assert.Contains("@p1", result);
-        Assert.NotEqual("@p0", "@p1");
     }
 
-    // ── 1.8 IsNull ────────────────────────────────────────────────────────
-
+    /// <summary>Оператор IsNull — SQL содержит IS NULL без параметра.</summary>
     [Fact]
     public void Build_IsNull_NoParameter()
     {
@@ -152,8 +147,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.Contains("IS NULL", result);
     }
 
-    // ── 1.9 IsNotNull ─────────────────────────────────────────────────────
-
+    /// <summary>Оператор IsNotNull — SQL содержит IS NOT NULL без параметра.</summary>
     [Fact]
     public void Build_IsNotNull_NoParameter()
     {
@@ -167,8 +161,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.Contains("IS NOT NULL", result);
     }
 
-    // ── 1.10 Contains ─────────────────────────────────────────────────────
-
+    /// <summary>Contains → LIKE @p0 ESCAPE '\' с обрамлением %value%.</summary>
     [Fact]
     public void Build_Contains_LikeWithEscape()
     {
@@ -183,8 +176,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.Contains("ESCAPE '\\'", result);
     }
 
-    // ── 1.11 SQL-инъекция ─────────────────────────────────────────────────
-
+    /// <summary>SQL-инъекция в значении — значение в параметре, не в SQL-тексте.</summary>
     [Fact]
     public void Build_SqlInjection_ValueInParameterNotInSql()
     {
@@ -199,19 +191,12 @@ public class KescoCompositeSqlBuilderTests
         Assert.DoesNotContain("--", result);
     }
 
-    // ── 1.12 ValueFilter IN ───────────────────────────────────────────────
-
+    /// <summary>ValueFilter в режиме IN — SQL содержит IN (@p0, @p1, @p2).</summary>
     [Fact]
     public void Build_ValueFilter_IN_GeneratesInClause()
     {
         var root = new KescoFilterGroupNode();
-        root.Nodes.Add(new ValueFilter
-        {
-            Column = "col",
-            Values = [1, 2, 3],
-            Negate = false,
-            BlankChecked = false,
-        });
+        root.Nodes.Add(new ValueFilter { Column = "col", Values = [1, 2, 3], Negate = false, BlankChecked = false });
 
         var dp = new DynamicParameters();
         var result = KescoCompositeSqlBuilder.Build(root, dp, Known(["col"]));
@@ -223,53 +208,37 @@ public class KescoCompositeSqlBuilderTests
         Assert.Contains("@p2", result);
     }
 
-    // ── 1.13 ValueFilter NOT IN + BlankChecked ────────────────────────────
-
+    /// <summary>ValueFilter NOT IN без BlankChecked — добавляется IS NOT NULL.</summary>
     [Fact]
     public void Build_ValueFilter_NotIn_BlankCheckedFalse()
     {
         var root = new KescoFilterGroupNode();
-        root.Nodes.Add(new ValueFilter
-        {
-            Column = "col",
-            Values = ["a", "b"],
-            Negate = true,
-            BlankChecked = false,
-        });
+        root.Nodes.Add(new ValueFilter { Column = "col", Values = ["a", "b"], Negate = true, BlankChecked = false });
 
         var dp = new DynamicParameters();
         var result = KescoCompositeSqlBuilder.Build(root, dp, Known(["col"]));
 
         Assert.NotNull(result);
         Assert.Contains("NOT IN (", result);
-        // Negate+!Blank: добавляется IS NOT NULL и <> '' для строк
         Assert.Contains("IS NOT NULL", result);
     }
 
-    // ── 1.14 ValueFilter Negate=false BlankChecked=true ───────────────────
-
+    /// <summary>ValueFilter с BlankChecked=true — OR-логика, IS NULL.</summary>
     [Fact]
     public void Build_ValueFilter_BlankChecked_OrLogic()
     {
         var root = new KescoFilterGroupNode();
-        root.Nodes.Add(new ValueFilter
-        {
-            Column = "col",
-            Values = [1],
-            Negate = false,
-            BlankChecked = true,
-        });
+        root.Nodes.Add(new ValueFilter { Column = "col", Values = [1], Negate = false, BlankChecked = true });
 
         var dp = new DynamicParameters();
         var result = KescoCompositeSqlBuilder.Build(root, dp, Known(["col"]));
 
         Assert.NotNull(result);
-        Assert.Contains(" OR ", result); // Blank → OR logic
+        Assert.Contains(" OR ", result);
         Assert.Contains("IS NULL", result);
     }
 
-    // ── 1.15 Date параметризуется как DateTime ───────────────────────────
-
+    /// <summary>Дата параметризуется как DateTime через Dapper.</summary>
     [Fact]
     public void Build_Date_AddedAsParameter()
     {
@@ -284,8 +253,7 @@ public class KescoCompositeSqlBuilderTests
         Assert.Contains("@p0", result);
     }
 
-    // ── 1.16 Decimal параметризуется ──────────────────────────────────────
-
+    /// <summary>Decimal параметризуется через Dapper.</summary>
     [Fact]
     public void Build_Decimal_AddedAsParameter()
     {

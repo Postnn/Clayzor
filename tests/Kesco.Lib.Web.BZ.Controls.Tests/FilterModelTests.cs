@@ -3,10 +3,13 @@ using Kesco.Lib.Web.BZ.Controls.Components.Grid.Filter;
 
 namespace Kesco.Lib.Web.BZ.Controls.Tests;
 
+/// <summary>
+/// Тесты модели фильтра: глубокое копирование (<see cref="IKescoFilterNode.Clone"/>)
+/// для всех трёх типов узлов — группа, лист (<see cref="ColumnFilter"/>), фильтр по значению (<see cref="ValueFilter"/>).
+/// </summary>
 public class FilterModelTests
 {
-    // ── 2.1 KescoFilterGroupNode.Clone() — глубокая копия ─────────────────
-
+    /// <summary>Clone группы — глубокая копия: правка копии не трогает оригинал.</summary>
     [Fact]
     public void GroupNode_Clone_DeepCopy()
     {
@@ -16,18 +19,15 @@ public class FilterModelTests
 
         var clone = (KescoFilterGroupNode)original.Clone();
 
-        // Структура идентична
         Assert.Equal(LogicalOperator.Or, clone.Logic);
         Assert.Single(clone.Nodes);
         Assert.IsType<ColumnFilter>(clone.Nodes[0]);
 
-        // Правка копии не трогает оригинал
         clone.Nodes.Clear();
         Assert.Single(original.Nodes);
     }
 
-    // ── 2.2 ColumnFilter.Clone() — поля скопированы ──────────────────────
-
+    /// <summary>Clone листа — все поля скопированы, IsNew не копируется.</summary>
     [Fact]
     public void ColumnFilter_Clone_CopiesAllFields()
     {
@@ -54,22 +54,14 @@ public class FilterModelTests
         Assert.Equal(LogicalOperator.Or, clone.LogicalOperator);
         Assert.Equal(ColumnFilterOperator.Equals, clone.SecondOperator);
         Assert.Equal(42, clone.SecondValue);
-        // IsNew не копируется
         Assert.False(clone.IsNew);
     }
 
-    // ── 2.3 ValueFilter.Clone() — независимый список Values ──────────────
-
+    /// <summary>Clone ValueFilter — Values — независимая копия списка.</summary>
     [Fact]
     public void ValueFilter_Clone_IndependentValuesList()
     {
-        var original = new ValueFilter
-        {
-            Column = "col",
-            Values = [1, 2, 3],
-            Negate = true,
-            BlankChecked = true,
-        };
+        var original = new ValueFilter { Column = "col", Values = [1, 2, 3], Negate = true, BlankChecked = true };
 
         var clone = (ValueFilter)original.Clone();
 
@@ -78,7 +70,6 @@ public class FilterModelTests
         Assert.True(clone.BlankChecked);
         Assert.Equal(3, clone.Values.Count);
 
-        // Правка копии не трогает оригинал
         clone.Values.Clear();
         Assert.Equal(3, original.Values.Count);
     }
