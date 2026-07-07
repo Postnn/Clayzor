@@ -60,11 +60,32 @@ body {
     font-size: var(--kesco-font-size) !important;
     font-weight: normal;
 }
-.mud-input-control .mud-input-label {
+/* Базовый размер лейбла */
+.mud-input-control .mud-input-label-outlined {
     font-size: var(--kesco-font-size) !important;
 }
-.mud-input-control .mud-input.mud-input-outlined .mud-input-outlined-border legend {
+/* Лейбл в покое (пустое поле без фокуса) — тот же размер, без уменьшения */
+.mud-input:not(.mud-shrink) ~ .mud-input-label-outlined {
     font-size: var(--kesco-font-size) !important;
+}
+/* Всплывший лейбл: mud-shrink на .mud-input (сосед), лейбл идёт ПОСЛЕ → цепляем через ~.
+   Второй селектор перекрывает focused-состояние: в фокусе MudBlazor заново вешает
+   scale(0.75) правилом с большей специфичностью, :focus-within его перебивает. */
+.mud-input.mud-shrink ~ .mud-input-label-outlined,
+.mud-input-control:focus-within .mud-input-label-outlined {
+    transform: translate(14px, -9px) scale(1) !important;   /* -9px подстроить ±2px */
+    font-size: var(--kesco-font-size) !important;
+    line-height: 1 !important;
+}
+/* Вырез рамки (notch) под полный размер — в обоих случаях всплытия */
+.mud-input.mud-shrink .mud-input-outlined-border legend,
+.mud-input-control:focus-within .mud-input-outlined-border legend {
+    font-size: var(--kesco-font-size) !important;
+}
+/* Сброс subtitle1 на полях ввода — убрать раздувание рамки */
+.mud-input.mud-typography-subtitle1 {
+    line-height: 1.5 !important;
+    letter-spacing: 0.01em !important;
 }
 
 #blazor-error-ui {
@@ -1224,6 +1245,23 @@ body {
 .kesco-vf-dialog {
     font-size: var(--kesco-font-size);
 }
+.kesco-combo-popover {
+    overflow-y: hidden !important;
+}
+.kesco-combo-popover .mud-list {
+    overflow-y: auto;
+    max-height: 300px;
+}
 .kesco-combo-popover .mud-list-item {
     font-size: var(--kesco-font-size);
+    line-height: 1.5;
+}
+
+/* ── Dense form (MedicalTestEditDialog) ── */
+.kesco-form-dense .mud-input-control-helper-container {
+    min-height: 0;
+}
+.kesco-form-dense .mud-input-control-helper-text {
+    margin-top: 2px;
+    line-height: 1.2;
 }

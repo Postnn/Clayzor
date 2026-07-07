@@ -3,6 +3,12 @@
 Выпадающий список для справочных сущностей, реализующих `ILookupEntity`.
 Автоматически использует `Id` как значение, `Name` как отображение.
 
+Рендерит `MudSelect` с фиксированными параметрами:
+- `Variant="Variant.Outlined"` — единый стиль полей ввода
+- `Margin="Margin.Dense"` — компактная высота (как поля фильтра)
+- `Dense="true"` — уменьшенные внутренние отступы
+- `PopoverClass="kesco-combo-popover"` — CSS-правила в `app.css` (overflow, max-height, line-height, font-size)
+
 ## Параметры
 
 | Параметр | Тип | По умолчанию | Описание |
@@ -34,7 +40,7 @@ public interface ILookupEntity
                Items="_testTypes"
                Label="Тип исследования"
                Required="true"
-               Class="mb-3" />
+               Class="mb-2" />
 ```
 
 ## Реализация справочной сущности

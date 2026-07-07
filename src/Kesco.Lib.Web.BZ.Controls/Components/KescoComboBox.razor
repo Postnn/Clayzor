@@ -1,18 +1,5 @@
 @typeparam TItem where TItem : ILookupEntity
 
-<style>
-    .kesco-combo-popover {
-        overflow-y: hidden !important;
-    }
-    .kesco-combo-popover .mud-list {
-        overflow-y: auto;
-        max-height: 300px;
-    }
-    .kesco-combo-popover .mud-list-item {
-        line-height: 1.5;
-    }
-</style>
-
 <MudSelect T="int"
            Value="@Value"
            ValueChanged="@ValueChanged"
@@ -22,6 +9,8 @@
            Required="@Required"
            RequiredError="@RequiredError"
            Class="@Class"
+           Margin="Margin.Dense"
+           Dense="true"
            PopoverClass="kesco-combo-popover">
     @if (_items is not null)
     {

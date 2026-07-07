@@ -192,7 +192,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | **KescoColumnSettingsDialog** — диалог настройки порядка, видимости, сортировки и фильтра по значению колонок (jQuery UI Sortable drag-and-drop с авто-прокруткой). Параметр `ShowSorting` (default `true`) — скрывает секцию сортировки для режима печати/экспорта. V8: sticky-заголовок с иконками `Visibility`/`Checklist`, переключатель `AllowValueFilter` (только при `ShowSorting`). Валидация: нельзя применить с нулём видимых колонок | [docs/kesco-grid.md](docs/kesco-grid.md) |
 | **KescoColumnSettingsPromptDialog** — лёгкий диалог с тремя исходами перед печатью/экспортом: «Выбрать колонки» (→ диалог настройки), «Как на странице» (→ текущий вид), «Отмена». Параметр `ContextLabel` — контекст операции | — |
 | **KescoEditForm\<T>** — MudDialog с валидацией, сохранением, удалением | [docs/kesco-edit-form.md](docs/kesco-edit-form.md) |
-| **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
+| **KescoComboBox\<TItem>** — выпадающий список для `ILookupEntity`. Рендерит `MudSelect` с `Variant="Variant.Outlined"`, `Margin="Margin.Dense"`, `Dense="true"` и `PopoverClass="kesco-combo-popover"`. CSS-правила `.kesco-combo-popover` (overflow, max-height, line-height, font-size) живут в `app.css` | [docs/kesco-combo-box.md](docs/kesco-combo-box.md) |
 | **KescoErrorBar** — баннер ошибок БД с детализацией (SQL, параметры) | [docs/kesco-error-bar.md](docs/kesco-error-bar.md) |
 | **KescoButton** — обёртка `MudTooltip` + `MudIconButton` с авто-сбросом тултипа после клика. Заменяет пару `<MudTooltip><MudIconButton/></MudTooltip>` | — |
 | **KescoMenu** — обёртка `MudMenu` с авто-построением кнопки-активатора (опциональный тултип, сброс тултипа после клика). Заменяет `<MudMenu><ActivatorContent><MudTooltip><MudIconButton/></MudTooltip></ActivatorContent></MudMenu>` | — |
@@ -408,11 +408,10 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Font face: **Verdana** + fallback `Arial, sans-serif` — defined via CSS variable `--kesco-font-family`
 - Font size: **0.8rem** (~13pt) — defined via CSS variable `--kesco-font-size` (single token, NO size variants)
 - MudBlazor typography (`KescoTheme.cs`) — all levels (Default, Body1, Body2, Subtitle1, Subtitle2, Caption, Overline) set `FontSize = "var(--kesco-font-size)"`. H4/H5/H6/Button keep their own sizes (heading/button scale)
-- MudBlazor input controls use `font-size: var(--kesco-font-size) !important` (CSS rules in `app.css` for `.mud-input-control input`, `.mud-input-label`, and `.mud-input-outlined-border legend`)
+- MudBlazor input controls use `font-size: var(--kesco-font-size) !important` (CSS rules in `app.css` for `.mud-input-control input`, `.mud-input-slot`, `.mud-input-label-outlined`, and `.mud-input-outlined-border legend`)
+- MudBlazor outlined labels use `transform: scale(0.75)` by default — overridden in `app.css` via `scale(1)` with `!important` on both `.mud-input.mud-shrink ~ .mud-input-label-outlined` and `.mud-input-control:focus-within .mud-input-label-outlined`. Key detail: `mud-shrink` class is on `div.mud-input`, NOT on the `<label>` — label is a sibling AFTER `.mud-input`, so the selector uses `~` (general sibling combinator). Focused empty fields have NO `mud-shrink` class, hence the separate `:focus-within` selector.
+- Legend notch in outlined border is sized via `font-size: var(--kesco-font-size) !important` on `.mud-input-outlined-border legend` (both `.mud-shrink` and `:focus-within` variants)
 - No external font CDN dependencies (Google Fonts Inter removed)
-
-### Known issue: legend font-size in MudBlazor 9
-MudBlazor 9's outlined variant uses `<fieldset><legend>` for floating labels. The legend's font-size is hardcoded as `0.75em` in MudBlazor's CSS (relative to parent `.mud-input`). Our `!important` override may not win because `MudThemeProvider` generates `<style>` tags at runtime after `app.css` loads. Workaround TBD.
 
 ## Style enforcement (STYLE_RULES.md)
 

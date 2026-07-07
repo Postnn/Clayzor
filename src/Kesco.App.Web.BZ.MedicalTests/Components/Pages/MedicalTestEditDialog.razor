@@ -11,70 +11,82 @@
                OnDelete="HandleDelete"
                ShowDelete="@(Model.Id != 0)">
 
+    <div class="kesco-form-dense">
+
     <MudTextField @bind-Value="Model.Name"
                   Label="Название"
                   Required="true"
                   RequiredError="Название обязательно"
                   Variant="Variant.Outlined"
-                  Class="mb-3" />
+                  Margin="Margin.Dense"
+                  Class="mb-2" />
 
     <KescoComboBox TItem="MedicalTestType"
                    @bind-Value="Model.TestTypeId"
                    Items="_testTypes"
                    Label="Тип исследования"
                    Required="true"
-                   Class="mb-3" />
+                   Class="mb-2" />
 
     <MudNumericField @bind-Value="Model.Order"
                      Label="Порядок"
                      Variant="Variant.Outlined"
-                     Class="mb-3" />
+                     Margin="Margin.Dense"
+                     Class="mb-2" />
 
-    <MudText Typo="Typo.subtitle1" Class="mt-2 mb-2">Нормы для женщин</MudText>
-    <MudGrid>
+    <MudText Typo="Typo.subtitle2" Class="mt-1 mb-1">Нормы для женщин</MudText>
+    <MudGrid Spacing="2">
         <MudItem xs="6">
             <MudNumericField @bind-Value="Model.NormMinFemale"
                              Label="От"
                              Variant="Variant.Outlined"
-                             Class="mb-3" />
+                             Margin="Margin.Dense"
+                             Class="mb-2" />
         </MudItem>
         <MudItem xs="6">
             <MudNumericField @bind-Value="Model.NormMaxFemale"
                              Label="По"
                              Variant="Variant.Outlined"
-                             Class="mb-3" />
+                             Margin="Margin.Dense"
+                             Class="mb-2" />
         </MudItem>
     </MudGrid>
 
-    <MudText Typo="Typo.subtitle1" Class="mt-2 mb-2">Нормы для мужчин</MudText>
-    <MudGrid>
+    <MudText Typo="Typo.subtitle2" Class="mt-1 mb-1">Нормы для мужчин</MudText>
+    <MudGrid Spacing="2">
         <MudItem xs="6">
             <MudNumericField @bind-Value="Model.NormMinMale"
                              Label="От"
                              Variant="Variant.Outlined"
-                             Class="mb-3" />
+                             Margin="Margin.Dense"
+                             Class="mb-2" />
         </MudItem>
         <MudItem xs="6">
             <MudNumericField @bind-Value="Model.NormMaxMale"
                              Label="По"
                              Variant="Variant.Outlined"
-                             Class="mb-3" />
+                             Margin="Margin.Dense"
+                             Class="mb-2" />
         </MudItem>
     </MudGrid>
 
     <MudTextField @bind-Value="Model.NormString"
                   Label="Норма (строка)"
                   Variant="Variant.Outlined"
-                  Class="mb-3" />
+                  Margin="Margin.Dense"
+                  Class="mb-2" />
 
-    <MudSwitch @bind-Value="Model.IsGroup"
-               Label="Группа"
-               Color="Color.Primary"
-               Class="mb-2" />
+    <div class="d-flex flex-wrap gap-4">
+        <MudSwitch @bind-Value="Model.IsGroup"
+                   Label="Группа"
+                   Color="Color.Primary" />
 
-    <MudSwitch @bind-Value="Model.IsConclusion"
-               Label="Заключение"
-               Color="Color.Primary" />
+        <MudSwitch @bind-Value="Model.IsConclusion"
+                   Label="Заключение"
+                   Color="Color.Primary" />
+    </div>
+
+    </div>
 </KescoEditForm>
 
 @code {
