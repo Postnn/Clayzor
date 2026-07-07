@@ -431,7 +431,10 @@ UI — панель фильтров (filter tray) с drag-and-drop заголо
 - Legend notch in outlined border is sized via `font-size: var(--kesco-font-size) !important` on `.mud-input-outlined-border legend` (both `.mud-shrink` and `:focus-within` variants)
 - No external font CDN dependencies (Google Fonts Inter removed)
 
-## Style enforcement (STYLE_RULES.md)
+## Style enforcement (STYLE_RULES.md, `promts/_done/STYLE_PROMPTS.md`)
+
+Пошаговые промты для внедрения единого стиля — `promts/_done/STYLE_PROMPTS.md` (Промт 0–6). Выполнены.
+Закон стиля — `STYLE_RULES.md`.
 
 **All visual styling (color, font, background, border, shadow, radius) lives ONLY in:**
 - `Kesco.App.Web.BZ.MedicalTests/wwwroot/css/app.css` — CSS classes and `:root` tokens
