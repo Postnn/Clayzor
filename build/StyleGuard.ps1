@@ -9,10 +9,10 @@ $ErrorActionPreference = 'Stop'
 # ── White-listed paths (files in these paths are excluded from scanning) ──
 $whiteListPatterns = @(
     'wwwroot\css\app.css',
-    'Themes\KescoTheme.cs',
-    'Services\KescoGridPrintStyles.cs',
-    'Services\KescoGridPrintHtmlGenerator.cs',
-    'Services\KescoGridExcelGenerator.cs'
+    'Themes\ClayTheme.cs',
+    'Services\ClayGridPrintStyles.cs',
+    'Services\ClayGridPrintHtmlGenerator.cs',
+    'Services\ClayGridExcelGenerator.cs'
 )
 
 # ── Prohibited CSS properties (match property name left of colon) ──
@@ -165,7 +165,7 @@ foreach ($file in $allFiles) {
             $violations = Test-StyleViolation $styleContent $filePath $lineNum
             if ($violations.Count -gt 0) {
                 $relPath = $filePath.Replace($ProjectDir, '')
-                Write-Host "error KESCO002: $relPath — visual inline style violation:"
+                Write-Host "error CLAY002: $relPath — visual inline style violation:"
                 foreach ($v in $violations) {
                     Write-Host $v
                 }
@@ -180,7 +180,7 @@ foreach ($file in $allFiles) {
             $line = $lines[$i]
             if ($line -match '<style\b') {
                 $relPath = $filePath.Replace($ProjectDir, '')
-                Write-Host "error KESCO002: $relPath ($($i+1)) — <style> tag in .cs file outside white-list"
+                Write-Host "error CLAY002: $relPath ($($i+1)) — <style> tag in .cs file outside white-list"
                 $exitCode = 1
             }
         }

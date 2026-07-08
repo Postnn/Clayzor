@@ -14,10 +14,10 @@
 <![CDATA[
     string[] whiteListPatterns = {
         @"wwwroot\css\app.css",
-        @"Themes\KescoTheme.cs",
-        @"Services\KescoGridPrintStyles.cs",
-        @"Services\KescoGridPrintHtmlGenerator.cs",
-        @"Services\KescoGridExcelGenerator.cs"
+        @"Themes\ClayTheme.cs",
+        @"Services\ClayGridPrintStyles.cs",
+        @"Services\ClayGridPrintHtmlGenerator.cs",
+        @"Services\ClayGridExcelGenerator.cs"
     };
 
     // Allowed structural CSS property names (prefixes)
@@ -121,14 +121,14 @@
                 if (string.IsNullOrWhiteSpace(styleContent)) continue;
 
                 if (HasProhibitedPattern(styleContent, out string reason)) {
-                    Log.LogError($"KESCO002: {relPath}({i + 1}) — visual inline style violation: {reason}");
+                    Log.LogError($"CLAY002: {relPath}({i + 1}) — visual inline style violation: {reason}");
                     hasErrors = true;
                 }
             }
 
             // Check .cs files for <style> tags
             if (file.Extension == ".cs" && line.Contains("<style")) {
-                Log.LogError($"KESCO002: {relPath}({i + 1}) — <style> tag in .cs file outside white-list");
+                Log.LogError($"CLAY002: {relPath}({i + 1}) — <style> tag in .cs file outside white-list");
                 hasErrors = true;
             }
         }

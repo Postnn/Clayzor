@@ -17,7 +17,7 @@ public static class MedA
 
 ### 2. SQL-константы
 
-Добавить в `Kesco.Lib.Entities/SQLQueries.cs`:
+Добавить в `Clayzor.Lib.Entities/SQLQueries.cs`:
 
 ```csharp
 /// <summary>Выборка новых записей.</summary>
@@ -44,7 +44,7 @@ DELETE FROM НоваяТаблица WHERE КодНовойЗаписи = @Id";
 
 ### 3. Класс сущности
 
-Создать в `Kesco.Lib.Entities/`:
+Создать в `Clayzor.Lib.Entities/`:
 
 ```csharp
 [Table("НоваяТаблица")]
@@ -79,7 +79,7 @@ public class NewEntity : Entity
 
 ### 4. Регистрация в DapperColumnMapper
 
-В `Kesco.Lib.Entities/MedicalTests/MedicalTest.cs` (файл с `DapperColumnMapper`):
+В `Clayzor.Lib.Entities/MedicalTests/MedicalTest.cs` (файл с `DapperColumnMapper`):
 
 ```csharp
 public static void Initialize()
@@ -96,9 +96,9 @@ public static void Initialize()
 
 ```razor
 @* NewEntityEditDialog.razor *@
-<KescoEditForm TEntity="NewEntity" Model="Model" OnSave="SaveAsync" OnDelete="DeleteAsync">
+<ClayEditForm TEntity="NewEntity" Model="Model" OnSave="SaveAsync" OnDelete="DeleteAsync">
     <MudTextField @bind-Value="Model.Name" Label="Название" Variant="Variant.Outlined" Required="true" />
-</KescoEditForm>
+</ClayEditForm>
 
 @code {
     [Parameter] public NewEntity Model { get; set; } = null!;
@@ -130,14 +130,14 @@ public static void Initialize()
 
 ```razor
 @page "/new-entities"
-@using Kesco.Lib.Web.Settings
-@using Kesco.Lib.Web.BZ.Controls
-@inherits KescoGridPageBase<NewEntity>
-@inject KescoAppSettings AppSettings
+@using Clayzor.Lib.Web.Settings
+@using Clayzor.Lib.Web.Controls
+@inherits ClayGridPageBase<NewEntity>
+@inject ClayAppSettings AppSettings
 
 <PageTitle>Новые записи</PageTitle>
 
-<KescoGrid TEntity="IKescoGridRow"
+<ClayGrid TEntity="IClayGridRow"
            @ref="_dataGrid"
            DataLoader="this"
            Title="Новые записи"
@@ -157,45 +157,45 @@ public static void Initialize()
 
 
     <ColumnDefs>
-        <KescoColumnDef ColumnId="1" SqlName="КодНовойЗаписи"      DisplayName="Код"      Groupable="true" Filterable="true" />
-        <KescoColumnDef ColumnId="2" SqlName="НазваниеНовойЗаписи" DisplayName="Название" Groupable="true" Filterable="true" />
+        <ClayColumnDef ColumnId="1" SqlName="КодНовойЗаписи"      DisplayName="Код"      Groupable="true" Filterable="true" />
+        <ClayColumnDef ColumnId="2" SqlName="НазваниеНовойЗаписи" DisplayName="Название" Groupable="true" Filterable="true" />
     </ColumnDefs>
 
     <Columns>
 
-        <KescoColumn TEntity="IKescoGridRow" ColumnId="1">
+        <ClayColumn TEntity="IClayGridRow" ColumnId="1">
             <CellTemplate>
                 @if (context.Item is DetailRow<NewEntity> detail)
                 {
                     <MudText Style="@($"padding-left:{(detail.Depth + 1) * 16}px")">@detail.Item.Id</MudText>
                 }
             </CellTemplate>
-        </KescoColumn>
+        </ClayColumn>
 
-        <KescoColumn TEntity="IKescoGridRow" ColumnId="2">
+        <ClayColumn TEntity="IClayGridRow" ColumnId="2">
             <CellTemplate>
                 @if (context.Item is DetailRow<NewEntity> detail)
                 {
                     <MudText>@detail.Item.Name</MudText>
                 }
             </CellTemplate>
-        </KescoColumn>
+        </ClayColumn>
 
     </Columns>
 
-</KescoGrid>
+</ClayGrid>
 
 @code {
-    private KescoGrid<IKescoGridRow> _dataGrid = null!;
-    protected override IKescoGrid? Grid => _dataGrid;
+    private ClayGrid<IClayGridRow> _dataGrid = null!;
+    protected override IClayGrid? Grid => _dataGrid;
 }
 ```
 
-**Важно:** страница передаёт всю SQL-конфигурацию через параметры `<KescoGrid>`:
+**Важно:** страница передаёт всю SQL-конфигурацию через параметры `<ClayGrid>`:
 - `SelectSql` — базовый SELECT
 - `SearchColumns` — выходные имена колонок для поиска и фильтрации (те же, что видны в подзапросе `ROW_NUMBER()`)
 - `DefaultOrder` — сортировка по умолчанию
 - `EditDialogType` — тип диалога редактирования
-- `DataLoader="this"` — подключает `IKescoGridDataLoader`
+- `DataLoader="this"` — подключает `IClayGridDataLoader`
 
 Никаких abstract-свойств на странице не требуется.

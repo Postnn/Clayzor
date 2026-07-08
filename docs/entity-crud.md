@@ -4,7 +4,7 @@
 
 ## Базовый класс `Entity`
 
-`Kesco.Lib.Entities/Entity.cs`:
+`Clayzor.Lib.Entities/Entity.cs`:
 - `abstract int Id` — первичный ключ
 - `abstract string SelectSql / InsertSql / UpdateSql / DeleteSql` — SQL-константы
 - `InsertAsync(DbManager db)` / `UpdateAsync(DbManager db)` / `DeleteAsync(DbManager db)` — наследуемые CRUD-методы
@@ -79,12 +79,12 @@ public class MyLookup : ILookupEntity
 
 ## Серверная группировка — модель данных
 
-`Kesco.Lib.Web.BZ.Controls/Components/Grid/KescoGridRow.cs` содержит типы для плоской модели с группами:
+`Clayzor.Lib.Web.Controls/Components/Grid/ClayGridRow.cs` содержит типы для плоской модели с группами:
 
 ```csharp
-public interface IKescoGridRow { }
+public interface IClayGridRow { }
 
-public class GroupHeaderRow : IKescoGridRow
+public class GroupHeaderRow : IClayGridRow
 {
     public string DisplayValue { get; set; }
     public string FullKey { get; set; }      // ключи через \u001F
@@ -94,7 +94,7 @@ public class GroupHeaderRow : IKescoGridRow
     public List<string> GroupKeys { get; set; }
 }
 
-public class DetailRow<T> : IKescoGridRow where T : Entity
+public class DetailRow<T> : IClayGridRow where T : Entity
 {
     public T Item { get; set; }
     public string GroupKey { get; set; }
@@ -103,7 +103,7 @@ public class DetailRow<T> : IKescoGridRow where T : Entity
 
 public class GroupedPage<T> where T : Entity
 {
-    public List<IKescoGridRow> Rows { get; set; }
+    public List<IClayGridRow> Rows { get; set; }
     public int TotalEffectiveRows { get; set; }
 }
 ```
@@ -111,7 +111,7 @@ public class GroupedPage<T> where T : Entity
 ## DapperColumnMapper
 
 Регистрирует маппинг свойств .NET на русские колонки БД.
-Находится в `Kesco.Lib.Entities/MedicalTests/MedicalTest.cs`.
+Находится в `Clayzor.Lib.Entities/MedicalTests/MedicalTest.cs`.
 
 ```csharp
 public static class DapperColumnMapper
