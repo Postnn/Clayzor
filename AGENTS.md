@@ -148,7 +148,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Документация ClayErrorBar | [src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md](src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md) |
 | Документация ClayColumnFilterDialog | [src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md](src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md) |
 | Документация ConfirmDialog | [src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md](src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md) |
-| Динамический режим ClayGrid — план реализации (G0–G14) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_readme_grid_dynamic.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_readme_grid_dynamic.md) |
+| Динамический режим ClayGrid — план реализации (G0–G14, выполнены) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_readme_grid_dynamic.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_readme_grid_dynamic.md) |
+| Динамический режим ClayGrid — багфиксы (GF1–GF16) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GF0_README_dynamic_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GF0_README_dynamic_fixes.md) |
 | DynamicGrid: SQL-схема (dev/test стенд) | [scripts/dynamic-grid/schema.sql](scripts/dynamic-grid/schema.sql) |
 | Типографика, шрифты, style enforcement (Variant A, build-time, checklist) | **[src/Clayzor.App.Web.MedicalTests/AGENTS.md](src/Clayzor.App.Web.MedicalTests/AGENTS.md)** |
 | Закон стиля (исходник) | [STYLE_RULES.md](STYLE_RULES.md) |
