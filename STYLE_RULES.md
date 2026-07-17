@@ -8,7 +8,7 @@
 
 ## 0. Главный закон
 
-**Визуальная стилизация UI (цвет, шрифт, фон, границы, тень, скругление) живёт ТОЛЬКО в `Clayzor.App.Web.MedicalTests/wwwroot/css/app.css` и в теме `Clayzor.Lib.Web.Controls/Themes/ClayTheme.cs`.**
+**Визуальная стилизация UI живёт в трёх местах: общие компоненты RCL — `Clayzor.Lib.Web.Controls/wwwroot/css/clay.css`, специфика приложения — `<App>/wwwroot/css/app.css`, палитра — `Clayzor.Lib.Web.Controls/Themes/ClayTheme.cs`. Правило: стилизуешь компонент из RCL → `clay.css`; стилизуешь страницу/диалог конкретного приложения → его `app.css`.**
 
 Нигде больше — ни в `.razor`, ни в `.cs`, ни в связанных сборках — собственная визуальная стилизация не допускается. Нарушение = ошибка сборки (см. §6).
 
