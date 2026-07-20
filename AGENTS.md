@@ -148,8 +148,12 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Документация ClayErrorBar | [src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md](src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md) |
 | Документация ClayColumnFilterDialog | [src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md](src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md) |
 | Документация ConfirmDialog | [src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md](src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md) |
-| Динамический режим ClayGrid — план реализации (G0–G14, выполнены) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_readme_grid_dynamic.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_readme_grid_dynamic.md) |
-| Динамический режим ClayGrid — багфиксы (GF1–GF16) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GF0_README_dynamic_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GF0_README_dynamic_fixes.md) |
+| Динамический режим ClayGrid — план реализации (G0–G14, выполнены) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/_readme_grid_dynamic.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/_readme_grid_dynamic.md) |
+| Динамический режим ClayGrid — багфиксы (GF1–GF16) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GF0_README_dynamic_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GF0_README_dynamic_fixes.md) |
+| Динамический режим ClayGrid — группировка (GG1–GG9) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GG0_README_dynamic_grouping.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GG0_README_dynamic_grouping.md) |
+| Динамический режим ClayGrid — снятие потолка уровней (GN1–GN4) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GN0_README_grouping_levels.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GN0_README_grouping_levels.md) |
+| Динамический режим ClayGrid — печать и Excel (GE1–GE6) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GE0_README_dynamic_export.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GE0_README_dynamic_export.md) |
+| ClayGrid — багфиксы UX (GB1–GB11) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GB0_README_grid_ux_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GB0_README_grid_ux_fixes.md) |
 | DynamicGrid: SQL-схема (dev/test стенд) | [scripts/dynamic-grid/schema.sql](scripts/dynamic-grid/schema.sql) |
 | Типографика, шрифты, style enforcement (Variant A, build-time, checklist) | **[src/Clayzor.App.Web.MedicalTests/AGENTS.md](src/Clayzor.App.Web.MedicalTests/AGENTS.md)** |
 | Закон стиля (исходник) | [STYLE_RULES.md](STYLE_RULES.md) |
