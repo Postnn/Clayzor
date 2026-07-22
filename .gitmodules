@@ -1,21 +1,21 @@
 [submodule "src/Clayzor.App.Web.MedicalTests"]
 	path = src/Clayzor.App.Web.MedicalTests
-	url = https://github.com/postnn/Clayzor.App.Web.MedicalTests.git
+	url = https://github.com/Postnn/Clayzor.App.Web.MedicalTests.git
 [submodule "src/Kesco.App.Web.Inventory"]
 	path = src/Kesco.App.Web.Inventory
-	url = https://github.com/postnn/Kesco.App.Web.Inventory.git
+	url = https://github.com/Postnn/Kesco.App.Web.Inventory.git
 [submodule "src/Clayzor.Lib.DALC"]
 	path = src/Clayzor.Lib.DALC
-	url = https://github.com/postnn/Clayzor.Lib.DALC.git
+	url = https://github.com/Postnn/Clayzor.Lib.DALC.git
 [submodule "src/Clayzor.Lib.Entities"]
 	path = src/Clayzor.Lib.Entities
-	url = https://github.com/postnn/Clayzor.Lib.Entities.git
+	url = https://github.com/Postnn/Clayzor.Lib.Entities.git
 [submodule "src/Clayzor.Lib.Web.Controls"]
 	path = src/Clayzor.Lib.Web.Controls
-	url = https://github.com/postnn/Clayzor.Lib.Web.Controls.git
+	url = https://github.com/Postnn/Clayzor.Lib.Web.Controls.git
 [submodule "src/Clayzor.Lib.Web.Settings"]
 	path = src/Clayzor.Lib.Web.Settings
-	url = https://github.com/postnn/Clayzor.Lib.Web.Settings.git
+	url = https://github.com/Postnn/Clayzor.Lib.Web.Settings.git
 [submodule "tests/Clayzor.Lib.Web.Controls.Tests"]
 	path = tests/Clayzor.Lib.Web.Controls.Tests
-	url = https://github.com/postnn/Clayzor.Lib.Web.Controls.Tests.git
+	url = https://github.com/Postnn/Clayzor.Lib.Web.Controls.Tests.git
