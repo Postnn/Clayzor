@@ -18,6 +18,7 @@ appsettings.Development.json
 
 # Local scripts
 run-deepseek-claude-code.ps1
+replacements.txt
 
 # OS
 .DS_Store
