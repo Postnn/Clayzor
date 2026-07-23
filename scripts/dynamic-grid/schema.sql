@@ -25,16 +25,22 @@ GO
 IF OBJECT_ID('dbo.ClayGridColumns', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.ClayGridColumns (
-        КодКолонки        int           NOT NULL PRIMARY KEY,
-        КодЗапроса         int           NOT NULL,
-        Колонка            varchar(50)   NULL,
-        ЗаголовокКолонки   varchar(50)   NULL,
-        КлючURL            varchar(50)   NULL,
-        Порядок            int           NULL,
-        Формат             varchar(2000) NULL,
-        Тип                int           NULL
+        КодКолонки                int           NOT NULL PRIMARY KEY,
+        КодЗапроса                 int           NOT NULL,
+        Колонка                    varchar(50)   NULL,
+        ЗаголовокКолонки           varchar(50)   NULL,
+        КлючURL                    varchar(50)   NULL,
+        Порядок                    int           NULL,
+        Формат                     varchar(2000) NULL,
+        Тип                        int           NULL,
+        УчаствуетВБыстромПоиске    tinyint       NULL
     );
 END
+GO
+
+-- Add quick-search column on existing DBs (idempotent)
+IF COL_LENGTH('dbo.ClayGridColumns', 'УчаствуетВБыстромПоиске') IS NULL
+    ALTER TABLE dbo.ClayGridColumns ADD УчаствуетВБыстромПоиске tinyint NULL;
 GO
 
 -- 3. User params with upsert trigger (п.4 спецификации)
@@ -109,12 +115,19 @@ GO
 -- Columns (5 rows)
 IF NOT EXISTS (SELECT 1 FROM dbo.ClayGridColumns WHERE КодЗапроса = 140)
 BEGIN
-    INSERT INTO dbo.ClayGridColumns (КодКолонки, КодЗапроса, Колонка, ЗаголовокКолонки, КлючURL, Порядок, Формат, Тип)
+    INSERT INTO dbo.ClayGridColumns (КодКолонки, КодЗапроса, Колонка, ЗаголовокКолонки, КлючURL, Порядок, Формат, Тип, УчаствуетВБыстромПоиске)
     VALUES
-        (1001, 140, N'КодИсследования', N'№',              N'id',      1, NULL,                                                       1),
-        (1002, 140, N'Название',        N'Название',        N'name',    2, NULL,                                                       2),
-        (1003, 140, N'ДатаСоздания',    N'Создано',         N'created', 3, N'dd.MM.yyyy',                                               3),
-        (1004, 140, N'КодТипа',         N'Тип исследования', N'type',    4, N'SELECT КодТипа, Наименование FROM Типы ORDER BY Наименование', 5),
-        (1005, 140, N'Активно',         N'Активно',         N'active',  0, N'Активно=1',                                                7);
+        (1001, 140, N'КодИсследования', N'№',              N'id',      1, NULL,                                                       1, 1),
+        (1002, 140, N'Название',        N'Название',        N'name',    2, NULL,                                                       2, 1),
+        (1003, 140, N'ДатаСоздания',    N'Создано',         N'created', 3, N'dd.MM.yyyy',                                               3, 1),
+        (1004, 140, N'КодТипа',         N'Тип исследования', N'type',    4, N'SELECT КодТипа, Наименование FROM Типы ORDER BY Наименование', 5, 1),
+        (1005, 140, N'Активно',         N'Активно',         N'active',  0, N'Активно=1',                                                7, 0);
 END
+ELSE
+    -- Update quick-search flag for existing seed rows (idempotent)
+    UPDATE dbo.ClayGridColumns SET УчаствуетВБыстромПоиске = c.Val
+    FROM (VALUES
+        (1001, 1), (1002, 1), (1003, 1), (1004, 1), (1005, 0)
+    ) AS c(КодКолонки, Val)
+    WHERE dbo.ClayGridColumns.КодКолонки = c.КодКолонки AND КодЗапроса = 140;
 GO
