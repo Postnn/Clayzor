@@ -135,11 +135,14 @@ Clayzor.App.Web.MedicalTests ← all of the above (web app entry point)
 
 ## Configuration — connection string priority
 
-`BindClaySettings()` in `Clayzor.Lib.Web.Settings/ClayAppSettings.cs` merges:
-1. `web.config` (XML) — loaded via `AddWebConfig()` alongside `appsettings.json`
-2. `ClayApp:ConnectionString` (any source) → `ConnectionStrings:DefaultConnection` (fallback)
+`BindClaySettings()` in `Clayzor.Lib.Web.Settings/ClayAppSettings.cs`:
+1. Биндит секцию `ClayApp` из конфигурации (`appsettings.json` + `web.config`)
+2. Если `ConnectionString` пуста — читает имя из `ClayGrid:Dynamic:ConnectionStringName` (по умолчанию `"DefaultConnection"`)
+3. Читает строку подключения с этим именем из `web.config` через `System.Configuration.ConfigurationManager.OpenMappedExeConfiguration().ConnectionStrings`
+4. `URI_help_clayGrid` читается из `web.config` через `ConfigurationManager.AppSettings` (ключ `URI_help_clayGrid`)
+5. `DictionaryConnectionString` — аналогично п.3 с именем `"DictionaryConnection"`
 
-Both `appsettings.json` and `web.config` participate; the merge order is standard .NET config layering (last source wins for keys). Local overrides go in `appsettings.Development.json` (gitignored).
+Оба `appsettings.json` и `web.config` участвуют в конфигурации; `web.config` — основной источник для `connectionStrings` и `appSettings`. Локальные переопределения — в `appsettings.Development.json` (gitignored).
 
 `Program.cs` registers MudBlazor and MudBlazor.Extensions:
 ```csharp
@@ -194,7 +197,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - No CI/CD, no linter configuration
 - Unit tests: `tests/Clayzor.Lib.Web.Controls.Tests/` (xUnit, 39 тестов — SQL-билдер, модель, сериализация)
 - **Использовать готовые компоненты из `src\Clayzor.Lib.Web.Controls`** при разработке форм (ClayEditForm, ClayComboBox, ConfirmDialog, ClayColumnFilterDialog, ClayErrorBar). Проверять наличие подходящего компонента перед использованием MudBlazor-компонентов напрямую.
-- **Кнопки с тултипом**: всегда использовать `<ClayButton>` вместо пары `<MudTooltip><MudIconButton/></MudTooltip>`. `ClayButton` автоматически сбрасывает тултип после клика, предотвращая «залипание» при открытии диалогов.
+- **Кнопки с тултипом**: всегда использовать `<ClayButton>` вместо пары `<MudTooltip><MudIconButton/></MudTooltip>`. `ClayButton` автоматически сбрасывает тултип после клика, предотвращая «залипание» при открытии диалогов. При задании `Href` рендерится как ссылка (`<a>`) — для кнопок, открывающих внешние страницы.
 - **Выпадающие меню**: всегда использовать `<ClayMenu>` вместо `<MudMenu>` с `<ActivatorContent>`, `<MudTooltip>` и `<MudIconButton>`. `ClayMenu` автоматически строит кнопку-активатор с опциональным тултипом и сбрасывает тултип после клика, аналогично `ClayButton`.
 - **Кастомные чекбоксы**: всегда использовать `<ClayCheckbox>` (controlled: `State` + `OnToggle`) вместо inline `<span>`-глифов 16×16. Поддерживает tri-state (`null` = indeterminate).
 - `[Column]` attributes use exact Russian database column names — do not translate
@@ -220,8 +223,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
   Каждый чип имеет переключатель `UnfoldMore`/`UnfoldLess` — разворачивает/сворачивает ВСЕ группы этого уровня (с каскадом вверх: разворачивание уровня N разворачивает и уровни 0..N−1). Кнопка `MoreVert` (⋮) справа — контекстное меню с пунктом «Фильтровать» (аналог меню заголовка колонки, вызывает `OpenFilterDialog`).
   Панель скрыта по умолчанию (`_trayExpanded = false`) и открывается кнопкой `AccountTree` в тулбаре.
   Кнопка группировки появляется автоматически при наличии хотя бы одного `ClayColumnDef` с `Groupable="true"`.
-  Кнопки тулбара (группировка, фильтрация, добавить, выбрать, групповые операции) используют `MudIconButton` с CSS-классами `grouping-toggle-btn` /
-  `filter-toggle-btn` / `toolbar-add-btn` / `toolbar-select-btn` / `toolbar-batch-btn` и тултипами — не `MudButton Variant.Filled`
+  Кнопки тулбара (настройка колонок, группировка, фильтрация, добавить, выбрать, групповые операции, документация) используют `ClayButton` с CSS-классами `toolbar-columns-btn` /
+  `grouping-toggle-btn` / `filter-toggle-btn` / `toolbar-add-btn` / `toolbar-select-btn` / `toolbar-batch-btn` / `toolbar-help-btn` и тултипами — не `MudButton Variant.Filled`
 - **Per-level expand/collapse**: `IClayGridDataLoader.IsLevelFullyExpanded(int depth)` / `ToggleLevelExpandedAsync(int depth)` — массовое управление группами. Дерево групп кешируется в `ClayGridPageBase._groupTreeRoots`. `IsLevelFullyExpanded` проверяет, что все FullKey данной глубины присутствуют в `ExpandedGroups`. `ToggleLevelExpandedAsync` при разворачивании каскадно добавляет в `ExpandedGroups` ключи уровней 0..depth, при сворачивании — удаляет ключи только depth. Взаимодействие с индивидуальным `ToggleGroup`: ручное сворачивание одной группы делает `IsLevelFullyExpanded = false`.
 - **Column registration**: метаданные колонок регистрируются через `<ClayColumnDef SqlName="..." DisplayName="..." Groupable="true" Filterable="true" />`
   внутри `<ColumnDefs>`, а не через параметры `ShowGroupingTray`/`AvailableGroupColumns`/`AvailableFilterColumns`.
