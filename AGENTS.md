@@ -188,6 +188,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Динамический режим ClayGrid — печать и Excel (GE1–GE6) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GE0_README_dynamic_export.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GE0_README_dynamic_export.md) |
 | ClayGrid — багфиксы UX (GB1–GB11) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GB0_README_grid_ux_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GB0_README_grid_ux_fixes.md) |
 | DynamicGrid: SQL-схема (dev/test стенд) | [scripts/dynamic-grid/schema.sql](scripts/dynamic-grid/schema.sql) |
+| DynamicGrid: быстрый поиск (QS0–QS9) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/QS0_README_quick_search.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/QS0_README_quick_search.md) |
 | Типографика, шрифты, style enforcement (Variant A, build-time, checklist) | **[src/Clayzor.App.Web.MedicalTests/AGENTS.md](src/Clayzor.App.Web.MedicalTests/AGENTS.md)** |
 | Закон стиля (исходник) | [STYLE_RULES.md](STYLE_RULES.md) |
 | Промты внедрения стиля (выполнены) | [promts/_done/STYLE_PROMPTS.md](promts/_done/STYLE_PROMPTS.md) |
