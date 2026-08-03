@@ -189,6 +189,9 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | ClayGrid — багфиксы UX (GB1–GB11) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GB0_README_grid_ux_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GB0_README_grid_ux_fixes.md) |
 | DynamicGrid: SQL-схема (dev/test стенд) | [scripts/dynamic-grid/schema.sql](scripts/dynamic-grid/schema.sql) |
 | DynamicGrid: быстрый поиск (QS0–QS9) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/QS0_README_quick_search.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/QS0_README_quick_search.md) |
+| ClayGrid — аудит безопасности (GA0, находки 1–14) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA0_README_audit_grid.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA0_README_audit_grid.md) |
+| GA1 — валидация ORDER BY / GROUP BY (выполнен) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA1_orderby_groupby_whitelist.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA1_orderby_groupby_whitelist.md) |
+| GA2 — детерминированные имена параметров групп (выполнен) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA2_group_param_names.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA2_group_param_names.md) |
 | Типографика, шрифты, style enforcement (Variant A, build-time, checklist) | **[src/Clayzor.App.Web.MedicalTests/AGENTS.md](src/Clayzor.App.Web.MedicalTests/AGENTS.md)** |
 | Закон стиля (исходник) | [STYLE_RULES.md](STYLE_RULES.md) |
 | Промты внедрения стиля (выполнены) | [promts/_done/STYLE_PROMPTS.md](promts/_done/STYLE_PROMPTS.md) |
