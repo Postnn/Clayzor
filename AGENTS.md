@@ -192,6 +192,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | ClayGrid — аудит безопасности (GA0, находки 1–14) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA0_README_audit_grid.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA0_README_audit_grid.md) |
 | GA1 — валидация ORDER BY / GROUP BY (выполнен) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA1_orderby_groupby_whitelist.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA1_orderby_groupby_whitelist.md) |
 | GA2 — детерминированные имена параметров групп (выполнен) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA2_group_param_names.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA2_group_param_names.md) |
+| GA3 — экранирование разделителей в GridStateSerializer (выполнен) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA3_state_serializer_escaping.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/GA3_state_serializer_escaping.md) |
 | Типографика, шрифты, style enforcement (Variant A, build-time, checklist) | **[src/Clayzor.App.Web.MedicalTests/AGENTS.md](src/Clayzor.App.Web.MedicalTests/AGENTS.md)** |
 | Закон стиля (исходник) | [STYLE_RULES.md](STYLE_RULES.md) |
 | Промты внедрения стиля (выполнены) | [promts/_done/STYLE_PROMPTS.md](promts/_done/STYLE_PROMPTS.md) |
