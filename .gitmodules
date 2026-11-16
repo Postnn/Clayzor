@@ -19,3 +19,6 @@
 [submodule "tests/Clayzor.Lib.Web.Controls.Tests"]
 	path = tests/Clayzor.Lib.Web.Controls.Tests
 	url = https://github.com/Postnn/Clayzor.Lib.Web.Controls.Tests.git
+[submodule "src/Clayzor.Lib.Web.DBSelect"]
+	path = src/Clayzor.Lib.Web.DBSelect
+	url = https://github.com/Postnn/Clayzor.Lib.Web.DBSelect.git
