@@ -22,3 +22,6 @@
 [submodule "src/Clayzor.Lib.Web.DBSelect"]
 	path = src/Clayzor.Lib.Web.DBSelect
 	url = https://github.com/Postnn/Clayzor.Lib.Web.DBSelect.git
+[submodule "src/Kesco.App.Web.Users"]
+	path = src/Kesco.App.Web.Users
+	url = https://github.com/Postnn/Kesco.App.Web.Users.git
