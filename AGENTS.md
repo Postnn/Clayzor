@@ -181,6 +181,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Документация ClayErrorBar | [src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md](src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md) |
 | Документация ClayColumnFilterDialog | [src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md](src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md) |
 | Документация ConfirmDialog | [src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md](src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md) |
+| Руководство пользователя ModelEquipmentForm | [src/Kesco.App.Web.Inventory/docs/model-equipment-form.md](src/Kesco.App.Web.Inventory/docs/model-equipment-form.md) |
+| Руководство пользователя ClaySelect | [src/Clayzor.Lib.Web.Controls/docs/clay-select-user-guide.md](src/Clayzor.Lib.Web.Controls/docs/clay-select-user-guide.md) |
 | Динамический режим ClayGrid — план реализации (G0–G14, выполнены) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/_readme_grid_dynamic.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/_readme_grid_dynamic.md) |
 | Динамический режим ClayGrid — багфиксы (GF1–GF16) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GF0_README_dynamic_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GF0_README_dynamic_fixes.md) |
 | Динамический режим ClayGrid — группировка (GG1–GG9) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GG0_README_dynamic_grouping.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GG0_README_dynamic_grouping.md) |
@@ -201,7 +203,10 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 - **Использовать готовые компоненты из `src\Clayzor.Lib.Web.Controls`** при разработке форм (ClayEditForm, ClayComboBox, ConfirmDialog, ClayColumnFilterDialog, ClayErrorBar). Проверять наличие подходящего компонента перед использованием MudBlazor-компонентов напрямую.
 - **Кнопки с тултипом**: всегда использовать `<ClayButton>` вместо пары `<MudTooltip><MudIconButton/></MudTooltip>`. `ClayButton` автоматически сбрасывает тултип после клика, предотвращая «залипание» при открытии диалогов. При задании `Href` рендерится как ссылка (`<a>`) — для кнопок, открывающих внешние страницы.
 - **Выпадающие меню**: всегда использовать `<ClayMenu>` вместо `<MudMenu>` с `<ActivatorContent>`, `<MudTooltip>` и `<MudIconButton>`. `ClayMenu` автоматически строит кнопку-активатор с опциональным тултипом и сбрасывает тултип после клика, аналогично `ClayButton`.
-- **Кастомные чекбоксы**: всегда использовать `<ClayCheckbox>` (controlled: `State` + `OnToggle`) вместо inline `<span>`-глифов 16×16. Поддерживает tri-state (`null` = indeterminate).
+- **Кастомные чекбоксы**: всегда использовать `<ClayCheckbox>` (controlled: `State` + `OnToggle`, либо двусторонняя привязка `State` + `StateChanged`) вместо inline `<span>`-глифов 16×16. Поддерживает tri-state (`null` = indeterminate), клавиатуру и `ReadOnly`.
+- **Контролы форм по legacy-аналогии**: если в legacy есть общий контрол, на формах Clayzor использовать его общий аналог — `ClayTextBox`, `ClayTextArea`, `ClayNumber`, `ClayDatePicker`, `ClayDropDownList`, `ClayCheckbox`, `ClaySelect`. Не оборачивать MudBlazor без legacy-аналога и не копировать legacy-реализацию: API и поведение должны быть едиными, оформление — современным визуальным продолжением legacy.
+- **Панель редактирования**: формы редактирования используют `ClayToolbar` и `ClayToolbarButton` для команд формы (например, OK, Применить, Обновить, Отмена). Кнопки не дублируют разметку `MudButton` на страницах.
+- **Сведения об изменении**: каждая форма редактирования всегда содержит `ClayChanged`. Для существующей записи компонент показывает сотрудника и дату последнего изменения; для новой записи область остаётся пустой.
 - `[Column]` attributes use exact Russian database column names — do not translate
 - SQL queries reference tables by Russian names (e.g. `МедицинскиеАнализы`, `МедицинскиеАнализыТипы`)
 - Each SQL constant must be documented with `///` XML doc and `--` inline SQL comments for every column
