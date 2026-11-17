@@ -162,6 +162,7 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 <script src="_content/Clayzor.Lib.Web.Controls/js/clayGridColumnDrag.js"></script>
 <script src="_content/Clayzor.Lib.Web.Controls/js/clayGridPrint.js"></script>
 <script src="_content/Clayzor.Lib.Web.Controls/js/clayGridExcel.js"></script>
+<script src="_content/Clayzor.Lib.Web.Controls/js/clayFormWindow.js"></script>
 ```
 
 ## Map / где что искать
