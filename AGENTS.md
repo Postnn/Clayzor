@@ -185,6 +185,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Документация ConfirmDialog | [src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md](src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md) |
 | Руководство пользователя ModelEquipmentForm | [src/Kesco.App.Web.Inventory/docs/model-equipment-form.md](src/Kesco.App.Web.Inventory/docs/model-equipment-form.md) |
 | Руководство пользователя EquipmentIns | [src/Kesco.App.Web.Inventory/docs/equipment-ins.md](src/Kesco.App.Web.Inventory/docs/equipment-ins.md) |
+| Руководство пользователя EquipmentForm | [src/Kesco.App.Web.Inventory/docs/equipment-form.md](src/Kesco.App.Web.Inventory/docs/equipment-form.md) |
+| Контракты EquipmentForm | [src/Kesco.App.Web.Inventory/docs/equipment-form-write-contracts.md](src/Kesco.App.Web.Inventory/docs/equipment-form-write-contracts.md) |
 | Руководство пользователя ClaySelect | [src/Clayzor.Lib.Web.Controls/docs/clay-select-user-guide.md](src/Clayzor.Lib.Web.Controls/docs/clay-select-user-guide.md) |
 | Динамический режим ClayGrid — план реализации (G0–G14, выполнены) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/_readme_grid_dynamic.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/_readme_grid_dynamic.md) |
 | Динамический режим ClayGrid — багфиксы (GF1–GF16) | [src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GF0_README_dynamic_fixes.md](src/Clayzor.Lib.Web.Controls/Components/Grid/promts/_done/GF0_README_dynamic_fixes.md) |
