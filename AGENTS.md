@@ -183,6 +183,8 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Документация ClayErrorBar | [src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md](src/Clayzor.Lib.Web.Controls/docs/clay-error-bar.md) |
 | Документация ClayColumnFilterDialog | [src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md](src/Clayzor.Lib.Web.Controls/docs/clay-column-filter-dialog.md) |
 | Документация ConfirmDialog | [src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md](src/Clayzor.Lib.Web.Controls/docs/confirm-dialog.md) |
+| Форма телефонного номера Tel и руководство пользователя | [src/Kesco.App.Web.Inventory/docs/phone-form.md](src/Kesco.App.Web.Inventory/docs/phone-form.md) |
+| Подтверждённые пропуски EquipmentForm_2 | [promts/EquipmentForm_2_skipped.md](promts/EquipmentForm_2_skipped.md) |
 | Руководство пользователя ModelEquipmentForm | [src/Kesco.App.Web.Inventory/docs/model-equipment-form.md](src/Kesco.App.Web.Inventory/docs/model-equipment-form.md) |
 | Руководство пользователя EquipmentIns | [src/Kesco.App.Web.Inventory/docs/equipment-ins.md](src/Kesco.App.Web.Inventory/docs/equipment-ins.md) |
 | Руководство пользователя EquipmentForm | [src/Kesco.App.Web.Inventory/docs/equipment-form.md](src/Kesco.App.Web.Inventory/docs/equipment-form.md) |
