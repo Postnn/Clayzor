@@ -43,6 +43,7 @@
     --clay-font-size-secondary: 0.8125rem;
     --clay-radius:      4px;
     --clay-radius-surface: 8px;
+    --clay-control-height: 32px;
     --clay-accent:      3px;
     --clay-white:       #FFFFFF;
 
