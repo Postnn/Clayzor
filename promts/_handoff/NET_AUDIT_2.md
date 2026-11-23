@@ -116,6 +116,20 @@ Tests (307 insertions, 6 deletions):
 
 Суперпроект: `promts/_handoff/NET_AUDIT_2.md` (этот файл). `promts/Net_2.md` не изменялся.
 
+## Общая ширина ClayDatePicker и ClayTime
+
+- `ClayDatePicker` получил класс `clay-date`; `clay-date` и `clay-time` используют
+  `--clay-date-time-width: 180px` из общего `wwwroot/css/clay.css`. Поля не растягиваются
+  вместе с формой. Правило добавлено в корневой `AGENTS.md`.
+- Browser EquipmentForm: date/time по 180 px; Net: date 180 px. При viewport 1400 и 800
+  размеры не меняются, `15.01.2027` отображается полностью.
+- `ClayFormControlsTests` — 8/8, общий набор — 936/936. Build успешен, 0 ошибок.
+- В регрессии исправлена только тестовая нестабильность `LoadErrorAfterIdChange`:
+  фоновый ClaySelect мог забрать единственную script-ошибку, поэтому очередь содержит
+  две SQL-ошибки для фонового и основного запросов. Продуктовое поведение не менялось.
+- Дополнительные файлы: `ClayDatePicker.razor`, `wwwroot/css/clay.css`, корневой
+  `AGENTS.md`, `ClayFormControlsTests.cs`, `NetFormTests.cs`.
+
 ## Незакрытые ограничения
 
 - Реальный PoE не вызывался, `sp_ResetPoEport` на стенде отсутствует.
