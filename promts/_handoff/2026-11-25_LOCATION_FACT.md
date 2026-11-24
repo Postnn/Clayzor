@@ -1,0 +1,33 @@
+# LocationFact и компоновка территорий — интеграция
+
+Источник: `C:\CLAYZOR-KIMI\Clayzor-remaining-2026-11-25`, отчёты `promts/REMAINING_FORMS/2026-11-25/04_LOCATION_FACT.md`, `05_TERRITORIAL_TREE_SCROLL.md`, `06_TERRITORIAL_FORM_LAYOUT.md`.
+
+## Перенесено
+
+- Форма `/Inv/LocationFact` и `.aspx`: поиск рабочего места и оборудования, список учётных и фактических данных, диалог подтверждения и сканер, DR-01, атомарная серверная запись с проверкой прав и ожидаемого снимка.
+- `LocationFactData`, SQL-константы, источник поиска оборудования и 11 профильных тестов.
+- `URI_inventory_fact` в `appsettings.json` и `web.config`, адресный фокус примечания в `app.js`.
+- Собственная прокрутка дерева территорий и ограничения ширины полей карточки территории. Текущий lifecycle и draft root карточки не заменялись.
+
+## Проверки интегрированного кода
+
+- `dotnet build Clayzor.sln --no-restore --verbosity:minimal --consoleLoggerParameters:ErrorsOnly` — успешно, 0 ошибок.
+- `LocationFactTests` — 11/11.
+- Профиль SlBl, SIM_FMTN, Modifications, LocationFact и TerritorialEntity — 63/63.
+- Общий набор с фильтром `FullyQualifiedName!~ClayTreeMutationAbortTests` — 1323/1323, включая `ModelEquipmentFormTests.ApplyNewModel_SavesNavigatesAndReloadsCreatedModel`.
+- Chrome, только чтение: оба маршрута LocationFact на 390 px без ошибок и горизонтального переполнения; дерево на 1280×700 и 320×560 имеет собственную прокрутку и `overscroll-behavior-y: contain`; карточка территории 814 на 1440/480/320 px сохраняет ширины 608/438/278 px для группы полей, 160 px для коротких полей и 224 px для телефонного кода.
+- OK, подтверждение инвентаризации и другие записи из UI не выполнялись.
+
+## Коммиты сабмодулей
+
+- Entities `1a2dd14` — данные и SQL LocationFact.
+- DBSelect `535fa38` — поиск оборудования.
+- Inventory `5fa38e3` — форма и конфигурация LocationFact.
+- Inventory `7d63837` — прокрутка дерева и ширина полей территории.
+- Tests `204bd00` — профильные тесты.
+
+Все коммиты сабмодулей опубликованы в `origin/main`. Inventory `5020`, Users `5030`, Styles `5040` запущены после сборки.
+
+## Открытая приёмка
+
+Не подтверждены реальный commit LocationFact из UI, складской сценарий с данными, конкурентные circuits, каскад SIM на отдельной тестовой станции и потеря связи в момент commit. URI владельца и места зависят от конфигурации стенда. Эти пункты не считаются выполненными. Тестовые DML координатором не выполнялись; по отчёту внешнего агента два rollback-теста завершились без остаточных записей и с активными триггерами.
