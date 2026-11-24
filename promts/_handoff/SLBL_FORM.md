@@ -1,0 +1,22 @@
+# SlBl_form — почтовые списки
+
+Изолированный worktree `C:\CLAYZOR-KIMI\Clayzor-remaining-2026-11-25` на базе `2eef23d`. Коммитов и записей в почтовые списки нет.
+
+Маршруты `/Equipment/SlBl_form` и `/Equipment/SlBl_form.aspx` в `SlBlForm.*`. Поддержаны адрес, `:0`/`:1` и U+001F, lookup `SlBlAddressSelectDataSource`, выбор вида по содержимому, точное отслеживание изменений, подтверждение перехода, locale-независимая валидация до 7950 символов, scoped `ClayDraftRegistration`, чтение оригинала для «Обновить» и отображение двух разностей. `SlBlLists.cs` и запросы `SELECT_SlBl*` в Entities. `Язык` UI — русский.
+
+На тестовой БД доступны `dbo.vwMailBoxesAddresses`, `dbo.vwMailBoxesAddressesSlBl` и `dbo.fn_SplitText`. Функция разделяет пробелы, запятые, `;`, табуляцию, CR/LF и NBSP. Оба представления вернули 0 строк. `sys.objects` и `sys.synonyms` не содержат видимой `sp_MailboxesSlBlSynchronize`, метаданные параметров пусты. DDL, исполнительные права и область разрешений на ящик остаются неподтверждёнными. Кнопка «Сохранить» отключена с пояснением. Следующий шаг — получить подтверждённые параметры, grants и согласованный тестовый адрес, затем подключить длительную процедуру и существующий read-only `CompareAsync` как вторую фазу. Модальные ветки подтверждённого успеха и повтора процедуры пока недоступны. Фокус после выбора и английские тексты требуют интеграционной проверки.
+
+Профиль `FullyQualifiedName~SlBlTests` — 12/12, сборка ссылочных проектов прошла. В Chrome на `5680` при 390 px проверены оба маршрута, сообщение о блокировке записи и отклонение неизвестного вида из URL. Реальный read-only SELECT сравнения на синтетическом тексте `one.example.invalid;two.example.invalid` вернул обе ожидаемые строки в `NotSaved` и пустой `NotDeleted`. Синхронизация, частичный результат и retry не запускались. Артефакты `TestResults/SlBl`.
+
+## Интеграция и merge
+
+Пакет перенесён после EQ10/TH2/territories. Ветка `slbl-readonly` опубликована и влита в `main` через `git merge --no-ff`:
+
+| Репозиторий | Merge SHA |
+|---|---|
+| Entities | `7e930e65d4130eea01656c78bba8d2869f360c59` |
+| DBSelect | `3ee645566d4926978ec93dcd0fdc4ece132927ac` |
+| Inventory | `868d1e4c282323c4bc3c022b0ebfcd4e75cc61ac` |
+| Tests | `180ec60dbec6e3ddb2209f41f5a2cc69d956f2fc` |
+
+`dotnet build Clayzor.sln` — 0 ошибок; `SlBlTests` — **13/13** с новой проверкой уникального root selector; общий suite — **1288/1288 passed**. Корневой класс `slbl-draft-{GUID}` предотвращает `Draft DOM root is ambiguous`. Синхронизация не включалась: процедура и права остаются неподтверждёнными, кнопка «Сохранить» отключена с пояснением.
