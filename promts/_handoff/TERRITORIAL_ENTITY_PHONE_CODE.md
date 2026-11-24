@@ -53,3 +53,7 @@ Feature-файлы и оба патча перенесены после EQ10/TH2
 | Tests | `420c754fd6ac5d0b0b59abb124be41affd23f548` |
 
 Проверки после интеграции: `dotnet build Clayzor.sln` — 0 ошибок; профильные территории/коды — **24/24**; общий suite без известного `ClayTreeMutationAbortTests` — **1274/1274 passed**. Read-only browser на основном `5020` повторил все сценарии: ограниченный корень, ленивые дети, переключение на коды, точные счётчики, 5751 совпадение при 100 видимых, alias `.aspx`, `CLID=85`, запрет wildcard origin, read-only строковый ключ и новая карточка 390 px. Бизнес-DML не выполнялись. Ограничения создания/удаления территории, экспорта, DnD и общего picker/state остаются открытыми, как указано выше.
+
+## Draft root hotfix
+
+Обнаружена и исправлена ошибка `Draft DOM root is ambiguous`: обе карточки использовали legacy-регистрацию без root selector, но не имели класса `.equipment-form`. `TerritorialEntityCardBase` теперь задаёт уникальный `territory-draft-{GUID}` в `FormOptions.Class` и передаёт тот же селектор в `RegisterHandleAsync`. Это не меняет layout и не снимает fail-closed защиту при реальных сбоях IndexedDB. Добавлен regression `DraftRootSelectorIsExplicitAndUniquePerCard` — 25/25 профильных тестов; общий suite — **1275/1275 passed**. Browser территории и телефонного кода подтвердил отсутствие сообщения «Не удалось подключить хранилище черновика» при сохранении остальных сценариев.
