@@ -1,0 +1,35 @@
+<MudDialog>
+    <DialogContent>
+        <ClayThemeSelector />
+        <ClayTextBox Options="LocationOptions" @bind-Value="_location" />
+        <ClayDatePicker Options="DateOptions" @bind-Value="_date" />
+        <ClayTime Options="TimeOptions" @bind-Value="_time" />
+        <ClayGrid TEntity="LocationChange" Items="History" Options="GridOptions">
+            <ColumnDefs>
+                <ClayColumnDef ColumnId="1" SqlName="Location" DisplayName="Предыдущее расположение" />
+            </ColumnDefs>
+            <Columns>
+                <ClayColumn TEntity="LocationChange" ColumnId="1"><CellTemplate>@context.Item.Location</CellTemplate></ClayColumn>
+            </Columns>
+        </ClayGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Default" Variant="Variant.Outlined" OnClick="Dialog.Cancel">Отмена</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@(() => Dialog.Close())">ОК</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance Dialog { get; set; } = null!;
+
+    private sealed record LocationChange(string Location);
+    private static readonly LocationChange[] History = [new("Ремонт")];
+    private static readonly ClayGridOptions GridOptions = new() { AutoHeight = true, ShowToolbar = false, ShowPagination = false };
+    private static readonly ClayTextBoxOptions LocationOptions = new() { Label = "Расположение", Required = true };
+    private static readonly ClayDatePickerOptions DateOptions = new() { Label = "Дата" };
+    private static readonly ClayTimeOptions TimeOptions = new() { Label = "Время", TimeFormat = "HH:mm" };
+
+    private string? _location = "Склад";
+    private DateTime? _date = new DateTime(2026, 11, 24);
+    private TimeSpan? _time = new TimeSpan(9, 30, 0);
+}

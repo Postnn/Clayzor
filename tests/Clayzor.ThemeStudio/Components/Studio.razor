@@ -1,0 +1,136 @@
+@page "/"
+@using Clayzor.Lib.Entities.Tree
+@using Clayzor.Lib.Web.Controls.Components.Filter
+@using Clayzor.Lib.Web.Controls.Components.Grid.ColumnTypes
+@inject ClayThemeState ThemeState
+@inject IDialogService Dialogs
+
+<PageTitle>Clayzor Theme Studio</PageTitle>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-3">
+            <ClayGrid TEntity="Sample" Options="_gridOptions" Items="Samples" TotalCount="Samples.Length" OnAdd="OpenDialogAsync">
+                <ColumnDefs>
+                    <ClayColumnDef ColumnId="1" SqlName="Id" DisplayName="Код" />
+                    <ClayColumnDef ColumnId="2" SqlName="Name" DisplayName="Наименование" />
+                    <ClayColumnDef ColumnId="3" SqlName="Category" DisplayName="Тип" />
+                </ColumnDefs>
+                <Columns>
+                    <ClayColumn TEntity="Sample" ColumnId="1"><CellTemplate>@context.Item.Id</CellTemplate></ClayColumn>
+                    <ClayColumn TEntity="Sample" ColumnId="2"><CellTemplate>@context.Item.Name</CellTemplate></ClayColumn>
+                    <ClayColumn TEntity="Sample" ColumnId="3"><CellTemplate>@context.Item.Category</CellTemplate></ClayColumn>
+                </Columns>
+            </ClayGrid>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-3">
+            <MudText Typo="Typo.h6">Расположения</MudText>
+            <ClayTreeView Options="_treeOptions" DataSource="_treeData" />
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12">
+        <MudPaper Class="pa-3">
+            <ClayToolbar>
+                <ClayToolbarButton Options="DialogButton" OnClick="OpenDialogAsync" />
+                <ClayToolbarButton Options="FilterButton" OnClick="OpenColumnFilterAsync" />
+                <ClayToolbarButton Options="CompositeButton" OnClick="OpenCompositeFilterAsync" />
+                <ClayMenu Icon="@Icons.Material.Filled.MoreVert" Tooltip="Операции">
+                    <MudMenuItem OnClick="ValidateAsync">Проверить поля</MudMenuItem>
+                    <MudMenuItem Disabled="true">Недоступная операция</MudMenuItem>
+                </ClayMenu>
+                <ClayButton Icon="@Icons.Material.Outlined.Info" Text="Пример подсказки" />
+            </ClayToolbar>
+            <MudForm @ref="_form">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="4"><ClayTextBox Options="NameOptions" @bind-Value="_name" /></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><ClayTextBox Options="ReadOnlyOptions" Value="ST-001" /></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><ClayTextBox Options="DisabledOptions" Value="Склад" /></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><ClayNumber Options="NumberOptions" @bind-Value="_quantity" /></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><ClayDatePicker Options="DateOptions" @bind-Value="_date" /></MudItem>
+                    <MudItem xs="12" sm="6" md="4"><ClayTime Options="TimeOptions" @bind-Value="_time" /></MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <ClaySelect TItem="Sample" TValue="int?" Items="Samples" ValueSelector="@(item => item.Id)"
+                                    TextSelector="@(item => item.Name)" Options="SelectOptions" @bind-Value="_selected" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <ClayComboBox TItem="Sample" Items="Samples" Label="Оборудование" @bind-Value="_combo" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="4">
+                        <ClayDropDownList TItem="Sample" TValue="int" Items="Samples" ValueSelector="@(item => item.Id)"
+                                          TextSelector="@(item => item.Name)" Options="DropDownOptions" @bind-Value="_list" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6"><ClayTextArea Options="NotesOptions" @bind-Value="_notes" /></MudItem>
+                    <MudItem xs="12" sm="6">
+                        <ClayCheckbox Label="На руках" @bind-State="_checked" />
+                        <ClayRadioGroup TValue="int" Items="RadioOptions" @bind-Value="_status" />
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+            <MudAlert Class="mt-3" Severity="Severity.Warning">Проверьте указанное расположение.</MudAlert>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [SupplyParameterFromQuery(Name = "theme")] public string? Theme { get; set; }
+
+    private sealed record Sample(int Id, string Name, string Category) : ILookupEntity;
+    private static readonly Sample[] Samples = [new(1, "Ноутбук", "Компьютер"), new(2, "Сканер", "Периферия"), new(3, "Телефон", "Связь")];
+    private static readonly ClayTextBoxOptions NameOptions = new() { Label = "Наименование", Required = true };
+    private static readonly ClayTextBoxOptions ReadOnlyOptions = new() { Label = "Код", ReadOnly = true };
+    private static readonly ClayTextBoxOptions DisabledOptions = new() { Label = "Расположение", Disabled = true };
+    private static readonly ClayNumberOptions NumberOptions = new() { Label = "Количество" };
+    private static readonly ClayDatePickerOptions DateOptions = new() { Label = "Дата размещения" };
+    private static readonly ClayTimeOptions TimeOptions = new() { Label = "Время размещения", TimeFormat = "HH:mm" };
+    private static readonly ClaySelectOptions SelectOptions = new() { Label = "Выбор записи", Required = true };
+    private static readonly ClayDropDownListOptions DropDownOptions = new() { Label = "Тип оборудования" };
+    private static readonly ClayTextAreaOptions NotesOptions = new() { Label = "Примечание" };
+    private static readonly ClayRadioOption<int>[] RadioOptions = [new(1, "В эксплуатации"), new(2, "Резерв")];
+    private static readonly ClayToolbarButtonOptions DialogButton = new() { Text = "Изменить расположение", Variant = Variant.Filled, Color = Color.Primary };
+    private static readonly ClayToolbarButtonOptions FilterButton = new() { Text = "Фильтр колонки" };
+    private static readonly ClayToolbarButtonOptions CompositeButton = new() { Text = "Настраиваемый фильтр" };
+
+    private readonly ClayGridOptions _gridOptions = new() { Title = "Оборудование", Id = "studio-grid", ShowAddButton = true, AutoHeight = true };
+    private readonly StudioTreeData _treeData = new();
+    private readonly ClayTreeOptions _treeOptions = new()
+    {
+        TreeId = "studio-locations", SelectSql = nameof(StudioTreeData), HierarchyMode = ClayTreeHierarchyMode.ParentKey,
+        Schema = new() { IdColumn = "Id", TextColumn = "Text", ParentColumn = "ParentId" }, ShowLines = true,
+    };
+    private MudForm? _form;
+    private string? _name = "Ноутбук";
+    private string? _notes;
+    private decimal? _quantity = 1;
+    private DateTime? _date = new DateTime(2026, 11, 24);
+    private TimeSpan? _time = new TimeSpan(9, 30, 0);
+    private int? _selected = 1;
+    private int _combo = 2;
+    private int _list = 3;
+    private bool? _checked = true;
+    private int _status = 1;
+
+    protected override Task OnParametersSetAsync() => Theme is null
+        ? Task.CompletedTask
+        : ThemeState.SelectAsync(ClayThemeCatalog.Parse(Theme));
+
+    private async Task OpenDialogAsync() => await Dialogs.ShowAsync<StudioDialog>("Изменение расположения");
+
+    private async Task OpenColumnFilterAsync() => await Dialogs.ShowAsync<ClayColumnFilterDialog>("Фильтр: Наименование", new DialogParameters
+    {
+        [nameof(ClayColumnFilterDialog.ColumnDisplayName)] = "Наименование",
+        [nameof(ClayColumnFilterDialog.ColumnSqlName)] = nameof(Sample.Name),
+    });
+
+    private async Task OpenCompositeFilterAsync() => await Dialogs.ShowAsync<ClayFilterDialog>("Настраиваемый фильтр", new DialogParameters
+    {
+        [nameof(ClayFilterDialog.Root)] = new ClayFilterGroupNode(),
+        [nameof(ClayFilterDialog.Columns)] = new[]
+        {
+            new ClayFilterColumnInfo { SqlName = nameof(Sample.Name), DisplayName = "Наименование", Type = new TextColumnType() },
+        },
+    });
+
+    private Task ValidateAsync() => _form?.ValidateAsync() ?? Task.CompletedTask;
+}

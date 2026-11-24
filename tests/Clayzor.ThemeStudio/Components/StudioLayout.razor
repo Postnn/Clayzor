@@ -1,0 +1,17 @@
+@inherits LayoutComponentBase
+
+<ClayThemeHost />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudMainContent Class="pa-4">
+        <header class="d-flex align-center gap-2 mb-4">
+            <MudText Typo="Typo.h5" HtmlTag="h1">Clayzor Theme Studio</MudText>
+            <MudSpacer />
+            <ClayThemeSelector />
+        </header>
+        @Body
+    </MudMainContent>
+</MudLayout>
