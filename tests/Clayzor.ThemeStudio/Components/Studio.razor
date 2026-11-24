@@ -7,14 +7,23 @@
 
 <PageTitle>Clayzor Theme Studio</PageTitle>
 
+@if (Review)
+{
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <MudButton OnClick="ApplyReviewGridAsync">Сортировка, группировка и фильтр</MudButton>
+        <MudButton OnClick="ClearReviewFilter">Снять фильтр по значению</MudButton>
+    </div>
+}
+
 <MudGrid Spacing="3">
     <MudItem xs="12" md="8">
         <MudPaper Class="pa-3">
-            <ClayGrid TEntity="Sample" Options="_gridOptions" Items="Samples" TotalCount="Samples.Length" OnAdd="OpenDialogAsync">
+            <ClayGrid TEntity="Sample" @ref="_grid" Options="_gridOptions" Items="Samples" TotalCount="Samples.Length"
+                      DataLoader="@(Review ? _reviewLoader : null)" OnAdd="OpenDialogAsync">
                 <ColumnDefs>
-                    <ClayColumnDef ColumnId="1" SqlName="Id" DisplayName="Код" />
-                    <ClayColumnDef ColumnId="2" SqlName="Name" DisplayName="Наименование" />
-                    <ClayColumnDef ColumnId="3" SqlName="Category" DisplayName="Тип" />
+                    <ClayColumnDef ColumnId="1" SqlName="Id" DisplayName="Код" Filterable="Review" AllowValueFilter="Review" />
+                    <ClayColumnDef ColumnId="2" SqlName="Name" DisplayName="Наименование" Filterable="Review" AllowValueFilter="Review" />
+                    <ClayColumnDef ColumnId="3" SqlName="Category" DisplayName="Тип" Groupable="Review" />
                 </ColumnDefs>
                 <Columns>
                     <ClayColumn TEntity="Sample" ColumnId="1"><CellTemplate>@context.Item.Id</CellTemplate></ClayColumn>
@@ -73,8 +82,14 @@
     </MudItem>
 </MudGrid>
 
+@if (Review)
+{
+    <ThemeRequiredReview />
+}
+
 @code {
     [SupplyParameterFromQuery(Name = "theme")] public string? Theme { get; set; }
+    [SupplyParameterFromQuery(Name = "review")] public bool Review { get; set; }
 
     private sealed record Sample(int Id, string Name, string Category) : ILookupEntity;
     private static readonly Sample[] Samples = [new(1, "Ноутбук", "Компьютер"), new(2, "Сканер", "Периферия"), new(3, "Телефон", "Связь")];
@@ -92,7 +107,18 @@
     private static readonly ClayToolbarButtonOptions FilterButton = new() { Text = "Фильтр колонки" };
     private static readonly ClayToolbarButtonOptions CompositeButton = new() { Text = "Настраиваемый фильтр" };
 
-    private readonly ClayGridOptions _gridOptions = new() { Title = "Оборудование", Id = "studio-grid", ShowAddButton = true, AutoHeight = true };
+    private readonly ClayGridOptions _gridOptions = new()
+    {
+        Title = "Оборудование", Id = "studio-grid", ShowAddButton = true, AutoHeight = true,
+        FilterColumnTypes = new Dictionary<string, ColumnType> { ["Id"] = ColumnType.Number, ["Name"] = ColumnType.Text },
+    };
+    private readonly StudioReviewDataLoader _reviewLoader = new(
+        new Dictionary<string, IReadOnlyList<object?>>
+        {
+            ["Id"] = Samples.Select(sample => (object?)sample.Id).ToArray(),
+            ["Name"] = Samples.Select(sample => (object?)sample.Name).ToArray(),
+        });
+    private ClayGrid<Sample>? _grid;
     private readonly StudioTreeData _treeData = new();
     private readonly ClayTreeOptions _treeOptions = new()
     {
@@ -133,4 +159,18 @@
     });
 
     private Task ValidateAsync() => _form?.ValidateAsync() ?? Task.CompletedTask;
+
+    private async Task ApplyReviewGridAsync()
+    {
+        if (_grid is not IClayGrid grid) return;
+        await grid.ToggleSort(nameof(Sample.Id));
+        await grid.ToggleSort(nameof(Sample.Name));
+        await grid.AddGroupAsync(nameof(Sample.Category));
+        grid.RestoreFilter(new ClayFilterGroupNode
+        {
+            Nodes = [new ValueFilter { Column = nameof(Sample.Name), Values = [Samples[0].Name] }],
+        });
+    }
+
+    private void ClearReviewFilter() => ((IClayGrid?)_grid)?.RestoreFilter(new ClayFilterGroupNode());
 }

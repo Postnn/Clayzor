@@ -1,0 +1,55 @@
+<MudPaper Class="pa-3 mt-3">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <MudButton OnClick="@(() => _filled = false)">Пустые обязательные поля</MudButton>
+        <MudButton OnClick="@(() => _filled = true)">Заполненные обязательные поля</MudButton>
+    </div>
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="6" md="4" data-review-field="email">
+            <ClayTextBox Options="EmailOptions" Value="@(_filled ? "не email" : null)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="textarea">
+            <ClayTextArea Options="NotesOptions" Value="@(_filled ? "Примечание" : null)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="number">
+            <ClayNumber Options="NumberOptions" Value="@(_filled ? 0m : null)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="date">
+            <ClayDatePicker Options="DateOptions" Value="@(_filled ? new DateTime(2026, 11, 24) : null)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="time">
+            <ClayTime Options="TimeOptions" Value="@(_filled ? TimeSpan.Zero : null)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="select">
+            <ClaySelect TItem="Choice" TValue="int?" Options="SelectOptions" Items="Choices"
+                        ValueSelector="@(item => (int?)item.Id)" TextSelector="@(item => item.Name)" Value="@(_filled ? 0 : null)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="combo">
+            <ClayComboBox TItem="Choice" Items="Choices" Required="true" Label="Справочник" Value="@(_filled ? 0 : -1)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="dropdown">
+            <ClayDropDownList TItem="Choice" TValue="int?" Options="DropDownOptions" Items="Choices"
+                              ValueSelector="@(item => (int?)item.Id)" TextSelector="@(item => item.Name)" Value="@(_filled ? 0 : null)" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="readonly">
+            <ClayTextBox Options="ReadOnlyOptions" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" data-review-field="disabled">
+            <ClayTextBox Options="DisabledOptions" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@code {
+    private sealed record Choice(int Id, string Name) : ILookupEntity;
+    private static readonly Choice[] Choices = [new(0, "Нулевой код"), new(1, "Первый код")];
+    private static readonly ClayTextBoxOptions EmailOptions = new() { Label = "Электронная почта", Required = true, InputType = InputType.Email, Placeholder = "name@example.com" };
+    private static readonly ClayTextAreaOptions NotesOptions = new() { Label = "Примечание", Required = true, Placeholder = "Введите примечание" };
+    private static readonly ClayNumberOptions NumberOptions = new() { Label = "Количество", Required = true };
+    private static readonly ClayDatePickerOptions DateOptions = new() { Label = "Дата", Required = true, Editable = false };
+    private static readonly ClayTimeOptions TimeOptions = new() { Label = "Время", Required = true, TimeFormat = "HH:mm" };
+    private static readonly ClaySelectOptions SelectOptions = new() { Label = "Выбор записи", Required = true, Placeholder = "Выберите запись" };
+    private static readonly ClayDropDownListOptions DropDownOptions = new() { Label = "Тип оборудования", Required = true };
+    private static readonly ClayTextBoxOptions ReadOnlyOptions = new() { Label = "Только чтение", Required = true, ReadOnly = true };
+    private static readonly ClayTextBoxOptions DisabledOptions = new() { Label = "Недоступно", Required = true, Disabled = true };
+    private bool _filled;
+}
