@@ -20,3 +20,16 @@
 | Tests | `180ec60dbec6e3ddb2209f41f5a2cc69d956f2fc` |
 
 `dotnet build Clayzor.sln` — 0 ошибок; `SlBlTests` — **13/13** с новой проверкой уникального root selector; общий suite — **1288/1288 passed**. Корневой класс `slbl-draft-{GUID}` предотвращает `Draft DOM root is ambiguous`. Синхронизация не включалась: процедура и права остаются неподтверждёнными, кнопка «Сохранить» отключена с пояснением.
+
+## SLBL-01…03 и сверка
+
+Приняты отчёты `19_SLBL_ROUTE.md`, `20_SLBL_DRAFT_BASELINE.md`, `21_SLBL_SYNC.md`, `22_SLBL_RECONCILIATION.md` из `C:\CLAYZOR-KIMI\Clayzor-review-3790567`.
+
+- `SlBlRoute` обслуживает оба маршрута; `@key=Id` утилизирует старый редактор при смене составного ключа.
+- Черновик хранит Address/Kind/Original/Current/NeedsReview и поддерживает прежний строковый формат с обязательной сверкой. URL обновляется с кодированием через NavigationManager/JS.
+- `SlBlSynchronization` разрешает одну отправку только после проверки intent, текущего Employee, `ISlBlMailboxWritePolicy`, доступности адреса, исходного текста и совместимой процедуры с EXECUTE. Отсутствие policy закрывает запись.
+- Timeout после dispatch даёт Unknown. Reconcile читает только сохранённый intent и ревизию, совпадение множеств завершает журнал без повторной отправки.
+- Сборка — 0 ошибок; SlBl + LocationFact — 31/31, включая 7 новых тестов синхронизации/сверки. Browser 390 px: оба маршрута открываются без переполнения, Save заблокирован при отсутствии Dirty и подтверждённой операции.
+- Entities `38586e3`, Inventory `98f11ae`, Tests `6ea77a8` опубликованы в `origin/main`. PhoneCode из worktree не переносился.
+
+Остаются открытыми реальная почтовая команда и подтверждённая реализация mailbox write policy, допустимый тестовый ящик, Partial/Unknown в браузере, reconnect и адресный callback после записи, dirty-переход с задержанным ответом. Реальные команды не запускались.
