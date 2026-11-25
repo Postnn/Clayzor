@@ -71,3 +71,17 @@ Feature-файлы и оба патча перенесены после EQ10/TH2
 - Entities `8b47e27`, Controls `2ae556f`, Inventory `8314f77`, Tests `7b9877e` опубликованы в `origin/main`.
 
 Открыты: полный перезапуск процесса во время multiple-выбора, внешняя совместимость 1С, create/delete территории и подтверждённые write-контракты.
+
+## TS-03 и multiple protocol
+
+Приняты отчёты `39_TERRITORY_VIEW_STATE.md`, `40_TERRITORY_SCOPED_RESTORE.md`, `41_TERRITORY_MULTI_PROTOCOL.md`.
+
+- `TerritoryViewState` читает legacy jsTree open/selected, хранит один якорь, выбранный узел и режим телефонных кодов. Обычный просмотр использует личный параметр `InvTerTreeState` с CLID/shared=0.
+- Ограниченные и caller-контексты используют sessionStorage вкладки с ключом по сотруднику и SHA-256 полного URI; основная настройка не перезаписывается.
+- `CustomStateStore` и `LoadStatePathAsync` позволяют владельцу разрешать путь. Территория получает цепочку предков SQL-запросом внутри ScopeRows. Внешний Chrome подтвердил восстановление раскрытой Германии, выделенного дочернего узла и URL правой панели после F5, а также пустую панель для root=7.
+- `MultipleSelectionBridgeTests` подтверждают null при отмене, [] при подтверждении пустого набора, сортировку/дедупликацию ID и отказ malformed payload.
+- Незаявленный `ReparentAsync` и включение DnD территорий из worktree не перенесены.
+- Сборка — 0 ошибок; профиль — 35/35; общий suite — 1397/1397.
+- Entities `98e7177`, Controls `43b81d8`, Inventory `371e84f`, Tests `12c0350` опубликованы в `origin/main`.
+
+Открыты: реальное SQL-сохранение обычного режима, изменение фильтра в том же URL и изоляция двух одновременно активных вкладок. Последняя проверка двух вкладок не засчитана из-за SQL login timeout/потери связи.
