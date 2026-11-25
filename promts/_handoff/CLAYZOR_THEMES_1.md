@@ -139,3 +139,14 @@ TH2 перенесён после EQ10. Ветка `theme-2` опубликов�
 | Tests | `aac9630672f5bb0bfdd09811a3f9184ff97aff72` |
 
 Проверки после интеграции: сборка решения и Theme Studio — 0 ошибок; профильные темы — 40/40; общий suite без известного `ClayTreeMutationAbortTests` — **1250/1250 passed**. Browser probe получил ожидание `document.readyState=complete` и проверку CDP-ошибок, устранив гонку начальной навигации. Studio review на основном коде подтвердил все пять тем, badges/active filter, сортировку/группировку и обязательные поля, включая null/0/readonly/disabled и непустой невалидный email. Рабочая БД не изменялась.
+
+## TH-C01 — MedicalTests
+
+Принят отчёт `31_MEDICAL_SHARED_THEME.md`.
+
+- MainLayout использует один `ClayThemeHost` и `ClayThemeSelector`; drawer и business DbManager сохранены.
+- `AddInventoryThemePreferences` имеет overload с отдельной фабрикой `ClayAppSettings`; прежняя сигнатура сохранена. MedicalTests читает `ConnectionStrings:InventoryTheme` для общего SQL store.
+- Внешний Chrome подтвердил classic:light, пять тем и переключение classic:dark для окна. Без подключения выводится причина невозможности сохранить выбор.
+- Общая сборка — 0 ошибок; профиль пяти групп — 85/85; общий suite — 1384/1384.
+- Controls `0a298a8`, MedicalTests `784e72e` опубликованы в `origin/main`.
+- Для сохранения между приложениями владельцу нужно задать доверенное Integrated Security подключение к Инвентаризации. SQL multiuser/delegation не проверялись.
