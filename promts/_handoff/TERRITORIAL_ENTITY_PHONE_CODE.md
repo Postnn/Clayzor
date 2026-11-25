@@ -99,3 +99,13 @@ Feature-файлы и оба патча перенесены после EQ10/TH2
 - Entities `7d35d11`, Controls `e790a7e`, Inventory `cd93cfd`, Tests `2593821` опубликованы в `origin/main`.
 
 Фактический DnD с записью территории и real DB trigger/rollback не запускался. Полный lifecycle Unknown и insert дочерней территории остаются открытыми.
+
+## DnD browser и PhoneCode route cancel
+
+Приняты отчёты `45_TERRITORY_DND_BROWSER.md` и `49_PHONECODE_ROUTE_CANCEL.md`.
+
+- Изолированный MoveHost с настоящими обработчиками дерева подтвердил: Cancel даёт 0 вызовов ReparentAsync, подтверждение ровно один с source.Id=1/target.Id=2 и действительными L/R. Marker снят. Это не физическая мышь и не SQL-триггер.
+- PhoneCode использует CancellationTokenSource конкретного открытия. При смене RouteKey прежний дочерний поиск отменяется; finally старой задачи не очищает новую регистрацию.
+- Внешний Chrome подтвердил закрытие старого окна при переходе на `?areaid=107`, удаление pending-запроса, показ Германии и игнорирование позднего сообщения старого requestId.
+- Общая сборка — 0 ошибок; профиль — 77/77; общий набор 1420/1420 + DR-01 browser 5/5. Реальные DML не выполнялись.
+- Inventory `963a94d` опубликован в `origin/main`. Общий lifecycle асинхронной загрузки CardBase остаётся у владельца DR-01.
