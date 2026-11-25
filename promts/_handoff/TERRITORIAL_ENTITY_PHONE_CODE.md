@@ -57,3 +57,17 @@ Feature-файлы и оба патча перенесены после EQ10/TH2
 ## Draft root hotfix
 
 Обнаружена и исправлена ошибка `Draft DOM root is ambiguous`: обе карточки использовали legacy-регистрацию без root selector, но не имели класса `.equipment-form`. `TerritorialEntityCardBase` теперь задаёт уникальный `territory-draft-{GUID}` в `FormOptions.Class` и передаёт тот же селектор в `RegisterHandleAsync`. Это не меняет layout и не снимает fail-closed защиту при реальных сбоях IndexedDB. Добавлен regression `DraftRootSelectorIsExplicitAndUniquePerCard` — 25/25 профильных тестов; общий suite — **1275/1275 passed**. Browser территории и телефонного кода подтвердил отсутствие сообщения «Не удалось подключить хранилище черновика» при сохранении остальных сценариев.
+
+## PhoneCode, export и TS-01/04
+
+Приняты отчёты `23_PHONECODE_SEARCH.md`, `24_PHONECODE_RETURN.md`, `25_TERRITORY_EXPORT.md`, `26_TERRITORY_EXPORT_BROWSER.md`, `35_TERRITORY_SINGLE_RETURN.md`, `36_TERRITORY_SELECTION_SCOPE.md`, `37_TERRITORY_MULTI_RETURN.md`, `38_TERRITORY_MULTI_BOUNDARIES.md`.
+
+- PhoneCode имеет расширенный поиск с серверной проверкой ID и `IsPhoneCodeTerritory`, readonly просмотр и обновление сообщения об отказе. Внешний Chrome подтвердил отказ ID 7, принятие Германии 107 и сохранность комментария.
+- Сохранённая территория имеет «Экспорт в 1С» через общий resolver/window service, `DirOU=15`; перед открытием повторно проверяются Employee и запись. Внешняя проверка подтвердила URL и сохранность несохранённого направления без обращения в 1С.
+- Single return проверяет ID в актуальной области roots и игнорирует устаревшую загрузку. `selectedids` строго парсится, дедуплицируется и сортируется.
+- Multiple ClayTree: управляемые отметки, return=2, sessionStorage по пользователю/requestId/scope, `OpenMultipleIdsAsync`, серверная проверка всех ID при загрузке и возврате. Bridge сохраняет проверки source/origin/requestId и payload.
+- Внешние Chrome подтвердили возврат из меню узла, пустой набор и [107], keyboard-only добавление корня и возврат 491 ID (Германия с 490 дочерними), а также отказ selectedids=7,107.
+- Общая сборка — 0 ошибок; профиль пяти групп — 85/85; общий suite — 1384/1384. Данные и внешний 1С не вызывались.
+- Entities `8b47e27`, Controls `2ae556f`, Inventory `8314f77`, Tests `7b9877e` опубликованы в `origin/main`.
+
+Открыты: полный перезапуск процесса во время multiple-выбора, внешняя совместимость 1С, create/delete территории и подтверждённые write-контракты.
