@@ -157,8 +157,8 @@ Scope не универсален: PhonePoolAtribute явно `IsCollaborateWork
 
 | Форма / файл | Существенное дополнение |
 |---|---|
-| [Finder](PROMPT_Finder.md) | Typed составной ключ оборудования, один consumed callback, keyboard advanced/return, Grid state, bool/Window gate |
-| [FinderTel](PROMPT_FinderTel.md) | Numeric phone key, актуальный контекст/late response, keyboard caller, cancel сохраняет выбор; без ненужного batch refactor |
+| [Finder](_DONE/PROMPT_Finder.md) | Typed составной ключ оборудования, один consumed callback, keyboard advanced/return, Grid state, bool/Window gate |
+| [FinderTel](_DONE/PROMPT_FinderTel.md) | Numeric phone key, актуальный контекст/late response, keyboard caller, cancel сохраняет выбор; без ненужного batch refactor |
 | [TypeEquipmentMenu](PROMPT_TypeEquipmentMenu.md) | Master static/detail один Dynamic, общий opener, независимые state IDs, существующее меню |
 | [SIM_FMTN](PROMPT_SIM_FMTN.md) | Точная цепочка Prefix→Short→Description→Save; regex/paste/leading zeros; caller draft/Changed |
 | [BeelineParams](PROMPT_BeelineParams.md) | Два writable поля, Windows TimeZone отдельно от display timezone, readonly Time; eligibility collaboration отдельно |
@@ -168,10 +168,10 @@ Scope не универсален: PhonePoolAtribute явно `IsCollaborateWork
 | [TerritorialEntity_form](PROMPT_TerritorialEntity_form.md) | Девять полей focus, OKCM NULL/0/integer, отдельный readonly drilldown, child cards без потери draft |
 | [TerritorialEntity_search](PROMPT_TerritorialEntity_search.md) | Active≠checked, branch exclusion, empty Save≠Cancel, exact total/empty result, keyboard/focus, single-path state |
 | [Maintenance](PROMPT_Maintenance.md) | Employee card, явное выполнение/подтверждение, нет повторного INSERT, scoped busy и временная семантика |
-| [Modifications](PROMPT_Modifications.md) | Date-only period commit, UTC columns, contacts, несколько static tables с отдельными state/snapshots, print/export |
+| [Modifications](_DONE/PROMPT_Modifications.md) | Date-only period commit, UTC columns, contacts, несколько static tables с отдельными state/snapshots, print/export |
 | [PingHost](PROMPT_PingHost.md) | Start/Stop operation scope, disposal/cancel/late callback; не глобальный wait и не фиктивная editable entity |
 | [duty_form](PROMPT_duty_form.md) | Date-only/динамический Required, keyboard radio и focus, employee contacts, audit отдельно |
-| [LocationFact](PROMPT_LocationFact.md) | Scanner Equipment→Equipment, три результата dialog, owner card внутри modal, отсутствие позднего focus/повторного write |
+| [LocationFact](_DONE/PROMPT_LocationFact.md) | Scanner Equipment→Equipment, три результата dialog, owner card внутри modal, отсутствие позднего focus/повторного write |
 | [SlBl_form](PROMPT_SlBl_form.md) | Textarea newline/paste/commit, последовательные подтверждения, сохранность address/kind/text и неизвестного результата, явная mail operation |
 
 Ни один частный промт не разрешает переносить arbitrary JS callback/HTML или изобретать серверные права/данные ради UI-паритета. Hotkeys F2/Insert только явно назначенные, не автоматическое новое действие16 форм.

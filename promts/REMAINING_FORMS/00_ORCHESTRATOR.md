@@ -119,8 +119,8 @@ G0.6 веди отдельным статусом от G0.4: результат 
 
 | № | Задание | Что получить | Жёсткая зависимость / условие начала интеграции |
 |---:|---|---|---|
-| 1 | [PROMPT_Finder.md](PROMPT_Finder.md) | Контекстный выбор оборудования для телефонного номера, правильные колонки и возврат | G0.1 и соответствующая часть G0.3; актуальный Tel и его контекстные фильтры |
-| 2 | [PROMPT_FinderTel.md](PROMPT_FinderTel.md) | Выбор телефонного номера для оборудования поверх существующего read/lookup | Общий проверенный bridge G0.1, исправный общий SQL-builder; UI Finder как бизнес-форма не является обязательной зависимостью |
+| 1 | [PROMPT_Finder.md](_DONE/PROMPT_Finder.md) | Контекстный выбор оборудования для телефонного номера, правильные колонки и возврат | G0.1 и соответствующая часть G0.3; актуальный Tel и его контекстные фильтры |
+| 2 | [PROMPT_FinderTel.md](_DONE/PROMPT_FinderTel.md) | Выбор телефонного номера для оборудования поверх существующего read/lookup | Общий проверенный bridge G0.1, исправный общий SQL-builder; UI Finder как бизнес-форма не является обязательной зависимостью |
 | 3 | [PROMPT_TypeEquipmentMenu.md](PROMPT_TypeEquipmentMenu.md) | Плоский список типов и модели выбранного типа, переход в существующую карточку | Действующий ClayGrid и ModelEquipmentForm; не зависит от Finder и не требует дерева типов |
 | 4 | [PROMPT_SIM_FMTN.md](PROMPT_SIM_FMTN.md) | Префикс/короткий номер, строковый mutable key и обновление caller | Готовый refresh bridge и существующие SIM/EquipmentForm точки; не зависит от Finder UI |
 | 5 | [PROMPT_BeelineParams.md](PROMPT_BeelineParams.md) | TimeZone/EmailМенеджера договора, остальные поля read-only | Реальные ключи TimeZone и данные договора; существующая ссылка EquipmentForm |
@@ -130,10 +130,10 @@ G0.6 веди отдельным статусом от G0.4: результат 
 | 9 | [PROMPT_TerritorialEntity_form.md](PROMPT_TerritorialEntity_form.md) | Девять полей территории, родитель, телефонные коды | Доменные territory контракты и PhoneCode UI для полного перехода; возврат реального нового PK |
 | 10 | [PROMPT_TerritorialEntity_search.md](PROMPT_TerritorialEntity_search.md) | Дерево, поиск, CRUD-навигация, single/multiple return | TerritoryForm/PhoneCode для полного UI-цикла, G0.1 и общий multiple/tree API |
 | 11 | [PROMPT_Maintenance.md](PROMPT_Maintenance.md) | Регламентные работы и регистрация выполнения | Реальные metadata/SQL/read-write permissions; от территориального UI не зависит |
-| 12 | [PROMPT_Modifications.md](PROMPT_Modifications.md) | Отчёт по периоду/сотруднику из ЗапросыИзмененияБД | Подтверждённые metadata и параметры запросов; общий Grid; не зависит от Maintenance |
+| 12 | [PROMPT_Modifications.md](_DONE/PROMPT_Modifications.md) | Отчёт по периоду/сотруднику из ЗапросыИзмененияБД | Подтверждённые metadata и параметры запросов; общий Grid; не зависит от Maintenance |
 | 13 | [PROMPT_PingHost.md](PROMPT_PingHost.md) | Диагностический экран Start/Stop, общий ICMP и one-shot контракт | Транспорт/права тестовой среды; перед изменением caller получить результат текущего EquipmentForm агента |
 | 14 | [PROMPT_duty_form.md](PROMPT_duty_form.md) | Дежурство, фактический сотрудник, подтверждение и отгул | Проверенная межбазовая транзакция и права, календарные правила; не зависит от Ping |
-| 15 | [PROMPT_LocationFact.md](PROMPT_LocationFact.md) | Инвентаризация, сканер/склад и атомарная работа с расположением | Актуальный location write-path, права/конкурентность, отсутствие усечения данных; не зависит от Duty |
+| 15 | [PROMPT_LocationFact.md](_DONE/PROMPT_LocationFact.md) | Инвентаризация, сканер/склад и атомарная работа с расположением | Актуальный location write-path, права/конкурентность, отсутствие усечения данных; не зависит от Duty |
 | 16 | [PROMPT_SlBl_form.md](PROMPT_SlBl_form.md) | Почтовые списки, долгий вызов, сверка частичного результата | Подтверждённый access/процедурный контракт и безопасный тестовый почтовый стенд; не зависит от LocationFact |
 
 **Почему такой порядок:** сначала общий возврат и простые точки, которые открывают новые формы; затем справочники и карточки с составными ключами; после этого связанный территориальный блок; далее metadata/диагностика; в конце сценарии с межбазовой записью, массовой фактической инвентаризацией и внешней синхронизацией. Это позволяет отладить shared механизмы до сложных необратимых эффектов. При наличии готового стенда независимые поздние задачи можно готовить раньше.

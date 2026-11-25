@@ -4,7 +4,7 @@
 
 Реализуй сценарий **Inventory/Inv/LocationFact.aspx**: выбор рабочего расположения, список учётного/фактически найденного оборудования, поиск по SN/инвентарному номеру/коду, обычное подтверждение и режим сканера, фиксация повреждения/примечания, необязательное учётное перемещение в одной транзакции с подтверждением. Это не обычный список Equipment и не редактирование единственной карточки.
 
-Прочитай [01_COMMON_RULES.md](01_COMMON_RULES.md), актуальные AGENTS.md Inventory, Entities, Controls/Grid и Controls/Select. Не перезаписывай работу текущего агента EquipmentForm/Net. После его исправлений сверяй shared EquipmentLocation API заново. Срез исследования: legacy `12a6efae7eb310adec06a57f6d80b8d9e76985b4`, Inventory `b3da274962c3c0811f71fbfe196f188ed3b5f659`, Entities `bf909e66d89a9a9c2f3fdc5069dd03b9b56368d7`, суперпроект `05f2fc7561bf2a5648cca7fce991be6e4c12cdb2`. Отдельной формы LocationFact нет; read model последней проверки и операции размещения уже частично существуют.
+Прочитай [01_COMMON_RULES.md](../01_COMMON_RULES.md), актуальные AGENTS.md Inventory, Entities, Controls/Grid и Controls/Select. Не перезаписывай работу текущего агента EquipmentForm/Net. После его исправлений сверяй shared EquipmentLocation API заново. Срез исследования: legacy `12a6efae7eb310adec06a57f6d80b8d9e76985b4`, Inventory `b3da274962c3c0811f71fbfe196f188ed3b5f659`, Entities `bf909e66d89a9a9c2f3fdc5069dd03b9b56368d7`, суперпроект `05f2fc7561bf2a5648cca7fce991be6e4c12cdb2`. Отдельной формы LocationFact нет; read model последней проверки и операции размещения уже частично существуют.
 
 ## 1. Прочитанные источники
 
@@ -192,7 +192,7 @@ Handoff: карта полей/команд, SQL и зависимости, ра
 
 ## Дополнение по общим скриптам Styles
 
-Подключи согласованные возможности из [PROMPT_SHARED_CLIENT_BEHAVIOR.md](PROMPT_SHARED_CLIENT_BEHAVIOR.md); доказательства и текущие ограничения — в [03_STYLES_CLIENT_AUDIT.md](03_STYLES_CLIENT_AUDIT.md). Styles проверен на fddc5a2157cf906402c50731e84cfa537abd7dba. Главные зависимости этой страницы — адресный фокус, управляемый выбор оборудования, трёхисходный вопрос и отсутствие дублей записи.
+Подключи согласованные возможности из [PROMPT_SHARED_CLIENT_BEHAVIOR.md](../PROMPT_SHARED_CLIENT_BEHAVIOR.md); доказательства и текущие ограничения — в [03_STYLES_CLIENT_AUDIT.md](../03_STYLES_CLIENT_AUDIT.md). Styles проверен на fddc5a2157cf906402c50731e84cfa537abd7dba. Главные зависимости этой страницы — адресный фокус, управляемый выбор оборудования, трёхисходный вопрос и отсутствие дублей записи.
 
 | CL-ID | Конкретная семантика | Приёмка |
 |---|---|---|

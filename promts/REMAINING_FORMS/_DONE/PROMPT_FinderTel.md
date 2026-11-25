@@ -2,7 +2,7 @@
 
 ## Задача и существующая основа
 
-Реализуй отдельное окно/страницу расширенного выбора, эквивалентное `Inventory/Default/FinderTel.aspx`, со всеми контекстными фильтрами, колонками, выбором и возвратом результата. Прочитай [общие правила](01_COMMON_RULES.md) и [промт Finder](PROMPT_Finder.md): обе формы используют общий транспорт выбора, но **разные SQL-функции и разные предметные колонки**.
+Реализуй отдельное окно/страницу расширенного выбора, эквивалентное `Inventory/Default/FinderTel.aspx`, со всеми контекстными фильтрами, колонками, выбором и возвратом результата. Прочитай [общие правила](../01_COMMON_RULES.md) и [промт Finder](PROMPT_Finder.md): обе формы используют общий транспорт выбора, но **разные SQL-функции и разные предметные колонки**.
 
 Исследование выполнено по legacy `KescoDev/Kesco.App.Web.V4.Inventory@12a6efae7eb310adec06a57f6d80b8d9e76985b4`; Inventory `b3da274962c3c0811f71fbfe196f188ed3b5f659`; Entities `bf909e66d89a9a9c2f3fdc5069dd03b9b56368d7`; DBSelect `9b8551dab6228ebcaff7506110c71fddff5b6f03`; Controls `ea980be926ae975678314029ba5fc8aa68c675ba`. Отдельного FinderTel в новом Inventory нет. Однако **значительная часть отбора уже реализована**: `PhoneNumberSelectDataSource`, `PhoneNumberLookup`, `PhoneNumberQuery`, `SQLQueries.SELECT_ТелефонныеНомераДляВыбора` и `EquipmentForm.UpdatePhoneSourceFilters()` вызывают ту же `fn_НомераДляТелАппаратов` с пятью параметрами. Используй и при необходимости расширяй эту общую основу, не создавай конкурирующее бизнес-правило выбора.
 
@@ -125,7 +125,7 @@ Handoff: маршруты, caller/config mapping, все 5 параметров,
 
 ## Дополнение по общим скриптам Styles
 
-Прочитай [PROMPT_SHARED_CLIENT_BEHAVIOR.md](PROMPT_SHARED_CLIENT_BEHAVIOR.md) и [03_STYLES_CLIENT_AUDIT.md](03_STYLES_CLIENT_AUDIT.md). Зависимости этой формы: **CL-01** (одноразовый callback/окна), **CL-03** (клавиатура/фокус), **CL-04** (Select), **CL-07** (Grid), **CL-12** (lifecycle и состояние). Клиентские первоисточники — [Kesco.Grid.js](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.Grid.js) и [Kesco.V4.js](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.V4.js), применённые только в фактической конфигурации FinderTel.
+Прочитай [PROMPT_SHARED_CLIENT_BEHAVIOR.md](../PROMPT_SHARED_CLIENT_BEHAVIOR.md) и [03_STYLES_CLIENT_AUDIT.md](../03_STYLES_CLIENT_AUDIT.md). Зависимости этой формы: **CL-01** (одноразовый callback/окна), **CL-03** (клавиатура/фокус), **CL-04** (Select), **CL-07** (Grid), **CL-12** (lifecycle и состояние). Клиентские первоисточники — [Kesco.Grid.js](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.Grid.js) и [Kesco.V4.js](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.V4.js), применённые только в фактической конфигурации FinderTel.
 
 **Один выбор — один принятый результат.** RowAction передаёт числовой phone ID по согласованному контракту, родитель восстанавливает номер и проверяет актуальную допустимость. Не выводи тип payload из внутреннего batch-selection `HashSet<int>`: это отдельная функция грида. Общая поддержка строковых/составных keys для других форм не должна заставлять FinderTel менять numeric JSON ID на строку или полный объект. После успешного приёма requestId больше не может быть потреблён; повторный message не добавляет вторую draft-связь. На время возврата действие блокируется, отмена оставляет прежние данные родителя.
 

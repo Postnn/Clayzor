@@ -18,7 +18,7 @@
 - [Territory.cs](https://github.com/KescoDev/Kesco.App.Web.V4.Inventory/blob/12a6efae7eb310adec06a57f6d80b8d9e76985b4/Kesco.Lib.Entities/Territories/Territory.cs), [Config.cs](https://github.com/KescoDev/Kesco.App.Web.V4.Inventory/blob/12a6efae7eb310adec06a57f6d80b8d9e76985b4/Kesco.Lib.Web.Settings/Config.cs), [ресурсы Areas ru](https://github.com/KescoDev/Kesco.App.Web.V4.Inventory/blob/12a6efae7eb310adec06a57f6d80b8d9e76985b4/Kesco.Lib.Localization/Corporate/Areas/ResContainer.ru.resx).
 - [Общие ресурсы ru](https://github.com/KescoDev/Kesco.App.Web.V4.Inventory/blob/12a6efae7eb310adec06a57f6d80b8d9e76985b4/Kesco.Lib.Localization/ResContainer.ru.resx): `Cfi_lblSave="Сохранить"`, `Cfi_lblCancel="Отмена"` — подписи унаследованных команд множественного выбора.
 - [Текущие ClayTreeOptions.cs](https://github.com/Postnn/Clayzor.Lib.Web.Controls/blob/ea980be926ae975678314029ba5fc8aa68c675ba/Components/Tree/ClayTreeOptions.cs), [Tree/AGENTS.md](https://github.com/Postnn/Clayzor.Lib.Web.Controls/blob/ea980be926ae975678314029ba5fc8aa68c675ba/Components/Tree/AGENTS.md), [ClayTreeDynamicSettings.cs](https://github.com/Postnn/Clayzor.Lib.Web.Controls/blob/ea980be926ae975678314029ba5fc8aa68c675ba/Components/Tree/ClayTreeDynamicSettings.cs), [TreeTest.razor](https://github.com/Postnn/Kesco.App.Web.Inventory/blob/b3da274962c3c0811f71fbfe196f188ed3b5f659/Components/Pages/TreeTest.razor).
-- Общий callback — источники из [PROMPT_Finder.md](PROMPT_Finder.md). Не считай текущий bridge исправным без этапа G0 оркестратора.
+- Общий callback — источники из [PROMPT_Finder.md](_DONE/PROMPT_Finder.md). Не считай текущий bridge исправным без этапа G0 оркестратора.
 
 ## 2. Маршруты, заголовок и режимы открытия
 

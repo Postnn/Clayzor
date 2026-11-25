@@ -4,7 +4,7 @@
 
 Реализуй страницу **Inventory/Reports/Modifications.aspx**: выбор периода, списка разделов из ЗапросыИзмененияБД и необязательного изменившего сотрудника; по команде «Сформировать» — несколько отдельных таблиц результатов с переходами к записям и сотрудникам. Это отчёт по SQL, хранящемуся в БД, а не универсальный CRUD журнала, не самостоятельно вычисляемая история diff до/после и не вызов внешнего report-server.
 
-Прочитай [01_COMMON_RULES.md](01_COMMON_RULES.md), актуальные AGENTS.md суперпроекта, Inventory, Entities/DynamicGrid и Controls/Grid/Select. Не изменяй параллельные исправления других форм; commit/push только по уже предоставленному разрешению. Исследованный срез: legacy `12a6efae7eb310adec06a57f6d80b8d9e76985b4`, Inventory `b3da274962c3c0811f71fbfe196f188ed3b5f659`, Entities `bf909e66d89a9a9c2f3fdc5069dd03b9b56368d7`, суперпроект `05f2fc7561bf2a5648cca7fce991be6e4c12cdb2`. В текущем приложении нет страницы Modifications; есть общий ClayGrid и инфраструктура безопасного динамического SQL.
+Прочитай [01_COMMON_RULES.md](../01_COMMON_RULES.md), актуальные AGENTS.md суперпроекта, Inventory, Entities/DynamicGrid и Controls/Grid/Select. Не изменяй параллельные исправления других форм; commit/push только по уже предоставленному разрешению. Исследованный срез: legacy `12a6efae7eb310adec06a57f6d80b8d9e76985b4`, Inventory `b3da274962c3c0811f71fbfe196f188ed3b5f659`, Entities `bf909e66d89a9a9c2f3fdc5069dd03b9b56368d7`, суперпроект `05f2fc7561bf2a5648cca7fce991be6e4c12cdb2`. В текущем приложении нет страницы Modifications; есть общий ClayGrid и инфраструктура безопасного динамического SQL.
 
 ## 1. Источники
 
@@ -151,7 +151,7 @@ Legacy renderer ограничивает высоту таблицы300px при
 
 ## Дополнение по общим скриптам Styles
 
-Согласуй реализацию с [PROMPT_SHARED_CLIENT_BEHAVIOR.md](PROMPT_SHARED_CLIENT_BEHAVIOR.md) и [03_STYLES_CLIENT_AUDIT.md](03_STYLES_CLIENT_AUDIT.md). Styles исследован на SHA fddc5a2157cf906402c50731e84cfa537abd7dba. Требования ниже уточняют общий клиентский слой отчёта; они не превращают чтение истории в редактор сущности.
+Согласуй реализацию с [PROMPT_SHARED_CLIENT_BEHAVIOR.md](../PROMPT_SHARED_CLIENT_BEHAVIOR.md) и [03_STYLES_CLIENT_AUDIT.md](../03_STYLES_CLIENT_AUDIT.md). Styles исследован на SHA fddc5a2157cf906402c50731e84cfa537abd7dba. Требования ниже уточняют общий клиентский слой отчёта; они не превращают чтение истории в редактор сущности.
 
 | CL-ID | Конкретная семантика | Приёмка |
 |---|---|---|
