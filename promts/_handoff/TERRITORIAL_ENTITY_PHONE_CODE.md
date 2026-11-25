@@ -85,3 +85,17 @@ Feature-файлы и оба патча перенесены после EQ10/TH2
 - Entities `98e7177`, Controls `43b81d8`, Inventory `371e84f`, Tests `12c0350` опубликованы в `origin/main`.
 
 Открыты: реальное SQL-сохранение обычного режима, изменение фильтра в том же URL и изоляция двух одновременно активных вкладок. Последняя проверка двух вкладок не засчитана из-за SQL login timeout/потери связи.
+
+## TS-02 Reparent и изоляция
+
+Приняты отчёты `42_TERRITORY_REPARENT.md` и `43_TERRITORY_COMPARE_AND_ISOLATION.md`.
+
+- `ReparentAsync` проверяет Employee/TerritoryUpdate и оба снимка ID/Parent/L/R под UPDLOCK/HOLDLOCK в одной транзакции. Отклоняет перенос в себя, потомка и к прежнему родителю, изменяет только Parent с read-back до commit.
+- Известные отказы UPDATE (229/547/1205/3609/50000) разблокируют новое решение; timeout/commit остаются Unknown.
+- DnD включён только в обычном неограниченном дереве с TerritoryUpdate. Picker сохраняет scope, алфавитная сортировка и отсутствие reorder соседей.
+- Неизвестный перенос оставляет session marker. «Сверить родителя» показывает исходный, запрошенный и текущий родитель без UPDATE и без доказательства авторства.
+- `TwoTreeWindows.ps1` после восстановления SQL подтвердил две вкладки root=10 с разными дочерними узлами и независимое восстановление iframe/выделения после F5.
+- Сборка — 0 ошибок; профиль SlBl + TerritoryReparentTests — 34/34, включая 14 тестов переноса; общий набор 1406/1406 + DR-01 browser 5/5.
+- Entities `7d35d11`, Controls `e790a7e`, Inventory `cd93cfd`, Tests `2593821` опубликованы в `origin/main`.
+
+Фактический DnD с записью территории и real DB trigger/rollback не запускался. Полный lifecycle Unknown и insert дочерней территории остаются открытыми.
