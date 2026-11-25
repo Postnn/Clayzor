@@ -43,3 +43,11 @@ Inventory/Users/Styles запущены после сборки. Chrome DevTools
 
 Ожидается ручная проверка владельцем либо команда на commit/push. Новые правки по этому
 этапу сначала сверить с данным handoff и текущими незакоммиченными изменениями меню.
+
+## Исправление tray DnD
+
+- Причина: `clayGridColumnDrag.init` вызывался после каждого Blazor-рендера, включая `dragover`, и очищал `srcSqlName` активной сессии. Поэтому реальный drop на панели группировки/фильтра не содержал колонку.
+- Инициализация теперь выполняется только при смене DOM ID грида. Для tray-drop SQL-имя передаётся напрямую из JS в `OnHeaderTrayDrop`, без зависимости от гонки `_dragState` с `dragend`.
+- Реальный CDP mouse-drag на grid 1001: `КодОборудования` добавлен в grouping tray; drop `PN` на filter tray открыл `Фильтр: PN`. JS-ошибок нет.
+- `dotnet build Clayzor.sln` — 0 ошибок. Общий suite без зависающего `ClayTreeMutationAbortTests` — 1377/1377.
+- Controls `b6c9e3b` опубликован в `origin/main`. Inventory/Users/Styles запущены.
