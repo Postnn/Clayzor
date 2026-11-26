@@ -24,7 +24,7 @@
 ## Обязательная общая приёмка
 
 - Cancel: clean close; Close/Reset/Continue и Escape; invalid/unblurred raw; fresh DB V2; ошибка чтения/storage; более новая N+1; Unknown/known outcome; create defaults; child Reset остаётся открытым и не меняет parent. Refresh не делает discard.
-- UI: центрированный placeholder; required editable пустое/заполненное с placeholder/без; initial focus без кражи; Tab/Shift+Tab; Focus+Dirty+Invalid+Required одновременно; change→revert; autosave/restore/Apply N с N+1; readonly native input интерактивного picker не исключается ошибочно.
+- UI: центрированный placeholder; required editable пустое — желтоватое, заполненное — обычный фон, очищенное — снова желтоватое, с placeholder/без; placeholder не задаёт Required; initial focus без кражи; Tab/Shift+Tab; Focus+Dirty+Invalid+Required одновременно; change→revert; autosave/restore/Apply N с N+1; readonly native input интерактивного picker не исключается ошибочно.
 - Enter/Select: один переход после принятия, включая unchanged value; IME/textarea/key repeat; поиск без принятого выбора; Escape/blur/restore не продвигают; callback reject/stale не закрывает/не крадёт фокус; после await пользовательский фокус имеет приоритет.
 - Help/theme: команды каждой формы/редактора при direct URL и modal, без дублирования confirm-toolbar; URI_wiki_help и каталог/legacy prefix; переключение сохраняет draft, baseline и операции; существующие темы не удаляются.
 - Presence: два сотрудника/одна сущность, aliases/несколько приложений, composite key, разные сущности, несколько вкладок, readonly, identity/access/reconnect, TTL и поздний leave, новая запись без общей группы0, отсутствие поля/draft-sync; реальная topology заявлена честно.
