@@ -1,5 +1,11 @@
 # Промт реализации Maintenance — «Регламентные работы»
 
+## Обязательное дополнение пользователя от 26.11.2026
+
+Прочитай [ключевые требования FORM-KEY-01…09 / DR-01](../../docs/agents/editing-forms-key-requirements.md) и [общий план внедрения](../FORMS_UX_2026-11-26/00_ORCHESTRATOR.md). Они закреплены в корневом AGENTS и обязательны для всех существующих/новых форм и новых приложений. Новое поведение Cancel (Close/ResetAndStay/Continue), неразрушительный Refresh, Required-фон независимо от пустоты, focus/dirty/Enter, справка/тема каждой формы и presence сущности имеют приоритет над противоречащими историческими формулировками ниже.
+
+Используй четыре общих задания и их владельцев; не создавай локальный CSS/JS/draft/presence/theme механизм. Для поиска/отчёта/диагностики сохраняется предметная семантика Cancel/Stop и нет фиктивного Save/DB reset/entity0. Новые требования расширяют применимые UI-ветви, права/CAS/DR-01 и уже исправленный Clayzor сохраняются. Внешние проверки остаются beta; фактически выполненные локальные проверки и применимость FORM-KEY фиксируются в handoff. Историческое описание source/legacy не означает приказ копировать его дефект или запускать уже реализованную форму заново.
+
 ## Задача и границы
 
 Реализуй в Clayzor страницу, эквивалентную legacy **Inventory/Maintenance.aspx**: список регламентных работ, срок выполнения, ссылка на инструкцию и подтверждение выполнения конкретной работы. Здесь нет карточки ремонта оборудования, редактора регламента или CRUD расписания. Динамический Home с произвольным запросом не заменяет специальное действие «Подтвердить выполнение» и семантику этой страницы.
@@ -124,4 +130,3 @@ Maintenance наследует Page и не редактирует общую En
 **Дополнительные источники:** [Maintenance.aspx.cs — RenderLinkPerson/FinishMaintenance](https://github.com/KescoDev/Kesco.App.Web.V4.Inventory/blob/12a6efae7eb310adec06a57f6d80b8d9e76985b4/Inventory/Maintenance.aspx.cs), [Kesco.Maintenance.js — подтверждение Yes/No](https://github.com/KescoDev/Kesco.App.Web.V4.Inventory/blob/12a6efae7eb310adec06a57f6d80b8d9e76985b4/Inventory/Maintenance/Kesco.Maintenance.js), [Kesco.qtip.js — интерактивный preview](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.qtip.js), [Kesco.Dialog.js — окна и callback](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.Dialog.js), [Kesco.js — wait/focus/storage](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.js).
 
 Это требования к будущей браузерной приёмке, а не отметка о выполненном browser smoke. В handoff отдельно привести фактические результаты клавиатуры, контактной карточки, окон и отказов/повторов записи; записи проверять на разрешённом стенде.
-

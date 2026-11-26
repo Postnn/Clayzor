@@ -101,3 +101,11 @@ builder.Services.AddMudExtensions(cfg => cfg.WithDefaultDialogOptions(d => d.Dra
 | Типографика, шрифты, style enforcement (Variant A, build-time, checklist) | **[src/Clayzor.App.Web.MedicalTests/AGENTS.md](../../src/Clayzor.App.Web.MedicalTests/AGENTS.md)** |
 | Закон стиля (исходник) | [STYLE_RULES.md](../../STYLE_RULES.md) |
 | Промты внедрения стиля (выполнены) | [promts/_done/STYLE_PROMPTS.md](../../promts/_done/STYLE_PROMPTS.md) |
+
+## Новая форма или новое приложение на Clayzor
+
+1. Прочитай корневой `AGENTS.md`, [правила форм](forms.md) и обязательные [ключевые требования FORM-KEY-01…09 / DR-01](editing-forms-key-requirements.md). Сошлись на каноническом контракте в `AGENTS.md` нового приложения/модуля; самостоятельный репозиторий должен иметь разрешимую закреплённую ссылку.
+2. Подключи существующие общие контролы, draft/Cancel/field-state/focus/navigation, shell справки и темы; для редактора существующей сущности — общий presence. При недостающей возможности сначала доработай общий компонент, не копируй Inventory-реализацию в новое приложение.
+3. Зарегистрируй форму: ключ/route aliases, путь справки, `URI_wiki_help` (существующее имя сохраняется по решению пользователя), контекст редактирования/черновика и каноническую идентичность сущности. `URI_help_clayGrid` остаётся отдельной справкой компонента. Режимы поиска/отчёта/диагностики не получают фиктивную бизнес-сущность.
+4. Сохрани общий ClayTheme, default Classic Light, настройки/обработку ошибок и все работающие consumers. Перед интеграцией назначь владельцев пересекающихся Settings/Program/shell/CSS/API; подключение новой формы не даёт права переписать их несовместимо.
+5. В handoff укажи матрицу ключевых требований, реальную поддержку topology presence, локальные проверки и отдельные beta-сценарии. Наличие scaffold/метода/класса не означает выполнение пользовательского сценария.

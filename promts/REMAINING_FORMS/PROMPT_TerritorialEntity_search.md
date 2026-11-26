@@ -1,5 +1,11 @@
 # Промт: реализовать TerritorialEntity_search — дерево территорий и телефонные коды
 
+## Обязательное дополнение пользователя от 26.11.2026
+
+Прочитай [ключевые требования FORM-KEY-01…09 / DR-01](../../docs/agents/editing-forms-key-requirements.md) и [общий план внедрения](../FORMS_UX_2026-11-26/00_ORCHESTRATOR.md). Они закреплены в корневом AGENTS и обязательны для всех существующих/новых форм и новых приложений. Новое поведение Cancel (Close/ResetAndStay/Continue), неразрушительный Refresh, Required-фон независимо от пустоты, focus/dirty/Enter, справка/тема каждой формы и presence сущности имеют приоритет над противоречащими историческими формулировками ниже.
+
+Используй четыре общих задания и их владельцев; не создавай локальный CSS/JS/draft/presence/theme механизм. Для поиска/отчёта/диагностики сохраняется предметная семантика Cancel/Stop и нет фиктивного Save/DB reset/entity0. Новые требования расширяют применимые UI-ветви, права/CAS/DR-01 и уже исправленный Clayzor сохраняются. Внешние проверки остаются beta; фактически выполненные локальные проверки и применимость FORM-KEY фиксируются в handoff. Историческое описание source/legacy не означает приказ копировать его дефект или запускать уже реализованную форму заново.
+
 ## Задача и scope
 
 Реализуй `Inventory/TerritorialEntity/TerritorialEntity_search.aspx` вместе с необходимой функциональностью `TerritoryData.ashx`: дерево территорий, поиск/фильтр, восстановление состояния, выбор значения, контекстные действия и правую область территорий/телефонных кодов. Отдельный технический .ashx-файл не является новой формой, но его поведение входит в этот промт.
@@ -286,4 +292,3 @@ TreeId, Grid Id, state keys, requestId и lifecycle identity изолирова�
 DnD-подтверждения, guards self/descendant/no-op, reload двух затронутых родителей и connectivity failure handling уже существуют в ClayTree: используй их с domain adapter из §7. Не дублируй nested-set алгоритм в JS. Generic inline rename/add/delete остаются выключенными; полноценные карточки, права и согласованный alphabetical reorder — обязательная прикладная часть.
 
 Дополнительная приёмка: checked A + active B; parent→child и child→parent; siblings; initial checked после снятия и новой lazy load; offscreen выбранный ключ; filter/clear без потери checked state; confirmed `[]` против Cancel; повторное callback сообщение; zero против SQL error; total 100/101/32767/32768; keyboard после lazy load и mutation; focus не украден после ухода в другое поле; два callers/CLID/circuits не смешиваются. Исследование исходников не заменяет эти runtime-проверки.
-
