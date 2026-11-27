@@ -1,0 +1,781 @@
+{
+  "source_audit": {
+    "schema_version": 1,
+    "audit_date": "2026-11-26",
+    "scope": "FORM-KEY-01 Cancel/Refresh/Reset only; source review, not runtime test",
+    "snapshots": {
+      "super": "a968feed66d1267c86ec589b5d02f1c164640118",
+      "inventory": "b1d23cdb0bb2e14c20f1cabd0d80fc357e532e9b",
+      "controls": "3ce2104819bb0db7b60fb49ee415fe05204c67d3"
+    },
+    "limitations": [
+      "No production or final prompt files modified by this subtask.",
+      "Historical _DONE, inputs and source findings must not be rewritten as current requirements.",
+      "Classification direct_conflict is narrower than missing/ambiguous requirement; compatible guards should be retained.",
+      "Line numbers/sha256 refer to pre-integration content."
+    ],
+    "classification_definitions": {
+      "direct_conflict": "Active instruction directly conflicts with new user Cancel/Refresh decision.",
+      "legacy_policy_override": "Existing preservation/inherited rule needs explicit user-authorized modern override.",
+      "ambiguous_cancel": "Old Cancel/Refresh wording no longer defines which of three outcomes may mutate draft.",
+      "acceptance_update": "Test row must distinguish new outcomes; old invariant often remains correct.",
+      "branch_clarification": "Correct behavior belongs only to one named outcome.",
+      "scope_clarification": "Preserve useful rule while distinguishing editor Cancel, confirmation cancel, lifecycle teardown.",
+      "ownership_clarification": "Keep owner boundary; do not treat it as prohibition of authorized common change.",
+      "historical_keep": "Historical source evidence remains unchanged; add explicit modern decision alongside.",
+      "compatible_extend": "Existing rule is compatible and should be extended/referenced, not removed.",
+      "clarification_required": "Avoid conflating editable draft with operation state.",
+      "missing_orchestration_contract": "Add ownership/dependency/API of new common task.",
+      "historical_policy_override": "Keep historical description, but explicitly override its UI policy for modern editable forms under new user decision."
+    },
+    "entries": [
+      {
+        "id": "ACT-01",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_TerritorialEntity_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_TerritorialEntity_form.md",
+        "line_start": 87,
+        "line_end": 88,
+        "exact_text": "- **Обновить**: при изменённом черновике подтвердить отказ от несохранённого; отказ сохраняет черновик. Для новой записи не превратить refresh в запрос несуществующего ID.\n- **Отмена**: при изменениях подтвердить отмену, без изменения данных; родитель не должен получать событие «сохранено».",
+        "sha256_at_audit": "00da4d6b9d91045b805b711372e8fa49578aff17dfed46966818345dcdba8e58",
+        "classification": "direct_conflict",
+        "reason": "Разрушительное повторное чтение прямо назначено Refresh; Cancel не имеет нового трёхвариантного выбора.",
+        "recommended_change": "Заменить обе команды: Refresh читает свежую версию для сверки с сохранением typed/raw; Cancel по FORM-KEY-01 даёт Close/Reset/Continue. Для create reset к fresh defaults без чтения ID0. Не посылать ложный save/parent event.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-02",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_TerritorialEntity_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_TerritorialEntity_form.md",
+        "line_start": 156,
+        "line_end": 156,
+        "exact_text": "| Refresh/Cancel с черновиком | Подтверждение, отмена действия не теряет данные |",
+        "sha256_at_audit": "00da4d6b9d91045b805b711372e8fa49578aff17dfed46966818345dcdba8e58",
+        "classification": "acceptance_update",
+        "reason": "Строка приёмки объединяет Refresh и Cancel в старое подтверждение.",
+        "recommended_change": "Разделить приёмку трёх вариантов Cancel и неразрушительного Refresh; добавить read failure/N+1/Unknown.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-03",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_BeelineParams.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_BeelineParams.md",
+        "line_start": 84,
+        "line_end": 84,
+        "exact_text": "- `Обновить` / `Отмена`: стандартное предупреждение при несохранённых изменениях, отказ от предупреждения сохраняет draft.",
+        "sha256_at_audit": "c8b906da7d83420f667b3e4090bcb90d74fb1d964232570ea3e6a35a96ed48b4",
+        "classification": "direct_conflict",
+        "reason": "Для обеих кнопок установлен прежний общий warning о потере изменений.",
+        "recommended_change": "Ссылка FORM-KEY-01: трёхвариантный Cancel, чтение перед reset/discard, Refresh сохраняет draft; доступ к договору перепроверяется.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-04",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_BeelineParams.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_BeelineParams.md",
+        "line_start": 114,
+        "line_end": 114,
+        "exact_text": "11. Отмена/обновление с draft: подтверждение Да/Нет, выбор Нет ничего не теряет.",
+        "sha256_at_audit": "c8b906da7d83420f667b3e4090bcb90d74fb1d964232570ea3e6a35a96ed48b4",
+        "classification": "direct_conflict",
+        "reason": "Прямо требует Да/Нет для Cancel/Refresh вместо трёх именованных решений.",
+        "recommended_change": "Заменить тестом Close/Reset/Continue, Escape=Continue, без разрушительного default; no-op и unavailable contract отдельными ветвями.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-05",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_PhoneCodeEntity_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_PhoneCodeEntity_form.md",
+        "line_start": 120,
+        "line_end": 120,
+        "exact_text": "- Refresh и Cancel наследуют подтверждение при изменённом объекте. Отказ от подтверждения сохраняет draft.",
+        "sha256_at_audit": "4c6761caa3c6399157a0e0adf8714241406de9060afb0abeb9af695af518a7e7",
+        "classification": "legacy_policy_override",
+        "reason": "Inherited подтверждение Refresh/Cancel нельзя оставлять нормативным современным UX.",
+        "recommended_change": "Сохранить историческую связь с EntityPage как источник; современное поведение определить FORM-KEY-01, including create identity и сохранность scope.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-06",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_PhoneCodeEntity_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_PhoneCodeEntity_form.md",
+        "line_start": 154,
+        "line_end": 154,
+        "exact_text": "| OK неизменённого/Cancel/Refresh | Нет лишнего DML; корректные подтверждения |",
+        "sha256_at_audit": "4c6761caa3c6399157a0e0adf8714241406de9060afb0abeb9af695af518a7e7",
+        "classification": "acceptance_update",
+        "reason": "Приёмка не различает новые Cancel и Refresh.",
+        "recommended_change": "Разделить clean Cancel, три dirty-ветви, readonly Refresh, fresh missing/denied и Unknown; DML count=0 для Cancel/Refresh сохраняется.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-07",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_NumPool.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_NumPool.md",
+        "line_start": 161,
+        "line_end": 161,
+        "exact_text": "- «Отмена» и «Обновить» наследуют предупреждение о несохранённых изменениях EntityPage; Cancel не выдаёт success=1.",
+        "sha256_at_audit": "abf8223085476d88f82ec6af86550cdc6f4043de89dc38b98d5bf5c0aed7b8cc",
+        "classification": "legacy_policy_override",
+        "reason": "В active prompt inherited предупреждение назначено обеим командам.",
+        "recommended_change": "Заменить нормативную часть на FORM-KEY-01; явный статус Cancel не success=1 оставить. Header+4 collections+Private входят в один принятый scope snapshot.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-08",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_NumPool.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_NumPool.md",
+        "line_start": 180,
+        "line_end": 180,
+        "exact_text": "6. Удалить только дочернюю связь: dirty=true; до Save БД не меняется; Cancel отменяет удаление.",
+        "sha256_at_audit": "abf8223085476d88f82ec6af86550cdc6f4043de89dc38b98d5bf5c0aed7b8cc",
+        "classification": "ambiguous_cancel",
+        "reason": "Фраза Cancel отменяет локальное удаление может означать автоматический отказ по нажатию.",
+        "recommended_change": "Отмена local removal происходит только в выбранной destructive ветке. Continue сохраняет намеренное локальное удаление; Reset читает свежий aggregate before retiring accepted revision.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-09",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+        "line_start": 119,
+        "line_end": 119,
+        "exact_text": "`RefreshData()` без адреса/вида обновляет страницу. При выбранном контексте заново читает SlBl и сравнивает выбранный список с текстом редактора через `ToLower().Trim()`. Если запись отсутствует или тексты отличаются — подтверждение **«Изменения не сохранены! Вы хотите заново загрузить данные?»**; после согласия reload сохраняет составной id. Это сравнение с актуальной БД, а не только с OriginalValue.",
+        "sha256_at_audit": "d79a159ec6f98dd5cb84c9db6bac4d45a3f4541f4e6d0b9504cbcf58865e33b2",
+        "classification": "historical_keep",
+        "reason": "Строка описывает существующий Legacy RefreshData, включая старое разрушительное подтверждение.",
+        "recommended_change": "Не искажать историческое описание. Добавить сразу после него обязательное современное отклонение: полный reset через Cancel FORM-KEY-01, Refresh fresh compare with draft preserved.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-10",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+        "line_start": 121,
+        "line_end": 121,
+        "exact_text": "Сохрани обнаружение внешнего изменения. В таблице решений явно опиши разницу: dirty-флаг legacy использует точное сравнение, Refresh — нечувствительное к регистру и краевым пробелам. Не меняй SQL/данные под видом унификации этих проверок. Пользовательский Cancel на refresh обязан оставлять черновик неизменным.",
+        "sha256_at_audit": "d79a159ec6f98dd5cb84c9db6bac4d45a3f4541f4e6d0b9504cbcf58865e33b2",
+        "classification": "legacy_policy_override",
+        "reason": "Нормативное продолжение оставляет Cancel/Confirm на destructive Refresh.",
+        "recommended_change": "Сохранить обнаружение внешнего изменения и предметное сравнение; не переносить destructive Refresh. Полный отказ перенести в Cancel; exact input/dirty остаётся до явного решения.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-11",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+        "line_start": 148,
+        "line_end": 148,
+        "exact_text": "| 18 | Refresh после внешней правки, Cancel/Confirm | Выбранное решение выполнено; права и черновик не потеряны |",
+        "sha256_at_audit": "d79a159ec6f98dd5cb84c9db6bac4d45a3f4541f4e6d0b9504cbcf58865e33b2",
+        "classification": "acceptance_update",
+        "reason": "Сценарий Refresh external change Cancel/Confirm требует ветвей нового контракта.",
+        "recommended_change": "Проверить неразрушительное Refresh/merge Cancel и отдельно Cancel Reset после fresh read; Known/Partial/Unknown сверка не вызывает dispatch.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-12",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_duty_form.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_duty_form.md",
+        "line_start": 66,
+        "line_end": 66,
+        "exact_text": "Не заменяй три radio чекбоксами, не меняй текст/порядок и не смешивай «Дежурный инженер» (плановый) с фактическим сотрудником. Неприменимые поля не сдвигают соседние смысловые пары. Общие ClayEntityForm, ClayToolbar, ClayRadioGroup, ClayCheckbox, ClayDatePicker, ClaySelect. Панель legacy удаляет Apply, Edit, Refresh, ReCheck, Cancel; остаётся Save из общего каркаса, кроме закрытого состояния. Не добавляй удаление или повторное открытие закрытого дежурства.",
+        "sha256_at_audit": "458f61c81cd36ae60971c928e5b0c43c984e42f2debb4b35cbc6e4aed08057a1",
+        "classification": "historical_policy_override",
+        "reason": "Описание Legacy удаляет кнопку Cancel; при буквальном переносе это противоречит новой обязательной Отмене edit-форм.",
+        "recommended_change": "Сохранить факт Legacy и бизнес-ограничения. Явно добавить новый обязательный Cancel по FORM-KEY-01 для editable duty; closed readonly не получает фиктивный reset/create/delete/reopen.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-13",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SIM_FMTN.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_SIM_FMTN.md",
+        "line_start": 122,
+        "line_end": 122,
+        "exact_text": "14. Отмена/обновление dirty-form с выбором отказа сохраняет все три draft-поля.",
+        "sha256_at_audit": "af1d3a6182d0c31e12c5ea1703abf96bec0d78f389f3995065adbfca7a029c36",
+        "classification": "ambiguous_cancel",
+        "reason": "Фраза выбор отказа не уточняет отказ от команды или от собственного ввода.",
+        "recommended_change": "Уточнить: Continue/Escape вопроса и отказ merge сохраняют поля; Close отбрасывает только принятый editable scope; Reset читает по правильному original/current key без повторного rename; Unknown хранит оба ключа.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-14",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/00_ORCHESTRATOR.md",
+        "repository_path": "promts/REMAINING_FORMS/00_ORCHESTRATOR.md",
+        "line_start": 83,
+        "line_end": 89,
+        "exact_text": "Перед разработкой утверди краткий контракт каждого используемого API: вход/выход и типы ключей, cancel/empty/error, ownership/cleanup, совместимость существующих consumers, применимые формы и минимальные проверки. Наличие API в handoff позволяет параллельно готовить consumers, но не заменяет готовую shared-реализацию при интеграционной приёмке.\n\n| Приоритет внутри shared | CL-задачи | Граница приёмки / что не должно ждать |\n|---|---|---|\n| Первая готовая очередь | CL-01 single/refresh, CL-02 dirty/reconnect + DR-01/G0.6, CL-03 commit/focus, CL-04 Select keyboard | Разблокируют основные окна/карточки; Finder single не ждёт Tree multiple |\n| Параллельно по непересекающимся файлам | CL-05 inputs/date-only, CL-06 dialogs, CL-07 grid isolation/совместимость, CL-10 UTC semantics | Duty/LocationFact/таблицы ждут только свои контракты; готовые Menu/Grid функции не переписывать |\n| До территориальной приёмки | CL-08 Tree multiple/search/focus + multiple часть CL-01 | Карточки территорий можно делать ранее; Search требует полного total, root guards и empty Save≠Cancel |",
+        "sha256_at_audit": "85313493f4062a0e798edde739d0fa8ba32d4b315e5813fc1a0eaa24c2850cde",
+        "classification": "missing_orchestration_contract",
+        "reason": "Контракты API и очереди ещё не включают явный общий Cancel/Reset с DR26 ownership.",
+        "recommended_change": "Добавить FORM-KEY-01 под A/G0.6, совместимость typed dialog CL-06; consumer owners готовят adapters параллельно, общий base/store один writer. Нельзя сохранить старую destructive Refresh семантику ради legacy parity.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-15",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/01_COMMON_RULES.md",
+        "repository_path": "promts/REMAINING_FORMS/01_COMMON_RULES.md",
+        "line_start": 282,
+        "line_end": 282,
+        "exact_text": "Удаление допускается после подтверждённого успешного завершения соответствующей работы либо явного решения пользователя отбросить черновик. Cancel отдельного popup/восстановления не равен удалению родительского черновика. Политика хранения настраивается и описывается явно; истечение circuit/cache TTL, restart или deployment не удаляют единственную копию незавершённой работы. Ротация ключей не делает нужные прежние данные нерасшифровываемыми.",
+        "sha256_at_audit": "1c17bd39d537989134192dd122b26165a46866c3c004b9c8988fc19768e35235",
+        "classification": "compatible_extend",
+        "reason": "Общее разрешение удалить draft после явного решения корректно, но не фиксирует fresh-first reset и revision-granularity.",
+        "recommended_change": "Сохранить DR-01 и parent isolation; добавить ссылку на FORM-KEY-01 с editable-only accepted revisions, fresh-first, atomic transition, сохранением attempt и запретом считать native close согласием на discard.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-16",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+        "line_start": 81,
+        "line_end": 81,
+        "exact_text": "Страницы Inventory уже имеют `NavigationLock`/IsModified; [ClayEntityForm](https://github.com/Postnn/Clayzor.Lib.Web.Controls/blob/ea980be926ae975678314029ba5fc8aa68c675ba/Components/Form/ClayEntityForm.razor) сам является layout. Сохрани действующие guards, расширив их совместимым общим механизмом. Legacy beforeunload зависит от `isAsk`, changed и validate; невалидная dirty-форма не должна терять защиту. Dirty учитывает radio/checkbox, скрытый draft и дочерние наборы; возврат к исходным значениям снимает dirty только при отсутствии других незавершённых изменений/операций.",
+        "sha256_at_audit": "b77c871205f4cde5a3bd50581c111849112c5d6c90fd698cf0e8c5d4e9c2db7b",
+        "classification": "clarification_required",
+        "reason": "Операция упомянута в dirty-определении, что может смешать editable dirty и отдельный unresolved attempt.",
+        "recommended_change": "Отделить dirty editable state от pending/Unknown operation. Защита операции не снимается возвращением полей к baseline; clean Cancel не превращается в уничтожение operation.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-17",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+        "line_start": 121,
+        "line_end": 121,
+        "exact_text": "Для Save/Apply зафиксируй отправляемую ревизию R и неизменяемый snapshot операции. После подтверждённого успеха обнови baseline/реальный ключ только для принятой части; ввод R+1, сделанный позднее, остаётся защищённым draft. Поздний autosave не перезаписывает новую ревизию; явный Discard защищён от её «воскрешения» задержанным запросом. Отмена popup или предложения восстановления не удаляет parent draft. Непрочитанный/неподтверждённый результат записи не очищает черновик.",
+        "sha256_at_audit": "b77c871205f4cde5a3bd50581c111849112c5d6c90fd698cf0e8c5d4e9c2db7b",
+        "classification": "compatible_extend",
+        "reason": "Revision guards/parent protection уже требуются, но reset transaction before/after read не задана.",
+        "recommended_change": "Сохранить paragraph; присоединить FORM-KEY-01 fresh temporary read → expected revision atomic reset → publish, включая late autosave/N+1/storage failure.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "ACT-18",
+        "source_kind": "active_repository_prompt",
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+        "repository_path": "promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+        "line_start": 236,
+        "line_end": 244,
+        "exact_text": "Источники: `v4_showConfirm`, `v4_confirmMsgBox`, `v4_dialog` в [V4](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.V4.js), [Confirm.js](https://github.com/KescoDev/Styles/blob/fddc5a2157cf906402c50731e84cfa537abd7dba/js/Kesco.Confirm.js), [текущий ConfirmDialog](https://github.com/Postnn/Clayzor.Lib.Web.Controls/blob/ea980be926ae975678314029ba5fc8aa68c675ba/Components/ConfirmDialog.razor). Нынешний общий ConfirmDialog возвращает boolean; LocationFact требует отличать Yes, No и Cancel. Добавь совместимый typed трёхисходный контракт поверх существующей dialog-основы, сохранив boolean consumers. Конкретное имя result-типа — решение Controls, не уже существующий класс.\n\nДля каждого вызывающего сценария явно задаются: доступные кнопки, default focus, Escape/title close/backdrop semantics, начальное/возвращаемое поле фокуса, pending state и разрешённость закрытия. Не объявляй No универсальным синонимом Cancel. В legacy `v4_showConfirm` имеет отдельные callbacks, а `v4_confirmMsgBox` по умолчанию вызывает No при закрытии; это два разных контракта. Ожидание результата завершается не более одного раза. Dispose/caller cancellation завершает его как согласованную отмену жизненного цикла и не исполняет Yes/No/default бизнес-ветку. Подтверждённое пользовательское действие получает ровно один соответствующий callback.\n\nФорма-диалог и message-dialog имели разные правила Escape. Не переноси общую блокировку всех Escape или старые числовые поправки размера окна. Modal focus trap, keyboard buttons, disabled pending, вложенное contact preview и возвращение к scanner должны работать совместно. Безопасное закрытие формы не означает автоматическое выполнение destructive/default команды.\n\nВ старом Confirm.js также есть номера/подписи документов, пересчёты и диалог звонка. Их наличие не требует встроить документный workflow или телефонию в каждую Inventory-форму. `CustomConfirmPhone` и status polling нужны только подтверждённой внешней интеграции и явному действию пользователя; hover контакта не делает звонок. Не переносить eval строковых callbacks/сырой HTML как контракт нового диалога.\n\nПриёмка: все три кнопки LocationFact с разными результатами; Escape/крестик/backdrop согласно конкретному сценарию; двойной click; закрытие во время pending; textarea Enter; первый/default focus и return focus; повторный dialog; старый bool consumer. No/Cancel не очищают принятый lookup или незавершённый draft вопреки бизнес-правилу.",
+        "sha256_at_audit": "b77c871205f4cde5a3bd50581c111849112c5d6c90fd698cf0e8c5d4e9c2db7b",
+        "classification": "compatible_extend",
+        "reason": "CL-06 уже предусматривает typed три исхода, но лишь на примере LocationFact; нового Cancel UX нет.",
+        "recommended_change": "Сохранить bool consumers и их специальные значения. Добавить отдельный typed CancelDecision по FORM-KEY-01, safe default Continue, Escape/title/backdrop=Continue; не объявлять No универсальным Cancel.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-01",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/PROMPT_FIX_Shared_Draft_Lifecycle.md",
+        "repository_path": null,
+        "line_start": 16,
+        "line_end": 16,
+        "exact_text": "4. Спроектируй lifecycle/cleanup: successful commit, explicit discard, close, logout/смена пользователя, migration backup и завершённые receipt. Безмолвный TTL для dirty/Unknown запрещён. Нужны явное удаление доступного пользовательского draft и предсказуемая очистка действительно чистого остатка; удаление шифроключа не должно делать нужные draft безвозвратно нечитаемыми.",
+        "sha256_at_audit": "fc55de809824d6bacd63a4462711babf5acd77bda71bec321cb5f5022b2c876c",
+        "classification": "compatible_extend",
+        "reason": "Lifecycle explicit discard/close указан без нового UX и fresh-first reset.",
+        "recommended_change": "Добавить FORM-KEY-01 под владельцем A; не заменять DR26, расширить revision-specific transaction и отдельно operation outcomes.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-02",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/PROMPT_FIX_EquipmentForm.md",
+        "repository_path": null,
+        "line_start": 38,
+        "line_end": 38,
+        "exact_text": "Открытый UPS Test получает явный owner root, отдельный scope, typed state/private checkbox state и immutable original. Восстановить структуру/динамические серверы до применения raw. Черновик сохраняется до nested OK. Cancel удаляет только nested draft, parent/current main/Unknown не затрагивает. Не использовать document-wide capture. Сохранять исторические неизвестные имена серверов, предупреждения об unchecked, корректный текст Issues и точность UTC roundtrip.",
+        "sha256_at_audit": "1dfc4750c030b74ede8cdd9cfe094a99cfd235b8d2e564c7385948c23df9e4f7",
+        "classification": "ambiguous_cancel",
+        "reason": "Cancel прямо удаляет nested draft без различения решений.",
+        "recommended_change": "Непосредственный Cancel открывает общий выбор при dirty. Только Close выбрасывает accepted editable scope; Reset свежий scoped baseline и stays open; Continue/no answer не удаляет ничего. Unknown/parent guards сохранить.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-03",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/PROMPT_FIX_EquipmentUpsTestDialog.md",
+        "repository_path": null,
+        "line_start": 13,
+        "line_end": 13,
+        "exact_text": "Добавь явный EquipmentEditorContext или эквивалент согласованного nested contract; отдельный owner root/scope, stable test identity, immutable original, typed Date/Time/Value/private checkbox state/revision. Публикуй изменения до nested OK; восстанавливай структуру before raw. Cancel удаляет только текущий nested editable scope, не Unknown operation и не parent lists. Не ослабляй общую изоляцию DOM.",
+        "sha256_at_audit": "864385d8d9a77f719e59997ae051b0f01afc566025973f272f9e73b3648a5877",
+        "classification": "ambiguous_cancel",
+        "reason": "Та же автоматическая формулировка удаления текущего nested editable scope.",
+        "recommended_change": "Разделить три outcomes FORM-KEY-01; parent-owned opening state/local row identity не теряются; EditorContext не удаляет scope на null/dispose как на explicit discard.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-04",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/SlBl_form_Fix_Prompt.md",
+        "repository_path": null,
+        "line_start": 31,
+        "line_end": 31,
+        "exact_text": "Без автоматического union, silent trimming/перестановки адресов и автоматического выбора local/fresh. Exact dirty и legacy Trim/ignore-case Refresh сравнение не переопределять случайно. Unknown сначала разрешается своим протоколом; конфликтная сверка не удаляет журнал попытки. Пользователь не обязан копировать длинный текст во внешний редактор ради продолжения работы.",
+        "sha256_at_audit": "0041feaf10cc8ec492bf6a994967a0088d511207ba939203baaa783e68b0e4bd",
+        "classification": "legacy_policy_override",
+        "reason": "Сохранение legacy Refresh сравнения можно неверно принять за запрет нового Cancel/Refresh UX.",
+        "recommended_change": "Сохранить comparison semantics и exact dirty; явно отменить только destructive refresh policy. Fresh compare сохраняет весь raw; полный reset через Cancel FORM-KEY-01.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-05",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/SlBl_form_Fix_Prompt.md",
+        "repository_path": null,
+        "line_start": 25,
+        "line_end": 25,
+        "exact_text": "Обновляй `_lists`, original и current согласованно после Partial, Verified и successful reconciliation. Если свежего canonical read нет, держи отдельное достоверное состояние и предложи read retry. Cancel при отказе браузера закрыть вкладку не возвращает cached list, существовавший до синхронизации. Не делай новый dispatch ради reload.",
+        "sha256_at_audit": "0041feaf10cc8ec492bf6a994967a0088d511207ba939203baaa783e68b0e4bd",
+        "classification": "branch_clarification",
+        "reason": "Fallback незакрывшейся вкладки описан для Cancel вообще, а теперь есть три варианта.",
+        "recommended_change": "Привязать fallback только к явному Close. Continue ничего не сбрасывает; Reset остаётся открытым по дизайну и сначала получает fresh. Не показывать cached list как свежий.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-06",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/SlBl_form_Fix_Prompt.md",
+        "repository_path": null,
+        "line_start": 44,
+        "line_end": 44,
+        "exact_text": "4. Partial/F5 сохраняет PartialIntent/разности; отказ повтора —1 dispatch, явное согласие —2; Cancel при незакрывшейся вкладке показывает последний подтверждённый baseline.",
+        "sha256_at_audit": "0041feaf10cc8ec492bf6a994967a0088d511207ba939203baaa783e68b0e4bd",
+        "classification": "acceptance_update",
+        "reason": "Проверка Cancel при незакрывшейся вкладке должна быть конкретным Close outcome.",
+        "recommended_change": "Сохранить Partial/dispatch assertions; добавить отдельные Continue/Reset, revision and cleanup failure, truthful close-failure UI.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-07",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/PROMPT_FIX_BeelineParams.md",
+        "repository_path": null,
+        "line_start": 45,
+        "line_end": 45,
+        "exact_text": "- No-op OK без UPDATE; dirty Save/OK через одну команду; fresh readback + audit; Cancel/Refresh предупреждают; failed save не закрывает форму.",
+        "sha256_at_audit": "1cbd9c3b4b3c3e166a0690dc746d6e309fbb3b69951774d990f9c319a5aea256",
+        "classification": "ambiguous_cancel",
+        "reason": "Фраза Cancel/Refresh предупреждают сохраняет старое объединение семантики.",
+        "recommended_change": "Заменить ссылкой FORM-KEY-01; трёхвариантный Cancel, Refresh свежая сверка с сохранением draft. No-op/write constraints сохраняются.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-08",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/PhonePoolAttribute_Fix_Prompt.md",
+        "repository_path": null,
+        "line_start": 19,
+        "line_end": 19,
+        "exact_text": "Не менять legacy delete/refresh политику по догадке, не добавлять сетевой вызов АТС. Общий адресный bridge и recovery API должны остаться совместимыми с Net/Equipment/территориальными карточками. SQLQueries/shared base править только по согласованному владению файлов.",
+        "sha256_at_audit": "c4557da9ad6bed8999a8b423de07bd4ba95c8e5c02e90a9e10a9d57e06e0d62e",
+        "classification": "legacy_policy_override",
+        "reason": "Не менять legacy delete/refresh политику по догадке: теперь есть прямое решение пользователя об изменении refresh/reset UX.",
+        "recommended_change": "Уточнить: domain delete/родительский refresh по-прежнему не выдумывать; обычный editor Refresh/Cancel перевести на FORM-KEY-01, это авторизованное новое требование.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-09",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/PROMPT_FIX_LocationFact.md",
+        "repository_path": null,
+        "line_start": 53,
+        "line_end": 59,
+        "exact_text": "- Known DB commit не маскируется ошибкой перечитывания списка; Cancel/Escape не выполняет DML, DiscardScope/OpenScope сохраняет рабочий registration.\n\n## Проверки до beta\n\nДобавь meaningful tests настоящего LocationFact component и domain, а не ещё один pure helper:\n\n1. Cancel/Escape→next equipment→Confirm; scope жив, old editor data не протекают, page context сохранён.",
+        "sha256_at_audit": "c40e63bc93e1a63d59c6c67f83781580f921e4f59850f82c571eefe4f6ff17d5",
+        "classification": "scope_clarification",
+        "reason": "Cancel/Escape сгруппированы; dirty editor, confirmation Cancel и dispose нужно различать.",
+        "recommended_change": "Сохранить no DML и working registration; Escape вопроса=Continue, dirty modal close не обходится прямым DiscardScope. Явный Close/Reset очищают только подтверждённую область; scanner/other scopes защищены.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-10",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/prompts/PROMPT_COMPLETE_Equipment_Network_Diagnostics.md",
+        "repository_path": null,
+        "line_start": 42,
+        "line_end": 42,
+        "exact_text": "Не менять рабочие подключения/отключения локальной сети и их роль103, UPS, MAC-правила R04, SQL↔ATS решение R01, Net CAS/транзакции/PoE, историю имён, портовые ссылки, dirty/Save/Apply/Cancel и права основной карточки. Не связывать read-only ping с обязательным сохранением полей. Не удалять durable drafts/Unknown, чтобы снять блокировку. Общая тема `ClayTheme`, default Classic Light и существующие темы других приложений сохраняются.",
+        "sha256_at_audit": "2470317240abd0ec17d04e546a66bd2c9f1b1b5c84a660ee2c10a917dc680c90",
+        "classification": "ownership_clarification",
+        "reason": "Сохранить dirty/Save/Apply/Cancel — граница network owner, а не запрет новому общему Cancel contract.",
+        "recommended_change": "Оставить запрет network agent менять parent lifecycle; пояснить, что общий владелец A и Equipment integrator применяют FORM-KEY-01 согласованно. Ping/WoL cancellation не превращать в DB reset.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-11",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/01_FIX_ORCHESTRATOR.md",
+        "repository_path": null,
+        "line_start": 36,
+        "line_end": 36,
+        "exact_text": "Правильная очистка не удаляет ввод N+1, появившийся после принятой команды N, чужие scope и unresolved attempt. Удаление пустого остатка после commit, явный отказ от редактирования, удаление серверной записи и Unknown — разные ветви. Не вводи скрытый TTL, безусловный discard при ошибке миграции или автоматическую очистку пользовательских drafts при отсутствии sessionStorage.",
+        "sha256_at_audit": "292984c28f09f5f5a146f5894d5592f777f98c2af735e5af5071041ccbb7415b",
+        "classification": "compatible_extend",
+        "reason": "Общие DR-01 guards корректны, но новое правило Reset/Close ещё не объявлено.",
+        "recommended_change": "Добавить приоритет FORM-KEY-01, владелец A, fresh-first reset, три outcomes, independent attempt cleanup; consumers ссылаются на единый контракт.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      },
+      {
+        "id": "REV-12",
+        "source_kind": "review_deliverable",
+        "path": "research/forms_2026-11-26/deliverables/Clayzor_Forms_Review_2026-11-26/01_FIX_ORCHESTRATOR.md",
+        "repository_path": null,
+        "line_start": 184,
+        "line_end": 184,
+        "exact_text": "| Вложенные редакторы | Parent N+1 переживает child commit/discard; второй child не очищает первый; nested UPS test сохраняется до OK; закрытие/возврат не оставляет dead registration. |",
+        "sha256_at_audit": "292984c28f09f5f5a146f5894d5592f777f98c2af735e5af5071041ccbb7415b",
+        "classification": "acceptance_update",
+        "reason": "Вложенная приёмка содержит commit/discard без нового Reset/Continue поведения.",
+        "recommended_change": "Добавить child reset stays open, child Continue untouched, parent N+1 survives each outcome, null/dispose not discard, receipt/Unknown retained.",
+        "target_contract": "FORM-KEY-01",
+        "owner": "A — общий DR26/Cancel contract; consumer adapters по владению оркестратора"
+      }
+    ],
+    "active_scan": [
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/00_ORCHESTRATOR.md",
+        "sha256_at_audit": "85313493f4062a0e798edde739d0fa8ba32d4b315e5813fc1a0eaa24c2850cde",
+        "finding_ids": [
+          "ACT-14"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/01_COMMON_RULES.md",
+        "sha256_at_audit": "1c17bd39d537989134192dd122b26165a46866c3c004b9c8988fc19768e35235",
+        "finding_ids": [
+          "ACT-15"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_BeelineParams.md",
+        "sha256_at_audit": "c8b906da7d83420f667b3e4090bcb90d74fb1d964232570ea3e6a35a96ed48b4",
+        "finding_ids": [
+          "ACT-03",
+          "ACT-04"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_Maintenance.md",
+        "sha256_at_audit": "f9ad76df66b8c02357364b75485d4388a2cfc2ed252c8d912ccb64c6328f9207",
+        "finding_ids": [],
+        "result": "no_direct_cancel_refresh_contradiction_found; add canonical contract reference where form editable; preserve picker/diagnostic exceptions"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_NumPool.md",
+        "sha256_at_audit": "abf8223085476d88f82ec6af86550cdc6f4043de89dc38b98d5bf5c0aed7b8cc",
+        "finding_ids": [
+          "ACT-07",
+          "ACT-08"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_PhoneCodeEntity_form.md",
+        "sha256_at_audit": "4c6761caa3c6399157a0e0adf8714241406de9060afb0abeb9af695af518a7e7",
+        "finding_ids": [
+          "ACT-05",
+          "ACT-06"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_PhonePoolAtribute_form.md",
+        "sha256_at_audit": "2b133699f8adf28517f2a4af34cf0c01ab82b141637ee0b0382ac58de69bf832",
+        "finding_ids": [],
+        "result": "no_direct_cancel_refresh_contradiction_found; add canonical contract reference where form editable; preserve picker/diagnostic exceptions"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_PingHost.md",
+        "sha256_at_audit": "8f1bd71395c6f825e09141235a8e44d317c4cd0f0ee3397c085e7d8df6821efe",
+        "finding_ids": [],
+        "result": "no_direct_cancel_refresh_contradiction_found; add canonical contract reference where form editable; preserve picker/diagnostic exceptions"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+        "sha256_at_audit": "b77c871205f4cde5a3bd50581c111849112c5d6c90fd698cf0e8c5d4e9c2db7b",
+        "finding_ids": [
+          "ACT-16",
+          "ACT-17",
+          "ACT-18"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SIM_FMTN.md",
+        "sha256_at_audit": "af1d3a6182d0c31e12c5ea1703abf96bec0d78f389f3995065adbfca7a029c36",
+        "finding_ids": [
+          "ACT-13"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+        "sha256_at_audit": "d79a159ec6f98dd5cb84c9db6bac4d45a3f4541f4e6d0b9504cbcf58865e33b2",
+        "finding_ids": [
+          "ACT-09",
+          "ACT-10",
+          "ACT-11"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_TerritorialEntity_form.md",
+        "sha256_at_audit": "00da4d6b9d91045b805b711372e8fa49578aff17dfed46966818345dcdba8e58",
+        "finding_ids": [
+          "ACT-01",
+          "ACT-02"
+        ],
+        "result": "see_findings"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_TerritorialEntity_search.md",
+        "sha256_at_audit": "2adf2a906703ddc02c115310fa317f71eb15a8636515f9813736ae5dda3a47ab",
+        "finding_ids": [],
+        "result": "no_direct_cancel_refresh_contradiction_found; add canonical contract reference where form editable; preserve picker/diagnostic exceptions"
+      },
+      {
+        "path": "research/forms_2026-11-26/current/super/promts/REMAINING_FORMS/PROMPT_duty_form.md",
+        "sha256_at_audit": "458f61c81cd36ae60971c928e5b0c43c984e42f2debb4b35cbc6e4aed08057a1",
+        "finding_ids": [
+          "ACT-12"
+        ],
+        "result": "see_findings"
+      }
+    ],
+    "new_contract_note": "research/forms_2026-11-26/notes/forms_ui_2026-11-26/CANCEL_CONTRACT_AND_PROMPT.md"
+  },
+  "applied_updates": [
+    {
+      "id": "ACT-01",
+      "target": "promts/REMAINING_FORMS/PROMPT_TerritorialEntity_form.md",
+      "classification": "direct_conflict",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-02",
+      "target": "promts/REMAINING_FORMS/PROMPT_TerritorialEntity_form.md",
+      "classification": "acceptance_update",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-03",
+      "target": "promts/REMAINING_FORMS/PROMPT_BeelineParams.md",
+      "classification": "direct_conflict",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-04",
+      "target": "promts/REMAINING_FORMS/PROMPT_BeelineParams.md",
+      "classification": "direct_conflict",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-05",
+      "target": "promts/REMAINING_FORMS/PROMPT_PhoneCodeEntity_form.md",
+      "classification": "legacy_policy_override",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-06",
+      "target": "promts/REMAINING_FORMS/PROMPT_PhoneCodeEntity_form.md",
+      "classification": "acceptance_update",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-07",
+      "target": "promts/REMAINING_FORMS/PROMPT_NumPool.md",
+      "classification": "legacy_policy_override",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-08",
+      "target": "promts/REMAINING_FORMS/PROMPT_NumPool.md",
+      "classification": "ambiguous_cancel",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-09",
+      "target": "promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+      "classification": "historical_keep",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "ACT-10",
+      "target": "promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+      "classification": "legacy_policy_override",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-11",
+      "target": "promts/REMAINING_FORMS/PROMPT_SlBl_form.md",
+      "classification": "acceptance_update",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-12",
+      "target": "promts/REMAINING_FORMS/PROMPT_duty_form.md",
+      "classification": "historical_policy_override",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "ACT-13",
+      "target": "promts/REMAINING_FORMS/PROMPT_SIM_FMTN.md",
+      "classification": "ambiguous_cancel",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "ACT-14",
+      "target": "promts/REMAINING_FORMS/00_ORCHESTRATOR.md",
+      "classification": "missing_orchestration_contract",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "ACT-15",
+      "target": "promts/REMAINING_FORMS/01_COMMON_RULES.md",
+      "classification": "compatible_extend",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "ACT-16",
+      "target": "promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+      "classification": "clarification_required",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "ACT-17",
+      "target": "promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+      "classification": "compatible_extend",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "ACT-18",
+      "target": "promts/REMAINING_FORMS/PROMPT_SHARED_CLIENT_BEHAVIOR.md",
+      "classification": "compatible_extend",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "REV-01",
+      "target": "prompts/PROMPT_FIX_Shared_Draft_Lifecycle.md",
+      "classification": "compatible_extend",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "REV-02",
+      "target": "prompts/PROMPT_FIX_EquipmentForm.md",
+      "classification": "ambiguous_cancel",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-03",
+      "target": "prompts/PROMPT_FIX_EquipmentUpsTestDialog.md",
+      "classification": "ambiguous_cancel",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-04",
+      "target": "prompts/SlBl_form_Fix_Prompt.md",
+      "classification": "legacy_policy_override",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-05",
+      "target": "prompts/SlBl_form_Fix_Prompt.md",
+      "classification": "branch_clarification",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-06",
+      "target": "prompts/SlBl_form_Fix_Prompt.md",
+      "classification": "acceptance_update",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-07",
+      "target": "prompts/PROMPT_FIX_BeelineParams.md",
+      "classification": "ambiguous_cancel",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-08",
+      "target": "prompts/PhonePoolAttribute_Fix_Prompt.md",
+      "classification": "legacy_policy_override",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-09",
+      "target": "prompts/PROMPT_FIX_LocationFact.md",
+      "classification": "scope_clarification",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-10",
+      "target": "prompts/PROMPT_COMPLETE_Equipment_Network_Diagnostics.md",
+      "classification": "ownership_clarification",
+      "action": "targeted replacement"
+    },
+    {
+      "id": "REV-11",
+      "target": "01_FIX_ORCHESTRATOR.md",
+      "classification": "compatible_extend",
+      "action": "kept with explicit contract clarification"
+    },
+    {
+      "id": "REV-12",
+      "target": "01_FIX_ORCHESTRATOR.md",
+      "classification": "acceptance_update",
+      "action": "targeted replacement"
+    }
+  ]
+}

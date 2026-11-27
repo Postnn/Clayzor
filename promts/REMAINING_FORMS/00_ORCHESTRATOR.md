@@ -1,5 +1,11 @@
 # Промт-оркестратор: реализация оставшихся форм legacy Inventory в Clayzor
 
+## Обязательное дополнение пользователя от 26.11.2026
+
+Прочитай [ключевые требования FORM-KEY-01…09 / DR-01](../../docs/agents/editing-forms-key-requirements.md) и [общий план внедрения](../FORMS_UX_2026-11-26/00_ORCHESTRATOR.md). Они закреплены в корневом AGENTS и обязательны для всех существующих/новых форм и новых приложений. Новое поведение Cancel (Close/ResetAndStay/Continue), неразрушительный Refresh, желтоватый Required-фон только у пустого редактируемого поля (заполненное — обычный фон, очистка — снова желтоватый; placeholder не определяет Required), focus/dirty/Enter, справка/тема каждой формы и presence сущности имеют приоритет над противоречащими историческими формулировками ниже.
+
+Используй четыре общих задания и их владельцев; не создавай локальный CSS/JS/draft/presence/theme механизм. Для поиска/отчёта/диагностики сохраняется предметная семантика Cancel/Stop и нет фиктивного Save/DB reset/entity0. Новые требования расширяют применимые UI-ветви, права/CAS/DR-01 и уже исправленный Clayzor сохраняются. Внешние проверки остаются beta; фактически выполненные локальные проверки и применимость FORM-KEY фиксируются в handoff. Историческое описание source/legacy не означает приказ копировать его дефект или запускать уже реализованную форму заново.
+
 ## Твоя задача
 
 Ты — агент-оркестратор переноса Inventory. Реализуй и доведи до проверки все **16 оставшихся форм**, перечисленных ниже, используя отдельный промт каждой формы. Управляй зависимостями, общей инфраструктурой, пересечениями файлов и приёмкой. Не подменяй задачу созданием пустых маршрутов или отчётом «компонент найден».
@@ -80,6 +86,8 @@
 
 Исследован Styles `fddc5a2157cf906402c50731e84cfa537abd7dba`: 32 JS и их C# callers сопоставлены с текущими Clay-компонентами. Исполняй [общий промт](PROMPT_SHARED_CLIENT_BEHAVIOR.md) по отдельным CL-статусам, а не глобальным этапом «переписать Styles». G0.1/CL-01 и согласованные G0.4/G0.6/CL-02 имеют единые общие контракты и владельцев пересекающихся файлов, без конкурирующих реализаций. CL-12 lifecycle/storage проверяет каждый владелец своего компонента; не выделяй его в позднюю необязательную уборку.
 
+Уточнение FORM-KEY-01: единый владелец A реализует DR26 и Cancel; CloseWithoutSaving / ResetAndStay / Continue различаются. Reset сначала читает fresh и остаётся открытым; Refresh сохраняет ввод. Unknown, N+1 и соседние scope защищены.
+
 Перед разработкой утверди краткий контракт каждого используемого API: вход/выход и типы ключей, cancel/empty/error, ownership/cleanup, совместимость существующих consumers, применимые формы и минимальные проверки. Наличие API в handoff позволяет параллельно готовить consumers, но не заменяет готовую shared-реализацию при интеграционной приёмке.
 
 | Приоритет внутри shared | CL-задачи | Граница приёмки / что не должно ждать |
@@ -87,11 +95,11 @@
 | Первая готовая очередь | CL-01 single/refresh, CL-02 dirty/reconnect + DR-01/G0.6, CL-03 commit/focus, CL-04 Select keyboard | Разблокируют основные окна/карточки; Finder single не ждёт Tree multiple |
 | Параллельно по непересекающимся файлам | CL-05 inputs/date-only, CL-06 dialogs, CL-07 grid isolation/совместимость, CL-10 UTC semantics | Duty/LocationFact/таблицы ждут только свои контракты; готовые Menu/Grid функции не переписывать |
 | До территориальной приёмки | CL-08 Tree multiple/search/focus + multiple часть CL-01 | Карточки территорий можно делать ранее; Search требует полного total, root guards и empty Save≠Cancel |
-| После определения provider/eligibility, независимо от остальных | CL-09 contacts, CL-11 presence/live changes | Параллельно с UI/SQL; не блокируют TypeEquipmentMenu/Ping, но требуемые contacts/collaboration нельзя скрыть как «готово» |
+| После определения provider/eligibility, независимо от остальных | CL-09 contacts, CL-11 presence по FORM-KEY-09 | Параллельно с UI/SQL; не блокируют TypeEquipmentMenu/Ping, но требуемые contacts/collaboration нельзя скрыть как «готово» |
 
 Не превращай порядок строк в обязательные волны. При наличии свободного владельца можно сразу вести Grid/Tree/date или исследование contacts provider. Разные CL могут менять один physical file: в таком случае владелец один, остальные передают точную delta; номера CL сами по себе не гарантируют независимость.
 
-Критические ограничения: максимум один DynamicGrid на страницу; Select ReadOnly запрещает ViewItem; confirmed empty multiple дерева очищает caller, Cancel сохраняет выбор; F2/Insert только opt-in; PhonePoolAtribute collaboration opt-out; Beeline SignalR override требует отдельной проверки; Stop/Cancel не зависят от валидности поля. Существующее all/none→clear у value filter грида — отдельный UI-контракт: его можно улучшить по разделу 11 COMMON с явной миграцией/проверкой consumers, не меняя семантику молча. Не подключать старые JS целиком, не возвращать global localStorage.clear/XHR/eval/Tab traps.
+Критические ограничения: максимум один DynamicGrid на страницу; Select ReadOnly запрещает ViewItem; confirmed empty multiple дерева очищает caller, Cancel сохраняет выбор; F2/Insert только opt-in; PhonePoolAttribute: presence обязателен, field-sync не переносить; Beeline SignalR override требует отдельной проверки; Stop/Cancel не зависят от валидности поля. Существующее all/none→clear у value filter грида — отдельный UI-контракт: его можно улучшить по разделу 11 COMMON с явной миграцией/проверкой consumers, не меняя семантику молча. Не подключать старые JS целиком, не возвращать global localStorage.clear/XHR/eval/Tab traps.
 
 ### G0.6. DR-01 — восстановление данных после IIS, сети и обновления
 
@@ -121,7 +129,7 @@ G0.6 веди отдельным статусом от G0.4: результат 
 |---:|---|---|---|
 | 1 | [PROMPT_Finder.md](_DONE/PROMPT_Finder.md) | Контекстный выбор оборудования для телефонного номера, правильные колонки и возврат | G0.1 и соответствующая часть G0.3; актуальный Tel и его контекстные фильтры |
 | 2 | [PROMPT_FinderTel.md](_DONE/PROMPT_FinderTel.md) | Выбор телефонного номера для оборудования поверх существующего read/lookup | Общий проверенный bridge G0.1, исправный общий SQL-builder; UI Finder как бизнес-форма не является обязательной зависимостью |
-| 3 | [PROMPT_TypeEquipmentMenu.md](PROMPT_TypeEquipmentMenu.md) | Плоский список типов и модели выбранного типа, переход в существующую карточку | Действующий ClayGrid и ModelEquipmentForm; не зависит от Finder и не требует дерева типов |
+| 3 | [PROMPT_TypeEquipmentMenu.md](_DONE/PROMPT_TypeEquipmentMenu.md) | Плоский список типов и модели выбранного типа, переход в существующую карточку | Действующий ClayGrid и ModelEquipmentForm; не зависит от Finder и не требует дерева типов |
 | 4 | [PROMPT_SIM_FMTN.md](PROMPT_SIM_FMTN.md) | Префикс/короткий номер, строковый mutable key и обновление caller | Готовый refresh bridge и существующие SIM/EquipmentForm точки; не зависит от Finder UI |
 | 5 | [PROMPT_BeelineParams.md](PROMPT_BeelineParams.md) | TimeZone/EmailМенеджера договора, остальные поля read-only | Реальные ключи TimeZone и данные договора; существующая ссылка EquipmentForm |
 | 6 | [PROMPT_PhonePoolAtribute_form.md](PROMPT_PhonePoolAtribute_form.md) | Редактирование значения фиксированной пары PoolId:Type; пул и тип read-only | PhonePoolLookup, read model типа и SQL атрибута; не зависит от NumPool |
@@ -179,7 +187,7 @@ G0.6 веди отдельным статусом от G0.4: результат 
 | Form focus/validation/commit/Select keyboard/date, CL-03/04/05 | Владелец inputs; общие lifecycle файлы через G0.4/CL-02 | Field chains, action keyboard, date-only/number constraints, существующие Select AGENTS; один писатель Interaction/Form файлов |
 | Grid/Tree/time, CL-07/08/10 | Владелец соответствующих Components/Grid/Tree partials | Drag ownership, unique IDs, typed keys, exact count/empty, UTC contract; date converter и экспорт интегрируются одним владельцем |
 | Contact preview/provider, CL-09 | Владелец общего preview и подтверждённой интеграции | Caller kind/ID/actions, права, readonly/modal, источники provider; не произвольный HTML endpoint |
-| Presence/field changes, CL-11 | Владелец общего предметного сервиса | Per-form eligibility, typed entity keys, opt-out, conflict/reconnect; identity через существующий Employee |
+| Presence, CL-11 / FORM-KEY-09 | P; shell через H | Все применимые редакторы, canonical entity keys, auth/lease/reconnect; identity через существующий Employee; без field-sync |
 
 В общей рабочей директории **один физический файл в каждый момент имеет одного писателя**. Даже разные области SQLQueries.cs не редактируются одновременно двумя агентами. В изолированных checkout возможны предложения разных патчей, но общую семантику и приёмку ведёт один назначенный владелец. Запрос на shared-изменение должен содержать точные символы, сигнатуры, SQL/типизацию, совместимость и потребителей; формулировки «добавь нужный lookup» недостаточно. Существующий исправленный механизм используется всеми формами, без повторения его версии в каждой поставке.
 
@@ -217,7 +225,7 @@ G0.1, G0.2, G0.3, G0.4, отдельные CL-задачи G0.5 и DR-01/G0.6 о
 
 ### 5.7. Очередь CL-задач и зависимости конкретных форм
 
-Помимо 16 форм, веди строки общих CL-задач с владельцем, файлами, API-версией, consumers и статусом. CL-01 раздели минимум на single/refresh и multiple/legacy compatibility, чтобы готовность первой части не ждать второй. CL-11 фиксируется по реально eligible consumers; explicit opt-out — проверенное «не применяется», а не незавершённая миграция.
+Помимо 16 форм, веди строки общих CL-задач с владельцем, файлами, API-версией, consumers и статусом. CL-01 раздели минимум на single/refresh и multiple/legacy compatibility, чтобы готовность первой части не ждать второй. CL-11 фиксируется для каждого редактора существующей сущности по FORM-KEY-09; legacy opt-out не освобождает редактор. Неприменимость допустима при отсутствии редактируемой сущности, а не по старому флагу.
 
 При четырёх доступных слотах пример старта: оркестратор + владелец окон/CL-01/06 + владелец lifecycle/input CL-02/03/04 + владелец Grid/Tree/time CL-07/08/10. Это пример распределения ролей, не обязательная задержка всех форм: если общий контракт уже исправлен или файл занят текущим агентом, выдай освободившемуся исполнителю независимый TypeEquipmentMenu/read model/card. Внешний агент EquipmentForm/Net занимает реальный слот и учитывается в лимите. Contacts/provider и eligibility CL-11 можно исследовать параллельно любой доступной ролью без записи чужих файлов.
 
@@ -225,14 +233,14 @@ G0.1, G0.2, G0.3, G0.4, отдельные CL-задачи G0.5 и DR-01/G0.6 о
 |---|---|
 | Finder/FinderTel | CL-01 single/legacy по реальным callers, CL-04 keyboard caller, применимые CL-07; общий int batch refactor не обязателен |
 | TypeEquipmentMenu | CL-01 opener, CL-07 unique/master-detail и CL-12 menu/lifecycle; не ждёт contacts/Tree multiple |
-| SIM/Beeline/PhonePoolAtribute | CL-02–05 по конкретным полям, CL-01 refresh, реальные Changed CL-09/10; CL-11 только eligibility, с явными исключениями |
+| SIM/Beeline/PhonePoolAtribute | CL-02–05 по конкретным полям, CL-01 refresh, реальные Changed CL-09/10; CL-11 / FORM-KEY-09 обязателен для существующей сущности, включая составной/строковый ключ |
 | NumPool | CL-02–05, CL-07 четыре static tables, CL-09 контакты, CL-10 audit/tooltip; accepted selection отдельно от intermediate null |
 | PhoneCode/TerritoryForm | CL-01/02/03/04/05, реальные audit/preview, интеграция child-card; TerritoryForm также CL-07 для вложенного списка телефонных кодов clid=85. Не ждут всего UI Search для разработки |
 | TerritorySearch | CL-01 multiple, CL-08 roots/checkbox/focus/search/total/DnD; один Dynamic detail по CL-07 |
 | Maintenance | CL-02/03/06 явная операция, CL-07/Grid, CL-09 employee, фактическая временная семантика CL-10 |
 | Modifications | CL-03/04/05 период/employee, CL-07 изолированные разделы, CL-09 contact, CL-10 единый UTC screen/print/export |
 | PingHost | CL-02/03/12 operation/Stop/dispose/опциональный ввод; нет обязательной editable entity/presence |
-| Duty | CL-02–06 по сценариям, CL-09 employee, CL-10 calendar/audit, CL-11 только после eligibility |
+| Duty | CL-02–06 по сценариям, CL-09 employee, CL-10 calendar/audit, CL-11 / FORM-KEY-09 для реального календарного ключа и текущих прав |
 | LocationFact | CL-02/03 scanner, CL-04 lookup, CL-06 три исхода, CL-07 грид/row actions/refresh, CL-09 owner в modal, CL-10 фактический timestamp |
 | SlBl | CL-02/03/05/06/12 draft/textarea/radio/подтверждения/unknown outcome; mail action только явная |
 
